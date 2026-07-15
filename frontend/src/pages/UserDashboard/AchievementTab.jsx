@@ -31,7 +31,7 @@ const AchievementTab = ({
             <p className="text-text-secondary font-medium text-xs">Loading analytics data...</p>
           </div>
         ) : !analyticsData || analyticsData.analytics.totalQuizzes === 0 ? (
-          <div className="p-12 text-center bg-white border border-border-color rounded-3xl text-text-secondary text-sm flex flex-col items-center justify-center gap-4 max-w-md mx-auto shadow-sm">
+          <div className="p-12 text-center bg-white dark:bg-slate-900 border border-border-color rounded-3xl text-text-secondary text-sm flex flex-col items-center justify-center gap-4 max-w-md mx-auto shadow-sm">
             <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-text-tertiary">
               <BarChart size={24} />
             </div>
@@ -55,19 +55,19 @@ const AchievementTab = ({
           <>
             {/* Analytics KPI Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 bg-white rounded-2xl border border-border-color shadow-sm">
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm">
                 <span className="text-xxs font-extrabold text-text-tertiary uppercase">Quizzes Attempted</span>
                 <p className="font-display font-black text-2xl text-primary mt-1">{analyticsData.analytics.totalQuizzes}</p>
               </div>
-              <div className="p-4 bg-white rounded-2xl border border-border-color shadow-sm">
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm">
                 <span className="text-xxs font-extrabold text-text-tertiary uppercase">Average Score</span>
                 <p className="font-display font-black text-2xl text-indigo-600 mt-1">{analyticsData.analytics.averageScore}%</p>
               </div>
-              <div className="p-4 bg-white rounded-2xl border border-border-color shadow-sm">
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm">
                 <span className="text-xxs font-extrabold text-text-tertiary uppercase">Best Score</span>
                 <p className="font-display font-black text-2xl text-emerald-500 mt-1">{analyticsData.analytics.bestScore}%</p>
               </div>
-              <div className="p-4 bg-white rounded-2xl border border-border-color shadow-sm">
+              <div className="p-4 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm">
                 <span className="text-xxs font-extrabold text-text-tertiary uppercase">Accuracy</span>
                 <p className="font-display font-black text-2xl text-amber-500 mt-1">{analyticsData.analytics.accuracy}%</p>
               </div>
@@ -76,7 +76,7 @@ const AchievementTab = ({
             {/* Charts Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Score Trend Card */}
-              <div className="p-6 bg-white rounded-2xl border border-border-color shadow-sm flex flex-col gap-4">
+              <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm flex flex-col gap-4">
                 <h3 className="font-display font-bold text-base text-text-primary m-0">Quiz Score Trend</h3>
                 <div className="w-full flex items-center justify-center min-h-[220px]">
                   {(() => {
@@ -121,7 +121,7 @@ const AchievementTab = ({
                                       <circle cx={p.x} cy={p.y} r="5" fill="#ffffff" stroke="var(--color-primary)" strokeWidth="2.5" />
                                       <circle cx={p.x} cy={p.y} r="8" fill="var(--color-primary)" opacity="0" className="hover:opacity-20 transition-opacity" />
                                       <foreignObject x={p.x - 25} y={p.y - 30} width="50" height="25" className="overflow-visible pointer-events-none">
-                                        <div className="bg-text-primary text-white text-[9px] font-black px-1.5 py-0.5 rounded text-center shadow whitespace-nowrap">
+                                        <div className="bg-text-primary text-bg-color text-[9px] font-black px-1.5 py-0.5 rounded text-center shadow whitespace-nowrap">
                                           {p.score}%
                                         </div>
                                       </foreignObject>
@@ -149,7 +149,7 @@ const AchievementTab = ({
               </div>
 
               {/* Weekly Activity Card */}
-              <div className="p-6 bg-white rounded-2xl border border-border-color shadow-sm flex flex-col gap-4">
+              <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm flex flex-col gap-4">
                 <h3 className="font-display font-bold text-base text-text-primary m-0">Weekly Practice Activity</h3>
                 <div className="w-full flex flex-col justify-end min-h-[220px]">
                   {(() => {
@@ -192,7 +192,7 @@ const AchievementTab = ({
             {/* Bottom Layout - Topics Accuracy and Topic Breakdown Table */}
             <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1.8fr] gap-6">
               {/* Topic Accuracy Bar chart */}
-              <div className="p-6 bg-white rounded-2xl border border-border-color shadow-sm flex flex-col gap-5">
+              <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm flex flex-col gap-5">
                 <h3 className="font-display font-bold text-base text-text-primary m-0">Topic Performance</h3>
                 {analyticsData.topicBreakdown.length === 0 ? (
                   <p className="text-xs text-text-secondary">No topic tests completed yet.</p>
@@ -214,7 +214,7 @@ const AchievementTab = ({
               </div>
 
               {/* Detailed Table */}
-              <div className="p-6 bg-white rounded-2xl border border-border-color shadow-sm flex flex-col gap-4">
+              <div className="p-6 bg-white dark:bg-slate-900 rounded-2xl border border-border-color shadow-sm flex flex-col gap-4">
                 <h3 className="font-display font-bold text-base text-text-primary m-0">Topic Analysis Details</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-xs">
@@ -324,7 +324,7 @@ const AchievementTab = ({
               return (
                 <div
                   key={badge.name}
-                  className={`p-6 rounded-3xl border bg-white shadow-sm flex flex-col items-center text-center justify-between transition-all duration-300 relative overflow-hidden ${earned ? 'border-primary/20 hover:shadow-md' : 'opacity-55 grayscale border-border-color'
+                  className={`p-6 rounded-3xl border bg-white dark:bg-slate-900 shadow-sm flex flex-col items-center text-center justify-between transition-all duration-300 relative overflow-hidden ${earned ? 'border-primary/20 hover:shadow-md' : 'opacity-55 grayscale border-border-color'
                     }`}
                 >
                   <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-primary to-primary-dark opacity-10"></div>

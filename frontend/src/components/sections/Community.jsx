@@ -7,7 +7,7 @@ const communityPlatforms = [
   {
     name: 'YouTube',
     icon: FaYoutube,
-    stats: '58.4K',
+    stats: '58.2K',
     label: 'Subscribers',
     actionText: 'Subscribe Now',
     themeColor: 'hover:border-[#FF0000] hover:text-[#FF0000]',
@@ -18,7 +18,7 @@ const communityPlatforms = [
   {
     name: 'WhatsApp',
     icon: MessageCircle,
-    stats: '10K+',
+    stats: '2.3K',
     label: 'Active Members',
     actionText: 'Join Community',
     themeColor: 'hover:border-[#25D366] hover:text-[#25D366]',
@@ -29,7 +29,7 @@ const communityPlatforms = [
   {
     name: 'Instagram',
     icon: FaInstagram,
-    stats: '25K',
+    stats: '3.6K',
     label: 'Followers',
     actionText: 'Follow Us',
     themeColor: 'hover:border-[#E1306C] hover:text-[#E1306C]',
@@ -40,7 +40,7 @@ const communityPlatforms = [
   {
     name: 'X (Twitter)',
     icon: FaTwitter,
-    stats: '12K',
+    stats: '5',
     label: 'Followers',
     actionText: 'Follow Updates',
     themeColor: 'hover:border-[#1DA1F2] hover:text-[#1DA1F2]',
@@ -68,7 +68,7 @@ const Community = () => {
   };
 
   return (
-    <section id="community" className="py-16 md:py-15 bg-bg-color relative" ref={containerRef}>
+    <section id="community" className="py-10 md:py-12 bg-bg-color/70 backdrop-blur-[2px] relative" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8">
         
         <div className="text-center max-w-2xl mx-auto mb-16">
@@ -98,7 +98,7 @@ const Community = () => {
                 target="_blank"
                 rel="noopener noreferrer" 
                 variants={itemVariants} 
-                className={`group flex flex-col p-8 rounded-2xl bg-white/70 border border-border-color transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative overflow-hidden glass ${platform.themeColor}`}
+                className={`group flex flex-col p-8 rounded-2xl bg-bg-color/ border border-border-color transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative overflow-hidden glass ${platform.themeColor}`}
               >
                 {/* Hover top bar indicator */}
                 <div className={`absolute top-0 left-0 w-full h-[4px] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 ${platform.barColor}`} />

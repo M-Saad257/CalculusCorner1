@@ -1,5 +1,7 @@
 const express = require('express');
 const adminController = require('../controllers/adminController');
+const bookController = require('../controllers/bookController');
+const upload = require('../middleware/uploadMiddleware');
 const { protect, isAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
@@ -18,11 +20,11 @@ router.post('/courses/:id/quiz', adminController.saveCourseQuiz);
 router.get('/courses/:id/leaderboard', adminController.getCourseLeaderboard);
 router.post('/courses/:id/award-badge', adminController.awardGoldBadge);
 
-// Subjects CRUD
-router.get('/subjects', adminController.getSubjects);
-router.post('/subjects', adminController.createSubject);
-router.put('/subjects/:id', adminController.updateSubject);
-router.delete('/subjects/:id', adminController.deleteSubject);
+// Books CRUD
+router.get('/books', bookController.getBooks);
+router.post('/books', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), bookController.createBook);
+router.put('/books/:id', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), bookController.updateBook);
+router.delete('/books/:id', bookController.deleteBook);
 
 
 // Students CRUD
@@ -45,7 +47,6 @@ router.post('/announcements', adminController.createAnnouncement);
 router.put('/announcements/:id', adminController.updateAnnouncement);
 router.delete('/announcements/:id', adminController.deleteAnnouncement);
 
-const upload = require('../middleware/uploadMiddleware');
 const multer = require('multer');
 const uploadMemory = multer({
   storage: multer.memoryStorage(),
@@ -55,8 +56,8 @@ const uploadMemory = multer({
 // Resources CRUD
 router.get('/resources', adminController.getResources);
 router.get('/resources/:id/download', adminController.downloadResource);
-router.post('/resources', upload.single('file'), adminController.createResource);
-router.put('/resources/:id', upload.single('file'), adminController.updateResource);
+router.post('/resources', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), adminController.createResource);
+router.put('/resources/:id', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), adminController.updateResource);
 router.delete('/resources/:id', adminController.deleteResource);
 
 // Videos CRUD

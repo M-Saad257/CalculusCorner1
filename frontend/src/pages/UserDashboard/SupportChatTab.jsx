@@ -12,10 +12,10 @@ const SupportChatTab = ({
   student
 }) => {
   return (
-    <div className="max-w-xl mx-auto flex flex-col h-[calc(100vh-230px)] bg-white rounded-3xl border border-border-color shadow-lg overflow-hidden animate-fadeIn text-left">
+    <div className="max-w-xl mx-auto flex flex-col h-[calc(100vh-230px)] bg-white dark:bg-slate-900 rounded-3xl border border-border-color shadow-lg overflow-hidden animate-fadeIn text-left">
       {/* Chat Header */}
       <div className="flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-primary to-primary-dark text-white text-left">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white/20 shadow-inner shrink-0">
+        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white dark:bg-slate-900 text-primary shadow-inner shrink-0">
           <MessageSquare size={20} />
         </div>
         <div>
@@ -48,7 +48,7 @@ const SupportChatTab = ({
                 <div
                   className={`p-3 px-4 rounded-2xl text-sm leading-relaxed ${isStudentSender
                       ? 'bg-primary text-white rounded-br-sm shadow-sm'
-                      : 'bg-white text-text-primary rounded-bl-sm border border-border-color shadow-sm'
+                      : 'bg-white dark:bg-slate-900 text-text-primary rounded-bl-sm border border-border-color shadow-sm'
                     }`}
                 >
                   {msg.message}
@@ -64,14 +64,14 @@ const SupportChatTab = ({
       </div>
 
       {/* Chat Footer Input */}
-      <div className="p-4 bg-white border-t border-border-color">
+      <div className="p-4 bg-white dark:bg-slate-900 border-t border-border-color">
         <form onSubmit={handleSendChatMessage} className="flex gap-2">
           <input
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             placeholder="Ask administration or appeal your case..."
-            className="grow px-4 py-2.5 border border-border-color rounded-full font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 shadow-inner transition-all bg-white text-text-primary"
+            className="grow px-4 py-2.5 border border-border-color rounded-full font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 shadow-inner transition-all bg-white dark:bg-slate-900 text-text-primary"
             disabled={chatSending}
           />
           <button

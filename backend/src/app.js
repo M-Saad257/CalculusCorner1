@@ -13,13 +13,12 @@ const contentRoutes = require('./routes/contentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const resourceRoutes = require('./routes/resourcesRoute');
-const subjectRoutes = require('./routes/subjectRoutes');
-
+const bookRoutes = require('./routes/bookRoutes');
 const app = express();
 
 // Serve uploaded resources statically with security options
 app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
-  maxAge: '1d',
+  maxAge: '30d',
   setHeaders: (res, path) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
   }
@@ -41,7 +40,7 @@ app.use(cors(corsOptions));
 // HTTP Request Logger
 app.use(morgan('dev'));
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Removed duplicate /uploads mapping that didn't have caching headers
 
 // Disable caching for API routes to prevent stale 304 states
 app.use('/api', (req, res, next) => {
@@ -68,8 +67,7 @@ app.use('/api/content', contentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/resources', resourceRoutes);
-app.use('/api/subjects', subjectRoutes);
-
+app.use('/api/books', bookRoutes);
 // Base route test
 app.get('/', (req, res) => {
   res.status(200).json({
@@ -85,24 +83,39 @@ app.get('/', (req, res) => {
 // ─── Dynamic Favicon & OG Image proxy routes ────────────────────────────────
 // These routes resolve the admin-uploaded logo as the site favicon and OG image,
 // so search engines, social platforms, and browsers always see the current logo.
+// Global cache for logo path to prevent db query on every page load
+let cachedLogoPath = null;
+let lastLogoFetchTime = 0;
+const LOGO_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 const serveDynamicLogo = async (req, res, fallback) => {
   try {
-    const db = require('./config/db');
-    const [rows] = await db.query(
-      "SELECT content_data FROM site_content WHERE section_name = 'logo' LIMIT 1"
-    );
-    if (rows.length > 0) {
-      const data = typeof rows[0].content_data === 'string'
-        ? JSON.parse(rows[0].content_data)
-        : rows[0].content_data;
-      if (data?.logo_url) {
-        const imgPath = path.join(__dirname, '..', data.logo_url);
-        if (require('fs').existsSync(imgPath)) {
-          return res.sendFile(imgPath);
+    const now = Date.now();
+    if (!cachedLogoPath || now - lastLogoFetchTime > LOGO_CACHE_TTL) {
+      const db = require('./config/db');
+      const [rows] = await db.query(
+        "SELECT content_data FROM site_content WHERE section_name = 'logo' LIMIT 1"
+      );
+      if (rows.length > 0) {
+        const data = typeof rows[0].content_data === 'string'
+          ? JSON.parse(rows[0].content_data)
+          : rows[0].content_data;
+        if (data?.logo_url) {
+          cachedLogoPath = data.logo_url;
+          lastLogoFetchTime = now;
         }
       }
     }
+
+    if (cachedLogoPath) {
+      const imgPath = path.join(__dirname, '..', cachedLogoPath);
+      if (require('fs').existsSync(imgPath)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+        return res.sendFile(imgPath);
+      }
+    }
   } catch { /* fall through to static fallback */ }
+  res.setHeader('Cache-Control', 'public, max-age=86400');
   res.sendFile(path.join(__dirname, '../public', fallback));
 };
 

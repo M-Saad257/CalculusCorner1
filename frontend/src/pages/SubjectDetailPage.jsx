@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
-  BookOpen, Award, Zap, CheckCircle2, ChevronRight, 
-  GraduationCap, Clock, Sparkles, PlayCircle, HelpCircle 
+import {
+  BookOpen, Award, Zap, CheckCircle2, ChevronRight,
+  GraduationCap, Clock, Sparkles, PlayCircle, HelpCircle
 } from 'lucide-react';
 import api from '../services/api';
 import Navbar from '../components/layout/Navbar';
@@ -17,7 +17,7 @@ const SubjectDetailPage = () => {
   const [loadingSubject, setLoadingSubject] = useState(true);
   const [videos, setVideos] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(true);
-  
+
   // State to hold a mini-cache of related subject details for titles
   const [relatedSubjectDetails, setRelatedSubjectDetails] = useState({});
 
@@ -60,7 +60,7 @@ const SubjectDetailPage = () => {
   useEffect(() => {
     if (subject) {
       document.title = subject.seoTitle || `${subject.title} | Calculus Corner`;
-      
+
       let metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {
         metaDesc = document.createElement('meta');
@@ -73,7 +73,7 @@ const SubjectDetailPage = () => {
 
   const fetchRelatedData = async () => {
     if (!subject) return;
-    
+
     // Fetch related videos
     try {
       setLoadingVideos(true);
@@ -92,15 +92,15 @@ const SubjectDetailPage = () => {
     // Fetch related subjects names (just fetch all and cache to be simple)
     try {
       if (subject.relatedSubjects && subject.relatedSubjects.length > 0) {
-         const res = await api.get('/subjects');
-         if (res.data && res.data.success) {
-           const allSubjects = res.data.data;
-           const mapping = {};
-           allSubjects.forEach(s => {
-             mapping[s.slug] = s;
-           });
-           setRelatedSubjectDetails(mapping);
-         }
+        const res = await api.get('/subjects');
+        if (res.data && res.data.success) {
+          const allSubjects = res.data.data;
+          const mapping = {};
+          allSubjects.forEach(s => {
+            mapping[s.slug] = s;
+          });
+          setRelatedSubjectDetails(mapping);
+        }
       }
     } catch (err) {
     }
@@ -142,7 +142,7 @@ const SubjectDetailPage = () => {
       <div className="flex flex-col min-h-screen bg-bg-secondary">
         <Navbar />
         <main className="grow flex items-center justify-center py-20 px-4">
-          <div className="max-w-md w-full bg-white border border-border-color rounded-3xl p-8 shadow-xl text-center">
+          <div className="max-w-md w-full bg-bg-color border border-border-color rounded-3xl p-8 shadow-xl text-center">
             <div className="w-16 h-16 mx-auto mb-6 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
               <HelpCircle size={32} />
             </div>
@@ -165,13 +165,13 @@ const SubjectDetailPage = () => {
   return (
     <div className="flex flex-col min-h-screen bg-bg-color">
       <Navbar />
-      
+
       {/* Hero Header Section */}
-      <section className="relative pt-32 pb-16 bg-gradient-to-b from-blue-50/40 via-bg-secondary to-bg-color overflow-hidden">
+      <section className="relative pt-32   bg-gradient-to-b from-blue-50/40 via-bg-secondary to-bg-color overflow-hidden">
         {/* Background shapes */}
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary-light/5 rounded-full blur-3xl pointer-events-none" />
-        
+
         <div className="container mx-auto px-4 md:px-8 relative text-left">
           {/* Breadcrumb & Back navigation */}
           <div className="flex items-center gap-2 text-xs md:text-sm text-text-tertiary mb-6 select-none">
@@ -202,10 +202,10 @@ const SubjectDetailPage = () => {
       <section className="pb-24 bg-bg-color">
         <div className="container mx-auto px-4 md:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12 items-start">
-            
+
             {/* Main Column */}
             <div className="lg:col-span-2 flex flex-col gap-10 text-left">
-              
+
               {/* Overview */}
               <div>
                 <h2 className="font-display font-bold text-2xl md:text-3xl text-text-primary mb-4 flex items-center gap-2">
@@ -252,13 +252,13 @@ const SubjectDetailPage = () => {
 
               {/* Target Audience & We Help */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 rounded-3xl bg-white border border-border-color shadow-sm text-left">
+                <div className="p-6 rounded-3xl bg-bg-color border border-border-color shadow-sm text-left">
                   <h4 className="font-display font-bold text-lg text-text-primary mb-3">Target Audience</h4>
                   <p className="text-text-secondary text-sm leading-relaxed whitespace-pre-wrap">
                     {subject.whoItIsFor}
                   </p>
                 </div>
-                <div className="p-6 rounded-3xl bg-white border border-border-color shadow-sm text-left">
+                <div className="p-6 rounded-3xl bg-bg-color border border-border-color shadow-sm text-left">
                   <h4 className="font-display font-bold text-lg text-text-primary mb-3">Calculus Corner Support</h4>
                   <p className="text-text-secondary text-sm leading-relaxed whitespace-pre-wrap">
                     {subject.howWeHelp}
@@ -304,9 +304,9 @@ const SubjectDetailPage = () => {
 
             {/* Sidebar Column */}
             <div className="flex flex-col gap-6 lg:sticky lg:top-24">
-              
+
               {/* Quick Facts Card */}
-              <div className="p-6 rounded-3xl bg-white border border-border-color shadow-md text-left">
+              <div className="p-6 rounded-3xl bg-bg-color border border-border-color shadow-md text-left">
                 <h3 className="font-display font-bold text-lg text-text-primary mb-4 pb-3 border-b border-border-color/60">
                   Quick Facts
                 </h3>
@@ -316,11 +316,10 @@ const SubjectDetailPage = () => {
                       <span className="text-xxs uppercase tracking-wider font-extrabold text-text-tertiary block mb-1">
                         Difficulty Level
                       </span>
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${
-                        subject.sidebarDifficulty === 'Easy' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                        subject.sidebarDifficulty === 'Medium' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
-                        'bg-red-50 text-red-600 border border-red-100'
-                      }`}>
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${subject.sidebarDifficulty === 'Easy' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                          subject.sidebarDifficulty === 'Medium' ? 'bg-blue-50 text-blue-600 border border-blue-100' :
+                            'bg-red-50 text-red-600 border border-red-100'
+                        }`}>
                         {subject.sidebarDifficulty}
                       </span>
                     </div>
@@ -360,25 +359,25 @@ const SubjectDetailPage = () => {
 
               {/* Related Videos Card */}
               {subject.relatedVideosCategory && (
-                <div className="p-6 rounded-3xl bg-white border border-border-color shadow-md text-left">
+                <div className="p-6 rounded-3xl bg-bg-color border border-border-color shadow-md text-left">
                   <h3 className="font-display font-bold text-lg text-text-primary mb-4 pb-3 border-b border-border-color/60 flex items-center gap-1.5">
                     <PlayCircle className="text-red-500" size={18} /> Related Video Lectures
                   </h3>
-                  
+
                   {loadingVideos ? (
                     <div className="text-xs text-text-tertiary py-4 animate-pulse">Loading related videos...</div>
                   ) : videos.length > 0 ? (
                     <div className="flex flex-col gap-4">
                       {videos.map(video => (
-                        <div 
-                          key={video.id} 
+                        <div
+                          key={video.id}
                           onClick={() => window.open(video.url, '_blank')}
                           className="group flex gap-3 cursor-pointer items-start p-2 rounded-xl hover:bg-bg-secondary transition-all"
                         >
                           <div className="relative w-20 aspect-video rounded-lg overflow-hidden shrink-0 border border-border-color bg-slate-100 shadow-sm">
-                            <img 
-                              src={video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`} 
-                              alt={video.title} 
+                            <img
+                              src={video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                              alt={video.title}
                               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                               onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=100'; }}
                             />
@@ -412,7 +411,7 @@ const SubjectDetailPage = () => {
 
               {/* Related Subjects Card */}
               {(subject.relatedSubjects && subject.relatedSubjects.length > 0) && (
-                <div className="p-6 rounded-3xl bg-white border border-border-color shadow-md text-left">
+                <div className="p-6 rounded-3xl bg-bg-color border border-border-color shadow-md text-left">
                   <h3 className="font-display font-bold text-lg text-text-primary mb-4 pb-3 border-b border-border-color/60">
                     Related Topics
                   </h3>
@@ -421,8 +420,8 @@ const SubjectDetailPage = () => {
                       const details = relatedSubjectDetails[relatedSlug];
                       const title = details ? details.title : relatedSlug.charAt(0).toUpperCase() + relatedSlug.slice(1);
                       return (
-                        <Link 
-                          key={relatedSlug} 
+                        <Link
+                          key={relatedSlug}
                           to={`/subjects/${relatedSlug}`}
                           className="px-3 py-1.5 bg-bg-secondary hover:bg-primary hover:text-white border border-border-color/60 rounded-full text-xs font-semibold text-text-secondary hover:border-primary transition-all cursor-pointer"
                         >

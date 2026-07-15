@@ -29,7 +29,7 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
             Browse and enroll in available calculus courses below.
           </p>
         </div>
-        <div className="bg-white p-12 rounded-3xl border border-border-color shadow-sm text-center">
+        <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-border-color shadow-sm text-center">
           <BookOpen size={48} className="mx-auto text-text-secondary/40 mb-4" />
           <h3 className="text-xl font-bold text-text-primary mb-2">No Courses Available</h3>
           <p className="text-text-secondary">There are currently no courses published in the system.</p>
@@ -96,8 +96,8 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
               className={`group relative flex flex-col p-7 rounded-3xl border transition-all duration-300 hover:-translate-y-1 ${isHighlight
                 ? 'bg-gradient-to-br from-primary to-primary-dark text-white border-0 shadow-xl shadow-primary/20'
                 : isPopular
-                  ? 'bg-white border-2 border-primary shadow-lg'
-                  : 'bg-white border-border-color shadow-md hover:shadow-lg hover:border-primary/30'
+                  ? 'bg-white dark:bg-slate-900 border-2 border-primary shadow-lg'
+                  : 'bg-white dark:bg-slate-900 border-border-color shadow-md hover:shadow-lg hover:border-primary/30'
                 }`}
             >
               {/* Most Popular Badge */}
@@ -123,7 +123,7 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
               {/* Header */}
               <div className={`mb-6 pb-5 border-b ${isHighlight ? 'border-white/20' : 'border-border-color'}`}>
                 <span
-                  className={`inline-block text-xs font-bold px-3 py-1 rounded-full mb-3 ${isHighlight ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary border border-primary/20'
+                  className={`inline-block text-xs font-bold px-3 py-1 rounded-full mb-3 ${isHighlight ? 'bg-white dark:bg-slate-900/ text-white' : 'bg-primary/10 text-primary border border-primary/20'
                     }`}
                 >
                   {course.grade}
@@ -194,7 +194,7 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
                     variant={isPopular || isHighlight ? 'primary' : 'outline'}
                     fullWidth
                     onClick={() => handleEnrollClick(course)}
-                    className={`mt-auto ${isHighlight ? 'bg-white text-primary border-0 hover:bg-bg-secondary hover:text-primary-dark shadow-md' : ''}`}
+                    className={`mt-auto ${isHighlight ? 'bg-white dark:bg-slate-900 text-primary border-0 hover:bg-bg-secondary hover:text-primary-dark shadow-md' : ''}`}
                   >
                     Enroll Now
                   </Button>
@@ -208,7 +208,7 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
       {/* Payment Modal */}
       {enrollModalCourse && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-md max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-y-auto cc-scroll text-left flex flex-col">
+          <div className="relative w-full max-w-md max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto cc-scroll text-left flex flex-col">
             <div className="px-6 py-5 border-b border-border-color flex items-center justify-between bg-bg-secondary/30 sticky top-0 z-10 backdrop-blur-md">
               <div className="flex items-center gap-2 text-primary">
                 <CreditCard size={20} />
@@ -233,7 +233,7 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
                 <p className="text-xs font-bold text-blue-800 uppercase tracking-wider m-0">Admin Bank Details</p>
                 <p className="text-sm text-blue-900 leading-relaxed m-0">Please transfer the amount to the following account to complete your enrollment.</p>
 
-                <div className="flex flex-col gap-3 bg-white/60 p-4 rounded-xl border border-blue-200/50">
+                <div className="flex flex-col gap-3 bg-white dark:bg-slate-900/ p-4 rounded-xl border border-blue-200/50">
                   <div className="flex items-start gap-3">
                     <Building size={16} className="text-blue-500 mt-0.5 shrink-0" />
                     <div className="flex flex-col">

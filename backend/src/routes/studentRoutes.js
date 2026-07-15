@@ -1,5 +1,6 @@
 const express = require('express');
 const studentController = require('../controllers/studentController');
+const progressController = require('../controllers/progressController');
 const { protect, isStudent } = require('../middleware/authMiddleware');
 const imageUpload = require('../middleware/imageUploadMiddleware');
 
@@ -20,6 +21,11 @@ router.get('/courses', studentController.getCourses);
 router.get('/resources', studentController.getResources);
 router.get('/resources/:id/download', studentController.downloadResource);
 router.get('/videos', studentController.getVideos);
+
+// Progress Tracking
+router.post('/progress/video/:videoId', progressController.updateVideoProgress);
+router.get('/progress/recent', progressController.getRecentlyWatched);
+router.get('/progress/summary', progressController.getProgressSummary);
 
 // Course Enrollment
 router.post('/enroll', studentController.enrollCourse);

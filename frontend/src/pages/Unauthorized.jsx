@@ -30,7 +30,7 @@ const Unauthorized = () => {
 
       {/* Main card */}
       <div className="relative z-10 w-full max-w-md mx-4 my-12">
-        <div className="p-8 md:p-10 rounded-3xl glass flex flex-col gap-6 text-center border border-white/40 shadow-xl bg-white/70 backdrop-blur-xl">
+        <div className="p-8 md:p-10 rounded-3xl glass flex flex-col gap-6 text-center border border-white/40 shadow-xl bg-bg-color/ backdrop-blur-xl">
           <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-500 flex items-center justify-center mx-auto shadow-sm">
             <ShieldAlert size={32} />
           </div>

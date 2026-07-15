@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Bell, CheckCheck } from 'lucide-react';
 import Button from '../ui/Button';
 import NotificationBell from '../ui/NotificationBell';
+import ThemeToggle from '../ui/ThemeToggle';
 import { useSocket } from '../../hooks/useSocket';
 import { useContent } from '../../context/ContentContext';
 
@@ -82,34 +83,45 @@ const Navbar = () => {
       return;
     }
 
-    const targetId = href.replace('/#', '');
-    if (location.pathname === '/') {
-      setTimeout(() => {
-        const element = document.getElementById(targetId);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, MENU_CLOSE_DELAY);
+    if (href.startsWith('/#')) {
+      const targetId = href.replace('/#', '');
+      if (location.pathname === '/') {
+        setTimeout(() => {
+          const element = document.getElementById(targetId);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, MENU_CLOSE_DELAY);
+      } else {
+        navigate('/', { state: { scrollTo: targetId } });
+      }
     } else {
-      navigate('/', { state: { scrollTo: targetId } });
+      setTimeout(() => {
+        navigate(href);
+      }, MENU_CLOSE_DELAY);
     }
   };
 
+  const visibility = content?.visibility || {};
   const navLinks = [
-    { name: 'Resources', href: '/#resources' },
-    { name: 'Lectures', href: '/#videos' },
-    { name: 'Subjects', href: '/#subjects' },
-    { name: 'Courses', href: '/#courses' },
-    { name: 'Practice', href: '/#practice' },
-
+    ...(visibility.about !== false ? [{ name: 'About', href: '/about' }] : []),
+    ...(visibility.notes !== false ? [{ name: 'Notes', href: '/notes' }] : []),
+    ...(visibility.lectures !== false ? [{ name: 'Lectures', href: '/lectures' }] : []),
+    ...(visibility.books !== false ? [{ name: 'Books', href: '/books' }] : []),
+    ...(visibility.courses !== false ? [{ name: 'Courses', href: '/courses' }] : []),
   ];
 
   const getLogoSrc = () => {
     if (content?.logo?.logo_url) {
-      if (content.logo.logo_url.startsWith('http')) {
-        return content.logo.logo_url;
+      let url = content.logo.logo_url;
+      url = url.replace('localost', 'localhost');
+      if (url.startsWith('http')) {
+        return url;
       }
-      return `https://localhost:5173${content.logo.logo_url}`;
+      if (!url.startsWith('/')) {
+        url = `/uploads/logo/${url}`;
+      }
+      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
     }
     return "/CClogo.png";
   };
@@ -157,6 +169,7 @@ const Navbar = () => {
         </nav>
 
         <div className="flex items-center gap-3 md:gap-4">
+          <ThemeToggle />
           {token ? (
             <>
               {/* Connection status */}
@@ -190,8 +203,7 @@ const Navbar = () => {
                 Log In
               </Button>
               <Button
-                variant="primary"
-                className="hidden sm:inline-flex px-5 py-2 text-sm"
+                className="hidden sm:inline-flex px-5 py-2 text-sm !bg-none !bg-[#FF0000] !border-[#FF0000] hover:!bg-[#CC0000] text-white"
                 onClick={() => { window.location.href = "https://www.youtube.com/@Calculus.Corner"; }}
               >
                 Subscribe

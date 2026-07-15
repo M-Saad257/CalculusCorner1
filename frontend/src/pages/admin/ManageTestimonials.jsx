@@ -116,7 +116,7 @@ const ManageTestimonials = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {isAdding && (
-          <div className="p-6 rounded-2xl bg-white border-2 border-primary-light shadow-md flex flex-col gap-4 glass">
+          <div className="p-6 rounded-2xl bg-bg-color border-2 border-primary-light shadow-md flex flex-col gap-4 glass">
             <h3 className="font-display font-bold text-lg text-text-primary">Add New Review</h3>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
               <input 
@@ -168,7 +168,7 @@ const ManageTestimonials = () => {
         )}
 
         {testimonials.filter(t => (t.status || 'approved') === activeTab).map(t => (
-          <div key={t.id} className="p-6 rounded-2xl bg-white border border-border-color shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
+          <div key={t.id} className="p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm hover:shadow-md transition-all flex flex-col gap-4">
             <div className="flex items-start justify-between gap-4">
               <span className="font-bold text-primary text-xs md:text-sm">{t.name}</span>
               <span className="font-semibold text-text-secondary bg-bg-secondary px-2 py-0.5 rounded text-xs flex items-center gap-0.5">

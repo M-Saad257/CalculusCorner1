@@ -135,7 +135,7 @@ const CoursesPage = () => {
                     variants={cardVariants}
                     initial="hidden"
                     animate="visible"
-                    className={`relative flex flex-col p-8 rounded-3xl border transition-all duration-300 bg-white shadow-md hover:-translate-y-1.5 hover:shadow-lg text-left ${
+                    className={`relative flex flex-col p-8 rounded-3xl border transition-all duration-300 bg-bg-color shadow-md hover:-translate-y-1.5 hover:shadow-lg text-left ${
                       isPopular ? 'border-primary border-2 scale-102' : 'border-primary/10'
                     }`}
                   >

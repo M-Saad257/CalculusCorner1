@@ -77,9 +77,9 @@ const uploadLogoContent = async (req, res, next) => {
 
     const { broadcastToAll } = require('../socket');
 
-    const baseUrl = process.env.NODE_ENV === 'production'
+    const baseUrl = process.env.BACKEND_URL || (process.env.NODE_ENV === 'production'
       ? 'https://localhost:5000'
-      : `${req.protocol}://${req.get('host')}`;
+      : `${req.protocol}://${req.get('host')}`);
 
     const logoUrl = `${baseUrl}/uploads/logo/${req.file.filename}`;
     const logoData = { logo_url: logoUrl };

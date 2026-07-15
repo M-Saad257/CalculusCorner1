@@ -27,7 +27,7 @@ const NotificationModel = {
 
   async markAllAsRead(userId) {
     const [result] = await db.query(
-      'UPDATE notifications SET is_read = 1 WHERE (user_id = ? OR user_id IS NULL) AND role = \'student\'',
+      'DELETE FROM notifications WHERE (user_id = ? OR user_id IS NULL) AND role = \'student\'',
       [userId]
     );
     return result.affectedRows > 0;
@@ -51,7 +51,7 @@ const NotificationModel = {
 
   async markAllAdminAsRead() {
     const [result] = await db.query(
-      'UPDATE notifications SET is_read = 1 WHERE role = \'admin\''
+      'DELETE FROM notifications WHERE role = \'admin\''
     );
     return result.affectedRows > 0;
   }

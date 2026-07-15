@@ -241,7 +241,7 @@ export const SocketProvider = ({ children }) => {
 
       const res = await api.put(endpoint);
       if (res.data && res.data.success) {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: 1 })));
+        setNotifications([]);
         setUnreadCount(0);
       }
     } catch (err) {

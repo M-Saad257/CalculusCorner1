@@ -63,45 +63,6 @@ const AnalyticsDashboard = () => {
   const barRefs = useRef([]);
   const [labelPositions, setLabelPositions] = useState([]);
 
-  // Measure bar wrappers and compute label coordinates whenever stats change or layout resizes
-  useLayoutEffect(() => {
-    const computePositions = () => {
-      const container = chartContainerRef.current;
-      if (!container) return setLabelPositions([]);
-      const containerRect = container.getBoundingClientRect();
-      const newPositions = chartData.map((item, idx) => {
-        const wrapper = barRefs.current[idx];
-        if (!wrapper) return { left: 0, points: [] };
-        const wrapRect = wrapper.getBoundingClientRect();
-        const relativeLeft = wrapRect.left - containerRect.left; // relative to chart container
-        const height = wrapRect.height;
-        const topBase = wrapRect.top - containerRect.top; // top of wrapper relative
-        const max = Number(item.value) || 0;
-        const points = generateScale(max).map((val) => {
-          const pct = max > 0 ? (val / max) : 0; // 0..1
-          const y = topBase + (1 - pct) * height; // px from container top
-          return { value: val, top: y };
-        });
-        return { left: relativeLeft, points };
-      });
-      setLabelPositions(newPositions);
-    };
-
-    computePositions();
-    const ro = new ResizeObserver(() => computePositions());
-    if (chartContainerRef.current) ro.observe(chartContainerRef.current);
-    window.addEventListener('resize', computePositions);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', computePositions);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stats, adminStats]);
-
-  if (loading) {
-    return <Loader text="Aggregating platform metrics..." />;
-  }
-
   const kpis = [
     {
       title: 'Total Students',
@@ -156,6 +117,47 @@ const AnalyticsDashboard = () => {
     { label: 'Alerts', value: stats?.announcementsCount || 0, color: 'bg-indigo-600' },
   ];
 
+  // Measure bar wrappers and compute label coordinates whenever stats change or layout resizes
+  useLayoutEffect(() => {
+    const computePositions = () => {
+      const container = chartContainerRef.current;
+      if (!container) return setLabelPositions([]);
+      const containerRect = container.getBoundingClientRect();
+      const newPositions = chartData.map((item, idx) => {
+        const wrapper = barRefs.current[idx];
+        if (!wrapper) return { left: 0, points: [] };
+        const wrapRect = wrapper.getBoundingClientRect();
+        const relativeLeft = wrapRect.left - containerRect.left; // relative to chart container
+        const height = wrapRect.height;
+        const topBase = wrapRect.top - containerRect.top; // top of wrapper relative
+        const max = Number(item.value) || 0;
+        const points = generateScale(max).map((val) => {
+          const pct = max > 0 ? (val / max) : 0; // 0..1
+          const y = topBase + (1 - pct) * height; // px from container top
+          return { value: val, top: y };
+        });
+        return { left: relativeLeft, points };
+      });
+      setLabelPositions(newPositions);
+    };
+
+    computePositions();
+    const ro = new ResizeObserver(() => computePositions());
+    if (chartContainerRef.current) ro.observe(chartContainerRef.current);
+    window.addEventListener('resize', computePositions);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', computePositions);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stats, adminStats]);
+
+  if (loading) {
+    return <Loader text="Aggregating platform metrics..." />;
+  }
+
+
+
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-8 text-left">
       <div>
@@ -174,7 +176,7 @@ const AnalyticsDashboard = () => {
           return (
             <div
               key={idx}
-              className="p-4 px-5 rounded-2xl bg-white border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden glass group"
+              className="p-4 px-5 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden glass group"
             >
               <div className="flex justify-between items-center w-full">
                 <div className="flex flex-col gap-0.5">
@@ -197,7 +199,7 @@ const AnalyticsDashboard = () => {
       {/* Analytics Insights */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Statistics Bar Chart Panel */}
-        <div className="md:col-span-2 p-6 rounded-2xl bg-white border border-border-color shadow-sm flex flex-col gap-4 text-left">
+        <div className="md:col-span-2 p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-4 text-left">
           <div className="flex justify-between items-center gap-3">
             <h3 className="font-display font-bold text-base text-text-primary">Platform Statistics Overview</h3>
             <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0">
@@ -249,7 +251,7 @@ const AnalyticsDashboard = () => {
         </div>
 
         {/* Live Active Student Sessions */}
-        <div className="p-6 rounded-2xl bg-white border border-border-color shadow-sm flex flex-col gap-4">
+        <div className="p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-4">
           <div className="flex justify-between items-center">
             <h3 className="font-display font-bold text-base text-text-primary">Live Student Activity</h3>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">

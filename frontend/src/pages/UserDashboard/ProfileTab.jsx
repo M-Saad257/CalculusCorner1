@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Edit3, Save, Medal, Sparkles, Clock, CheckCircle, GraduationCap, X, Loader2, Camera, Upload, Flame } from 'lucide-react';
+import { Edit3, Save, Medal, Sparkles, Clock, CheckCircle, GraduationCap, X, Loader2, Camera, Upload, Flame, Lock } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
+import { useContent } from '../../context/ContentContext';
 
 const SimpleCropper = ({ imageSrc, onCrop, onCancel }) => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -92,7 +93,7 @@ const SimpleCropper = ({ imageSrc, onCrop, onCancel }) => {
   
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white p-6 rounded-3xl w-full max-w-sm flex flex-col items-center shadow-2xl">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl w-full max-w-sm flex flex-col items-center shadow-2xl">
         <h3 className="font-display font-bold text-lg mb-2 text-text-primary">Crop Profile Photo</h3>
         <p className="text-xs text-text-secondary mb-6 text-center">Drag to position the image.</p>
         
@@ -157,11 +158,44 @@ const ProfileTab = ({
   stats,
   timeline
 }) => {
+  const { content } = useContent();
+  const visibility = content?.visibility || {};
+  const showCourses = visibility.courses !== false;
+  const showLectures = visibility.lectures !== false;
+  const showNotes = visibility.notes !== false;
+
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [cropImageSrc, setCropImageSrc] = useState(null);
   const avatarInputRef = useRef(null);
+
+  // Password state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordStatus, setPasswordStatus] = useState({ loading: false, error: '', success: '' });
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordStatus({ loading: false, error: 'New passwords do not match', success: '' });
+      return;
+    }
+    setPasswordStatus({ loading: true, error: '', success: '' });
+    try {
+      const res = await api.put('/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      setPasswordStatus({ loading: false, error: '', success: res.data.message || 'Password changed successfully' });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setPasswordStatus({ loading: false, error: err.response?.data?.message || 'Failed to change password', success: '' });
+    }
+  };
 
   const handleAvatarFileChange = async (e) => {
     const file = e.target.files[0];
@@ -213,7 +247,7 @@ const ProfileTab = ({
     <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-8 animate-fadeIn text-left">
       {/* Left Section - Profile Card */}
       <div className="w-full md:w-1/3 flex flex-col gap-6">
-        <div className="bg-white rounded-3xl border border-border-color p-6 shadow-sm flex flex-col items-center relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border-color p-6 shadow-sm flex flex-col items-center relative overflow-hidden">
           {/* Decorative background gradient */}
           <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-r from-primary/10 via-primary-light/5 to-transparent"></div>
 
@@ -326,7 +360,7 @@ const ProfileTab = ({
                       <span className="font-semibold">Reason:</span> {student?.banReason || 'No reason provided.'}
                     </div>
                     {hasPendingRequest ? (
-                      <div className="rounded-2xl bg-white border border-amber-200 p-4 text-sm text-text-secondary">
+                      <div className="rounded-2xl bg-white dark:bg-slate-900 border border-amber-200 p-4 text-sm text-text-secondary">
                         <p className="font-semibold text-amber-700">Appeal Status: Pending Review</p>
                         {unbanRequest && (
                           <p className="text-[11px] uppercase tracking-wide text-text-tertiary mt-2">Submitted: {new Date(unbanRequest.created_at || unbanRequest.createdAt).toLocaleDateString()}</p>
@@ -365,66 +399,121 @@ const ProfileTab = ({
             </div>
           )}
         </div>
+
+        {/* Security / Password Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border-color p-6 shadow-sm">
+          <h3 className="font-display font-bold text-lg text-text-primary mb-4 flex items-center gap-2">
+            <Lock size={18} className="text-primary" /> Security
+          </h3>
+          <form onSubmit={handlePasswordChange} className="flex flex-col gap-3">
+            <div>
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Current Password</label>
+              <input
+                type="password"
+                required
+                value={passwordData.currentPassword}
+                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">New Password</label>
+              <input
+                type="password"
+                required
+                value={passwordData.newPassword}
+                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Confirm New Password</label>
+              <input
+                type="password"
+                required
+                value={passwordData.confirmPassword}
+                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+              />
+            </div>
+
+            {passwordStatus.error && <p className="text-xs text-red-500 font-semibold">{passwordStatus.error}</p>}
+            {passwordStatus.success && <p className="text-xs text-emerald-500 font-semibold">{passwordStatus.success}</p>}
+
+            <Button type="submit" disabled={passwordStatus.loading} className="w-full mt-2 py-2.5 text-xs font-bold shadow-sm border-0 cursor-pointer flex justify-center items-center gap-1.5">
+              {passwordStatus.loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Change Password
+            </Button>
+          </form>
+        </div>
+
       </div>
 
       {/* Right Section - Statistics and Activity */}
       <div className="flex-1 flex flex-col gap-6">
         {/* Learning Statistics Grid */}
-        <div className="bg-white rounded-3xl border border-border-color p-6 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border-color p-6 shadow-sm">
           <h3 className="font-display font-bold text-lg text-text-primary mb-5">Learning Progress & Overview</h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100/55 text-left">
-              <span className="text-xxs font-extrabold uppercase text-indigo-500">Enrolled Courses</span>
-              <p className="font-display font-black text-2xl text-primary mt-1">{enrolledCourses?.length || 0}</p>
-            </div>
+            {showCourses && (
+              <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100/55 text-left">
+                <span className="text-xxs font-extrabold uppercase text-indigo-500">Enrolled Courses</span>
+                <p className="font-display font-black text-2xl text-primary mt-1">{enrolledCourses?.length || 0}</p>
+              </div>
+            )}
 
-            <div className="p-4 bg-purple-50/40 rounded-2xl border border-purple-100/55 text-left">
-              <span className="text-xxs font-extrabold uppercase text-purple-600">Videos Available</span>
-              <p className="font-display font-black text-2xl text-purple-600 mt-1">{videos.length}</p>
-            </div>
+            {showLectures && (
+              <div className="p-4 bg-purple-50/40 rounded-2xl border border-purple-100/55 text-left">
+                <span className="text-xxs font-extrabold uppercase text-purple-600">Videos Available</span>
+                <p className="font-display font-black text-2xl text-purple-600 mt-1">{videos.length}</p>
+              </div>
+            )}
 
-            <div className="p-4 bg-emerald-50/40 rounded-2xl border border-emerald-100/55 text-left">
-              <span className="text-xxs font-extrabold uppercase text-emerald-600">Formula Sheets</span>
-              <p className="font-display font-black text-2xl text-emerald-600 mt-1">{resources.length}</p>
-            </div>
+            {showNotes && (
+              <div className="p-4 bg-emerald-50/40 rounded-2xl border border-emerald-100/55 text-left">
+                <span className="text-xxs font-extrabold uppercase text-emerald-600">Formula Sheets</span>
+                <p className="font-display font-black text-2xl text-emerald-600 mt-1">{resources.length}</p>
+              </div>
+            )}
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-6 mt-6 p-4 bg-bg-secondary/40 rounded-2xl border border-border-color/60">
-            <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-bg-tertiary"
-                  strokeWidth="3.5"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className="text-primary"
-                  strokeWidth="3.5"
-                  strokeDasharray={`${stats.completion}, 100`}
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="font-display font-black text-sm text-text-primary">{stats.completion}%</span>
+          {showCourses && (
+            <div className="flex flex-col sm:flex-row items-center gap-6 mt-6 p-4 bg-bg-secondary/40 rounded-2xl border border-border-color/60">
+              <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <path
+                    className="text-bg-tertiary"
+                    strokeWidth="3.5"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    className="text-primary"
+                    strokeWidth="3.5"
+                    strokeDasharray={`${stats.completion}, 100`}
+                    strokeLinecap="round"
+                    stroke="currentColor"
+                    fill="none"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <div className="absolute flex flex-col items-center justify-center">
+                  <span className="font-display font-black text-base text-text-primary">{stats.completion}%</span>
+                </div>
+              </div>
+              <div className="text-center sm:text-left">
+                <h4 className="font-bold text-text-primary text-sm">Overall Course Progress</h4>
+                <p className="text-xs text-text-tertiary mt-1">
+                  You've completed <strong className="text-primary">{stats.completion}%</strong> of your active courses. Keep it up!
+                </p>
               </div>
             </div>
-            <div>
-              <h4 className="font-bold text-sm text-text-primary">Mastery Progress Ring</h4>
-              <p className="text-text-secondary text-xs mt-1 leading-relaxed">
-                You have mastered {stats.completion}% of the Calculus syllabus based on video completion, quizzes, and downloaded cheat sheets. Keep it up!
-              </p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Activity Log & Streak */}
-        <div className="bg-white rounded-3xl border border-border-color p-6 shadow-sm flex-1">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border-color p-6 shadow-sm flex-1">
           <h3 className="font-display font-bold text-lg text-text-primary mb-4">Activity Timeline</h3>
 
           <div className="flex flex-col gap-4">

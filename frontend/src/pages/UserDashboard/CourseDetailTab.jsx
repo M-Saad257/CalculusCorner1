@@ -149,7 +149,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
         <ArrowLeft size={16} /> Back to Dashboard
       </button>
 
-      <div className="bg-white rounded-3xl p-8 border border-border-color shadow-sm flex flex-col gap-6">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-border-color shadow-sm flex flex-col gap-6">
         <div>
           <span className="text-xs font-bold px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full">
             {course.grade}
@@ -288,7 +288,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
       </div>
 
       {takingQuiz && (
-        <div className="bg-white rounded-3xl p-8 border border-border-color shadow-sm mt-4 animate-fadeIn">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-border-color shadow-sm mt-4 animate-fadeIn">
           <h2 className="font-display font-bold text-xl mb-6">Final Assessment</h2>
           <div className="flex flex-col gap-8">
             {quizQuestions.map((q, qIdx) => (
@@ -298,7 +298,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
                 </h4>
                 <div className="flex flex-col gap-2">
                   {q.options.map((opt, oIdx) => (
-                    <label key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${quizAnswers[qIdx] === opt ? 'bg-primary-light/10 border-primary text-primary' : 'bg-white border-border-color text-text-secondary hover:bg-slate-50'}`}>
+                    <label key={oIdx} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${quizAnswers[qIdx] === opt ? 'bg-primary-light/10 border-primary text-primary' : 'bg-white dark:bg-slate-900 border-border-color text-text-secondary hover:bg-slate-50'}`}>
                       <input
                         type="radio"
                         name={`question-${qIdx}`}
@@ -325,7 +325,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
       {/* Certificate Payment Modal */}
       {paymentModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-md max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-y-auto cc-scroll text-left flex flex-col">
+          <div className="relative w-full max-w-md max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto cc-scroll text-left flex flex-col">
             <div className="px-6 py-5 border-b border-border-color flex items-center justify-between bg-bg-secondary/30 sticky top-0 z-10 backdrop-blur-md">
               <div className="flex items-center gap-2 text-primary">
                 <Award size={20} />
@@ -343,7 +343,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
               <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 flex flex-col gap-4">
                 <p className="text-sm text-amber-900 leading-relaxed m-0 text-center">Please transfer the amount to the following account to receive your certificate.</p>
 
-                <div className="flex flex-col gap-3 bg-white/60 p-4 rounded-xl border border-amber-200/50">
+                <div className="flex flex-col gap-3 bg-white dark:bg-slate-900/ p-4 rounded-xl border border-amber-200/50">
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-bold text-amber-400">Bank Name</span>
                     <span className="text-sm font-semibold text-amber-950">{bankDetails.bank_name || 'Not Configured'}</span>
@@ -386,7 +386,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
       {/* Name Entry Modal */}
       {showNameEntryModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
             <h3 className="font-display font-bold text-xl mb-4">Enter Certificate Name</h3>
             <p className="text-sm text-text-secondary mb-6">Max 10 characters, no spaces.</p>
             <input
@@ -413,7 +413,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
       {/* Certificate Viewer Modal (Dynamic HTML) */}
       {showCertificateModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
             <div className="px-6 py-4 border-b border-border-color flex items-center justify-between bg-bg-secondary/50">
               <div className="flex items-center gap-2 text-primary-dark">
                 <Award size={20} />
@@ -430,7 +430,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
             <div className="p-6 md:p-8 flex-1 overflow-auto bg-slate-50 flex items-center justify-center">
               <div
                 ref={certificateRef}
-                className="relative w-full max-w-3xl shadow-md border border-border-color bg-white overflow-hidden"
+                className="relative w-full max-w-3xl shadow-md border border-border-color bg-white dark:bg-slate-900 overflow-hidden"
                 style={{ aspectRatio: '2000/1414', containerType: 'inline-size' }}
               >
                 <img
@@ -490,7 +490,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
               </div>
             </div>
 
-            <div className="p-4 border-t border-border-color bg-white flex justify-end gap-3">
+            <div className="p-4 border-t border-border-color bg-white dark:bg-slate-900 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowCertificateModal(false)}>
                 Close
               </Button>

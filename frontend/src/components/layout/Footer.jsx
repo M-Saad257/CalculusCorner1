@@ -7,6 +7,7 @@ import api from '../../services/api';
 
 const Footer = () => {
   const { content } = useContent();
+  const visibility = content?.visibility || {};
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState(null); // 'success' | 'error' | null
   const [newsletterMessage, setNewsletterMessage] = useState('');
@@ -48,16 +49,21 @@ const Footer = () => {
 
   const getLogoSrc = () => {
     if (content?.logo?.logo_url) {
-      if (content.logo.logo_url.startsWith('http')) {
-        return content.logo.logo_url;
+      let url = content.logo.logo_url;
+      url = url.replace('localost', 'localhost');
+      if (url.startsWith('http')) {
+        return url;
       }
-      return `https://localhost:5173${content.logo.logo_url}`;
+      if (!url.startsWith('/')) {
+        url = `/uploads/logo/${url}`;
+      }
+      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
     }
     return "/CClogo.png";
   };
 
   return (
-    <footer className="bg-bg-secondary border-t border-border-color pt-16 pb-8">
+    <footer className="bg-bg-secondary border-t border-border-color pt-16 pb-8 relative z-10">
       <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 pb-12 border-b border-border-color">
 
         {/* Brand Column */}
@@ -66,7 +72,7 @@ const Footer = () => {
             <img
               src={getLogoSrc()}
               alt="Calculus Corner Logo"
-              className="h-10 w-auto object-contain mix-blend-multiply"
+              className="h-10 w-auto object-contain"
               onError={(e) => {
                 if (e.target.src !== window.location.origin + "/CClogo.png") {
                   e.target.src = "/CClogo.png";
@@ -81,16 +87,16 @@ const Footer = () => {
             Where math actually makes sense. Helping students build real confidence through expert lessons, AI-powered tools, and a community that grows together.
           </p>
           <div className="flex gap-3 mt-2">
-            <a href="https://www.youtube.com/@Calculus.Corner" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="YouTube">
+            <a href="https://www.youtube.com/@Calculus.Corner" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="YouTube">
               <FaYoutube size={18} />
             </a>
-            <a href="https://instagram.com/calculus.corner?igsh=cmtmdTY0YmVqYnJx" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="Instagram">
+            <a href="https://instagram.com/calculus.corner?igsh=cmtmdTY0YmVqYnJx" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="Instagram">
               <FaInstagram size={18} />
             </a>
-            <a href="https://x.com/CalculusCorner" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="Twitter">
+            <a href="https://x.com/CalculusCorner" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="Twitter">
               <FaTwitter size={18} />
             </a>
-            <a href="https://whatsapp.com/channel/0029VaE4Wcn8KMqo8oK8LH18" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="WhatsApp">
+            <a href="https://whatsapp.com/channel/0029VaE4Wcn8KMqo8oK8LH18" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="WhatsApp">
               <FaWhatsapp size={18} />
             </a>
           </div>
@@ -100,11 +106,10 @@ const Footer = () => {
         <div className="flex flex-col gap-4 lg:pl-8">
           <h4 className="font-display font-bold text-text-primary text-base tracking-wide">Quick Links</h4>
           <ul className="list-none p-0 m-0 flex flex-col gap-3">
-            <li><a href="/#about" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">About Us</a></li>
-            <li><a href="/courses" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Courses</a></li>
-            <li><a href="/#ai" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">AI Features</a></li>
-            <li><a href="/#success" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Success Stories</a></li>
-            <li><a href="/#contact" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Contact</a></li>
+            {visibility.about !== false && <li><Link to="/about" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">About Us</Link></li>}
+            {visibility.courses !== false && <li><Link to="/courses" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Courses</Link></li>}
+            {visibility.success_stories !== false && <li><a href="/#success" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Success Stories</a></li>}
+            {visibility.contact !== false && <li><a href="/#contact" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Contact</a></li>}
           </ul>
         </div>
 
@@ -112,11 +117,11 @@ const Footer = () => {
         <div className="flex flex-col gap-4 lg:pl-8">
           <h4 className="font-display font-bold text-text-primary text-base tracking-wide">Resources</h4>
           <ul className="list-none p-0 m-0 flex flex-col gap-3">
-            <li><a href="/#videos" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Video Library</a></li>
-            <li><a href="/#practice" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Practice Quizzes</a></li>
-            <li><a href="/#resources" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">PDF Notes</a></li>
-            <li><a href="/#subjects" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Blog & Articles</a></li>
-            <li><a href="/#contact" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">FAQ</a></li>
+            {visibility.lectures !== false && <li><Link to="/lectures" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Video Library</Link></li>}
+            {visibility.practice !== false && <li><a href="/#practice" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Practice Quizzes</a></li>}
+            {visibility.notes !== false && <li><Link to="/notes" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">PDF Notes</Link></li>}
+            {visibility.books !== false && <li><Link to="/books" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Books & Subjects</Link></li>}
+            {visibility.contact !== false && <li><a href="/#contact" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">FAQ</a></li>}
           </ul>
         </div>
 
@@ -134,7 +139,7 @@ const Footer = () => {
               placeholder="Your email address"
               value={newsletterEmail}
               onChange={(e) => setNewsletterEmail(e.target.value)}
-              className="w-full bg-white border border-border-color rounded-full py-2.5 pl-4 pr-12 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 shadow-sm transition-all"
+              className="w-full bg-bg-color border border-border-color rounded-full py-2.5 pl-4 pr-12 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30 shadow-sm transition-all"
               required
               disabled={newsletterLoading}
             />

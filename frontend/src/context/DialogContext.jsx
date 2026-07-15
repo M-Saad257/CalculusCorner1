@@ -71,7 +71,7 @@ export const DialogProvider = ({ children }) => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="bg-white p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-md text-left font-sans relative"
+              className="bg-bg-color p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-md text-left font-sans relative"
             >
               <button
                 onClick={closeDialog}
@@ -150,7 +150,7 @@ export const DialogProvider = ({ children }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className={`p-4 rounded-2xl border shadow-lg flex items-center gap-3 bg-white pointer-events-auto border-border-color`}
+              className={`p-4 rounded-2xl border shadow-lg flex items-center gap-3 bg-bg-color pointer-events-auto border-border-color`}
             >
               <div className={`p-2 rounded-xl shrink-0 ${
                 toast.type === 'success' 

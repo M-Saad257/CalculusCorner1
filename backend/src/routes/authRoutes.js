@@ -3,6 +3,8 @@ const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const authController = require('../controllers/authController');
 
+const { protect } = require('../middleware/authMiddleware');
+
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 requests per window
@@ -17,5 +19,10 @@ const authLimiter = rateLimit({
 
 router.post('/login', authController.login);
 router.post('/register', authController.register);
+router.post('/verify-otp', authController.verifyOTP);
+router.post('/resend-otp', authController.resendOTP);
+router.post('/forgot-password', authController.forgotPassword);
+router.post('/reset-password', authController.resetPassword);
+router.put('/change-password', protect, authController.changePassword);
 
 module.exports = router;

@@ -13,7 +13,7 @@ const TermsOfService = () => {
       
       <main className="grow pt-32 pb-24">
         <div className="container mx-auto px-4 md:px-8 max-w-4xl">
-          <div className="bg-white rounded-3xl border border-border-color shadow-sm p-8 md:p-12">
+          <div className="bg-bg-color rounded-3xl border border-border-color shadow-sm p-8 md:p-12">
             <h1 className="font-display font-extrabold text-3xl md:text-5xl text-gradient bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent mb-8 border-b border-border-color pb-6">
               Terms of Service
             </h1>

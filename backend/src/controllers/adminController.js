@@ -482,29 +482,42 @@ const adminController = {
 
   async createResource(req, res, next) {
     try {
-      const { title, category } = req.body;
+      const { title, category, subcategory } = req.body;
       if (!title) {
         res.status(400);
         throw new Error('Resource title is required');
       }
 
-      if (!req.file) {
+      const fileObj = req.files && req.files['file'] ? req.files['file'][0] : null;
+      const thumbObj = req.files && req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
+
+      if (!fileObj) {
         res.status(400);
         throw new Error('Please upload a file');
       }
 
-      const file_url = `/uploads/resources/${req.file.filename}`;
-      const original_filename = req.file.originalname || req.file.filename;
+      const file_url = '/uploads/resources/' + fileObj.filename;
+      const original_filename = fileObj.originalname || fileObj.filename;
+      let thumbnail_url = null;
+      if (thumbObj) {
+         thumbnail_url = '/uploads/resources/' + thumbObj.filename;
+      }
 
       // Automatically extract and persist file metadata
+      const path = require('path');
       const ext = path.extname(original_filename).replace('.', '').toLowerCase();
       const metadata = {
-        size_bytes: req.file.size,
+        size_bytes: fileObj.size,
         extension: ext,
-        mime_type: req.file.mimetype || 'application/octet-stream'
+        mime_type: fileObj.mimetype || 'application/octet-stream'
       };
 
-      const resourceId = await ResourceModel.create(title, file_url, original_filename, metadata, category || 'General');
+      const ResourceModel = require('../models/ResourceModel');
+      const NotificationModel = require('../models/NotificationModel');
+      const { broadcastToAll, broadcastToStudents, getIO } = require('../socket');
+      const { sendUpdatedDashboardStats } = require('../socket/handlers/users');
+
+      const resourceId = await ResourceModel.create(title, file_url, original_filename, metadata, category || 'General', subcategory || null, thumbnail_url);
       const newResource = await ResourceModel.getById(resourceId);
 
       // Real-time broadcasts & notifications
@@ -523,7 +536,10 @@ const adminController = {
   async updateResource(req, res, next) {
     try {
       const { id } = req.params;
-      const { title, category } = req.body;
+      const { title, category, subcategory } = req.body;
+      const ResourceModel = require('../models/ResourceModel');
+      const path = require('path');
+      const fs = require('fs');
 
       const resource = await ResourceModel.getById(id);
       if (!resource) {
@@ -534,17 +550,21 @@ const adminController = {
       let file_url = resource.file_url;
       let original_filename = resource.original_filename || null;
       let metadata = resource.metadata || null;
+      let thumbnail_url = resource.thumbnail_url || null;
 
-      if (req.file) {
-        file_url = `/uploads/resources/${req.file.filename}`;
-        original_filename = req.file.originalname || req.file.filename;
+      const fileObj = req.files && req.files['file'] ? req.files['file'][0] : null;
+      const thumbObj = req.files && req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
+
+      if (fileObj) {
+        file_url = '/uploads/resources/' + fileObj.filename;
+        original_filename = fileObj.originalname || fileObj.filename;
 
         // Re-extract metadata for the new file
         const ext = path.extname(original_filename).replace('.', '').toLowerCase();
         metadata = {
-          size_bytes: req.file.size,
+          size_bytes: fileObj.size,
           extension: ext,
-          mime_type: req.file.mimetype || 'application/octet-stream'
+          mime_type: fileObj.mimetype || 'application/octet-stream'
         };
 
         // Delete old file if it was a local upload
@@ -556,8 +576,21 @@ const adminController = {
         }
       }
 
-      await ResourceModel.update(id, title || resource.title, file_url, original_filename, metadata, category || resource.category);
+      if (thumbObj) {
+        thumbnail_url = '/uploads/resources/' + thumbObj.filename;
+        if (resource.thumbnail_url && resource.thumbnail_url.startsWith('/uploads/resources/')) {
+          const oldFilePath = path.join(__dirname, '../..', resource.thumbnail_url);
+          fs.unlink(oldFilePath, (err) => {
+            if (err) console.error('Failed to delete old resource thumbnail:', err.message);
+          });
+        }
+      }
+
+      await ResourceModel.update(id, title || resource.title, file_url, original_filename, metadata, category || resource.category, subcategory !== undefined ? subcategory : resource.subcategory, thumbnail_url);
       const updatedResource = await ResourceModel.getById(id);
+
+      const { broadcastToAll, getIO } = require('../socket');
+      const { sendUpdatedDashboardStats } = require('../socket/handlers/users');
 
       // Real-time broadcasts
       broadcastToAll('resource:update', updatedResource);
@@ -572,6 +605,10 @@ const adminController = {
   async deleteResource(req, res, next) {
     try {
       const { id } = req.params;
+      const ResourceModel = require('../models/ResourceModel');
+      const path = require('path');
+      const fs = require('fs');
+
       const resource = await ResourceModel.getById(id);
       if (!resource) {
         res.status(404);
@@ -586,7 +623,18 @@ const adminController = {
         });
       }
 
+      // delete thumb on disk
+      if (resource.thumbnail_url && resource.thumbnail_url.startsWith('/uploads/resources/')) {
+        const filePath = path.join(__dirname, '../..', resource.thumbnail_url);
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Failed to delete resource thumbnail:', err.message);
+        });
+      }
+
       await ResourceModel.delete(id);
+
+      const { broadcastToAll, getIO } = require('../socket');
+      const { sendUpdatedDashboardStats } = require('../socket/handlers/users');
 
       // Real-time broadcasts
       broadcastToAll('resource:delete', { id: parseInt(id) });
@@ -598,7 +646,7 @@ const adminController = {
     }
   },
 
-  // --- VIDEOS CRUD ---
+  // Videos CRUD
   async getVideos(req, res, next) {
     try {
       const videos = await VideoModel.getAll();
@@ -1013,8 +1061,8 @@ const adminController = {
       const resourcesCount = await ResourceModel.getCount();
       const videosCount = await VideoModel.getCount();
 
-      const AiModel = require('../models/AiModel');
-      const aiStats = await AiModel.getAnalytics();
+      // AI features were removed, mock the analytics so the frontend doesn't crash
+      const aiStats = { totalConversations: 0, totalMessages: 0 };
 
       const [annRows] = await db.query("SELECT COUNT(*) as count FROM announcements");
 
@@ -1781,12 +1829,12 @@ Return ONLY a raw JSON array with no markdown, no code fences, no extra text. Fo
     }
   },
 
-  // --- SUBJECTS CRUD ---
+  // --- SUBJECTS (Books) CRUD ---
   async getSubjects(req, res, next) {
     try {
-      const SubjectModel = require('../models/SubjectModel');
-      const subjects = await SubjectModel.getAll();
-      res.status(200).json({ success: true, data: subjects });
+      const BookModel = require('../models/BookModel');
+      const books = await BookModel.getAll();
+      res.status(200).json({ success: true, data: books });
     } catch (err) {
       next(err);
     }
@@ -1794,13 +1842,43 @@ Return ONLY a raw JSON array with no markdown, no code fences, no extra text. Fo
 
   async createSubject(req, res, next) {
     try {
-      const SubjectModel = require('../models/SubjectModel');
-      const subjectId = await SubjectModel.create(req.body);
-      const newSubject = await SubjectModel.getBySlug(req.body.slug);
-      
-      broadcastToAll('subject:create', newSubject);
-      
-      res.status(201).json({ success: true, message: 'Subject created successfully', data: newSubject });
+      const { title, category, subcategory } = req.body;
+      if (!title) {
+        res.status(400);
+        throw new Error('Book title is required');
+      }
+
+      const fileObj = req.files && req.files['file'] ? req.files['file'][0] : null;
+      const thumbObj = req.files && req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
+
+      if (!fileObj) {
+        res.status(400);
+        throw new Error('Please upload a file');
+      }
+
+      const file_url = '/uploads/resources/' + fileObj.filename;
+      const original_filename = fileObj.originalname || fileObj.filename;
+      let thumbnail_url = null;
+      if (thumbObj) {
+         thumbnail_url = '/uploads/resources/' + thumbObj.filename;
+      }
+
+      const path = require('path');
+      const ext = path.extname(original_filename).replace('.', '').toLowerCase();
+      const metadata = {
+        size_bytes: fileObj.size,
+        extension: ext,
+        mime_type: fileObj.mimetype || 'application/octet-stream'
+      };
+
+      const BookModel = require('../models/BookModel');
+      const bookId = await BookModel.create(title, file_url, original_filename, metadata, category || 'General', subcategory || null, thumbnail_url);
+      const newBook = await BookModel.getById(bookId);
+
+      const { broadcastToAll } = require('../socket');
+      broadcastToAll('subject:create', newBook);
+
+      res.status(201).json({ success: true, message: 'Book created successfully', data: newBook });
     } catch (err) {
       next(err);
     }
@@ -1809,16 +1887,60 @@ Return ONLY a raw JSON array with no markdown, no code fences, no extra text. Fo
   async updateSubject(req, res, next) {
     try {
       const { id } = req.params;
-      const SubjectModel = require('../models/SubjectModel');
-      const updated = await SubjectModel.update(id, req.body);
-      if (!updated) {
+      const { title, category, subcategory } = req.body;
+      const BookModel = require('../models/BookModel');
+      const path = require('path');
+      const fs = require('fs');
+
+      const book = await BookModel.getById(id);
+      if (!book) {
         res.status(404);
-        throw new Error('Subject not found');
+        throw new Error('Book not found');
       }
-      
-      broadcastToAll('subject:update', { id, ...req.body });
-      
-      res.status(200).json({ success: true, message: 'Subject updated successfully' });
+
+      let file_url = book.file_url;
+      let original_filename = book.original_filename || null;
+      let metadata = book.metadata || null;
+      let thumbnail_url = book.thumbnail_url || null;
+
+      const fileObj = req.files && req.files['file'] ? req.files['file'][0] : null;
+      const thumbObj = req.files && req.files['thumbnail'] ? req.files['thumbnail'][0] : null;
+
+      if (fileObj) {
+        file_url = '/uploads/resources/' + fileObj.filename;
+        original_filename = fileObj.originalname || fileObj.filename;
+        const ext = path.extname(original_filename).replace('.', '').toLowerCase();
+        metadata = {
+          size_bytes: fileObj.size,
+          extension: ext,
+          mime_type: fileObj.mimetype || 'application/octet-stream'
+        };
+
+        if (book.file_url && book.file_url.startsWith('/uploads/resources/')) {
+          const oldFilePath = path.join(__dirname, '../..', book.file_url);
+          fs.unlink(oldFilePath, (err) => {
+            if (err) console.error('Failed to delete old book file:', err.message);
+          });
+        }
+      }
+
+      if (thumbObj) {
+        thumbnail_url = '/uploads/resources/' + thumbObj.filename;
+        if (book.thumbnail_url && book.thumbnail_url.startsWith('/uploads/resources/')) {
+          const oldFilePath = path.join(__dirname, '../..', book.thumbnail_url);
+          fs.unlink(oldFilePath, (err) => {
+            if (err) console.error('Failed to delete old book thumbnail:', err.message);
+          });
+        }
+      }
+
+      await BookModel.update(id, title || book.title, file_url, original_filename, metadata, category || book.category, subcategory !== undefined ? subcategory : book.subcategory, thumbnail_url);
+      const updatedBook = await BookModel.getById(id);
+
+      const { broadcastToAll } = require('../socket');
+      broadcastToAll('subject:update', updatedBook);
+
+      res.status(200).json({ success: true, message: 'Book updated successfully', data: updatedBook });
     } catch (err) {
       next(err);
     }
@@ -1827,16 +1949,36 @@ Return ONLY a raw JSON array with no markdown, no code fences, no extra text. Fo
   async deleteSubject(req, res, next) {
     try {
       const { id } = req.params;
-      const SubjectModel = require('../models/SubjectModel');
-      const deleted = await SubjectModel.delete(id);
-      if (!deleted) {
+      const BookModel = require('../models/BookModel');
+      const path = require('path');
+      const fs = require('fs');
+
+      const book = await BookModel.getById(id);
+      if (!book) {
         res.status(404);
-        throw new Error('Subject not found');
+        throw new Error('Book not found');
       }
-      
+
+      if (book.file_url && book.file_url.startsWith('/uploads/resources/')) {
+        const filePath = path.join(__dirname, '../..', book.file_url);
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Failed to delete book file:', err.message);
+        });
+      }
+
+      if (book.thumbnail_url && book.thumbnail_url.startsWith('/uploads/resources/')) {
+        const filePath = path.join(__dirname, '../..', book.thumbnail_url);
+        fs.unlink(filePath, (err) => {
+          if (err) console.error('Failed to delete book thumbnail:', err.message);
+        });
+      }
+
+      await BookModel.delete(id);
+
+      const { broadcastToAll } = require('../socket');
       broadcastToAll('subject:delete', { id: parseInt(id) });
-      
-      res.status(200).json({ success: true, message: 'Subject deleted successfully' });
+
+      res.status(200).json({ success: true, message: 'Book deleted successfully' });
     } catch (err) {
       next(err);
     }

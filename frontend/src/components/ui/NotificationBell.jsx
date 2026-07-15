@@ -38,7 +38,7 @@ const NotificationBell = () => {
       <AnimatePresence>
         {isNotifOpen && (
           <motion.div
-            className="absolute -right-14 sm:right-0 top-12 w-[300px] sm:w-80 bg-white border border-border-color rounded-2xl shadow-xl z-50 overflow-hidden text-left"
+            className="absolute -right-14 sm:right-0 top-12 w-[300px] sm:w-80 bg-bg-color border border-border-color rounded-2xl shadow-xl z-50 overflow-hidden text-left"
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}

@@ -65,13 +65,13 @@ const ResourceLibraryPage = () => {
       </div>
 
       {Object.keys(categories).length === 0 ? (
-        <div className="rounded-3xl bg-white border border-border-color p-8 text-text-secondary text-sm">
+        <div className="rounded-3xl bg-bg-color border border-border-color p-8 text-text-secondary text-sm">
           No resources available at the moment.
         </div>
       ) : (
         <div className="grid gap-10">
           {Object.entries(categories).map(([category, items]) => (
-            <div key={category} className="bg-white border border-border-color rounded-3xl shadow-sm p-6">
+            <div key={category} className="bg-bg-color border border-border-color rounded-3xl shadow-sm p-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
                 <div>
                   <h2 className="font-display font-bold text-2xl text-text-primary">{category}</h2>

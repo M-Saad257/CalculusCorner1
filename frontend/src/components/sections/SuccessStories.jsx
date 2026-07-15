@@ -103,7 +103,7 @@ const SuccessStories = () => {
   };
 
   return (
-    <section id="success" className="py-16 md:py-24 bg-bg-color relative overflow-hidden" ref={containerRef}>
+    <section id="success" className="py-10 md:py-16 bg-bg-color/70 backdrop-blur-[2px] relative overflow-hidden" ref={containerRef}>
       {/* Background shape */}
       <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-bg-secondary to-transparent z-0 pointer-events-none" />
 
@@ -137,7 +137,7 @@ const SuccessStories = () => {
                   animate="center"
                   exit="exit"
                   transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                  className="w-full p-8 md:p-12 rounded-3xl bg-white shadow-xl border border-border-color relative text-left glass"
+                  className="w-full p-8 md:p-12 rounded-3xl bg-bg-color shadow-xl border border-border-color relative text-left glass"
                 >
                   <Quote className="absolute top-6 right-8 text-slate-100/90 pointer-events-none" size={64} />
                   
@@ -171,7 +171,7 @@ const SuccessStories = () => {
           {!loading && testimonials.length > 0 && (
             <div className="flex items-center justify-center gap-6 mt-8">
               <button 
-                className="bg-white border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm" 
+                className="bg-bg-color border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm" 
                 onClick={() => paginate(-1)}
                 aria-label="Previous review"
               >
@@ -195,7 +195,7 @@ const SuccessStories = () => {
               </div>
               
               <button 
-                className="bg-white border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm" 
+                className="bg-bg-color border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm" 
                 onClick={() => paginate(1)}
                 aria-label="Next review"
               >

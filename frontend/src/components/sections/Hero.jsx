@@ -116,29 +116,30 @@ const Hero = () => {
     }
   };
 
-  // Hero.jsx ke andar getImageUrl function ko is se replace karein:
   const getImageUrl = (url) => {
     if (!url) return "/SirMehtabPhoto.png";
 
-    // If the path starts with /uploads directly from the server config mapping
+    url = url.replace('localost', 'localhost');
+
     if (url.startsWith("/uploads")) {
-      return `https://localhost:5173${url}`;
+      // Serve uploads from the backend running on port 5000
+      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
     }
 
     // Fallback map checks for old relative routes mappings
-    if (url.startsWith("http://")) {
+    if (url.startsWith("http://") && !url.includes("localhost")) {
       return url.replace("http://", "https://");
     }
 
     return url;
   };
   return (
-    <section id="about" className="relative min-h-screen flex items-center justify-center pt-28 pb-12 overflow-hidden bg-white dark:bg-bg-color text-text-primary" ref={containerRef}>
+    <section id="about" className="relative min-h-screen flex px-10 items-center justify-center pt-20 pb-8 overflow-hidden bg-bg-color/70 dark:bg-[#0B1221]/90 backdrop-blur-[2px] text-text-primary" ref={containerRef}>
       {/* Notice Banner */}
-      {announcements.length === 1 && (
+      {announcements.length === 1 && ( 
         <div className="absolute top-20 left-0 w-full bg-gradient-to-r from-primary to-primary-dark text-white text-center py-3 px-4 font-semibold text-xs md:text-sm z-30 flex justify-center items-center gap-2 shadow-sm animate-fadeIn">
           <Star size={16} fill="currentColor" className="text-accent shrink-0" />
-          <span className="font-extrabold uppercase text-[10px] bg-white/15 px-2 py-0.5 rounded border border-white/20 mr-1 select-none">
+          <span className="font-extrabold uppercase text-[10px] bg-bg-color/ px-2 py-0.5 rounded border border-white/20 mr-1 select-none">
             {announcements[0].title || 'Notice'}
           </span>
           {announcements[0].link ? (
@@ -171,7 +172,7 @@ const Hero = () => {
             {[...announcements, ...announcements].map((ann, idx) => (
               <div key={idx} className="flex items-center gap-2.5 whitespace-nowrap px-4 shrink-0">
                 <Star size={14} fill="currentColor" className="text-accent shrink-0 animate-pulse" />
-                <span className="font-extrabold uppercase text-[10px] tracking-wider bg-white/15 px-2.5 py-0.5 rounded-full border border-white/25">
+                <span className="font-extrabold uppercase text-[10px] tracking-wider bg-bg-color/ px-2.5 py-0.5 rounded-full border border-white/25">
                   {ann.title || 'Notice'}
                 </span>
                 <span className="text-xs md:text-sm font-semibold tracking-wide">
@@ -189,55 +190,7 @@ const Hero = () => {
         </div>
       )}
 
-      {/* Animated Math Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none   overflow-hidden select-none">
-        <motion.div
-          className="absolute top-[10%] left-[5%] w-[180px] md:w-[350px] h-[180px] md:h-[350px] opacity-40 md:opacity-80"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-        >
-          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-            <circle cx="100" cy="100" r="80" stroke="var(--color-primary)" strokeWidth="1.5" strokeOpacity="0.15" strokeDasharray="5 5" />
-            <path d="M100 20 L180 140 L20 140 Z" stroke="var(--color-primary)" strokeWidth="1.5" strokeOpacity="0.15" />
-          </svg>
-        </motion.div>
-
-        <motion.div
-          className="absolute bottom-[10%] right-[5%] w-[200px] md:w-[450px] h-[200px] md:h-[450px] opacity-40 md:opacity-80"
-          animate={{ rotate: -360 }}
-          transition={{ duration: 50, repeat: Infinity, ease: "linear" }}
-        >
-          <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-            <rect x="40" y="40" width="120" height="120" stroke="var(--color-accent)" strokeWidth="1.5" strokeOpacity="0.15" transform="rotate(45 100 100)" />
-            <ellipse cx="100" cy="100" rx="90" ry="30" stroke="var(--color-accent)" strokeWidth="1.5" strokeOpacity="0.15" />
-          </svg>
-        </motion.div>
-
-        {/* Math Symbols floating */}
-        <motion.div
-          className="absolute top-[20%] left-[12%] text-5xl md:text-8xl text-primary-dark opacity-[0.06] font-bold"
-          animate={{ y: [-15, 15, -15], rotate: [0, 10, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        >
-          ∫<sub className="text-[0.4em] -ml-2">0</sub><sup className="text-[0.4em]">∞</sup>
-        </motion.div>
-
-        <motion.div
-          className="absolute bottom-[20%] right-[12%] text-6xl md:text-9xl text-primary-dark opacity-[0.06] font-bold"
-          animate={{ y: [15, -15, 15], rotate: [0, -10, 0] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        >
-          ∑
-        </motion.div>
-
-        <motion.div
-          className="absolute top-[35%] right-[20%] text-2xl md:text-4xl text-primary-dark opacity-[0.06] font-bold"
-          animate={{ scale: [1, 1.08, 1], opacity: [0.03, 0.08, 0.03] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-        >
-          e<sup>iπ</sup> + 1 = 0
-        </motion.div>
-      </div>
+      {/* Global Animated Math Background is rendered via LandingPage.jsx */}
 
       <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10 w-full mt-6">
 
@@ -264,7 +217,7 @@ const Hero = () => {
 
           {/* Subheadline */}
           <motion.p variants={itemVariants} className="text-base sm:text-lg md:text-xl text-gray-500 dark:text-text-secondary leading-relaxed max-w-2xl xl:max-w-xl mb-8">
-            {heroData.subheadline || 'From Algebra to Calculus, learn every concept step by step — clear video lessons, real expert guidance, and an AI tutor that adapts to the way you learn.'}
+            {heroData.subheadline || 'From Algebra to Calculus, learn every concept step by step — clear video lessons and real expert guidance.'}
           </motion.p>
 
           {/* Call to Actions */}
@@ -277,7 +230,7 @@ const Hero = () => {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="relative z-10 group-hover:translate-x-1 transition-transform">
                 <path d="m9 18 6-6-6-6" />
               </svg>
-              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+              <div className="absolute inset-0 bg-bg-color/ translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
             </button>
             <button
               onClick={() => {
@@ -285,7 +238,7 @@ const Hero = () => {
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
                 else navigate('/#videos');
               }}
-              className="flex items-center justify-center gap-2 px-8 py-3.5 bg-white dark:bg-bg-secondary text-primary font-bold rounded-full border border-gray-200 dark:border-border-color shadow-sm hover:border-primary/50 transition-all hover:-translate-y-0.5 active:translate-y-0"
+              className="flex items-center justify-center gap-2 px-8 py-3.5 bg-bg-color dark:bg-bg-secondary text-primary font-bold rounded-full border border-gray-200 dark:border-border-color shadow-sm hover:border-primary/50 transition-all hover:-translate-y-0.5 active:translate-y-0"
             >
               <Play size={18} className="fill-primary text-primary" />
               <span>{heroData.button_secondary || 'Watch Free Lessons'}</span>
@@ -306,7 +259,7 @@ const Hero = () => {
           {/* Main Image Container */}
           <div className="relative w-full max-w-[320px] rounded-[40px] bg-gray-50 dark:bg-bg-tertiary pt-8 px-6 pb-0 mb-20 flex justify-center items-end h-[380px]">
             {/* Top Left Float */}
-            <div className="absolute top-6 -left-12 p-3 lg:p-4 rounded-2xl bg-glass dark:bg-bg-secondary shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 dark:border-border-color flex flex-col items-center text-center max-w-[140px] z-20">
+            <div className="absolute top-6 -left-12 p-3 lg:p-4 rounded-2xl bg-glass  shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 dark:border-border-color flex flex-col items-center text-center max-w-[140px] z-20">
               <User className="text-primary mb-1" size={24} />
               <p className="text-[11px] font-bold text-gray-800 dark:text-text-secondary leading-tight">Muhammad Mehtab</p>
             </div>
@@ -328,7 +281,7 @@ const Hero = () => {
           </div>
 
           {/* Bottom Card over overlapping */}
-          <div className="absolute bottom-0 z-30 w-[110%] max-w-[420px] text-center p-6 rounded-3xl bg-white dark:bg-bg-secondary shadow-[0_20px_50px_rgb(0,0,0,0.08)] border border-gray-100 dark:border-border-color border-t-4 border-t-primary">
+          <div className="absolute bottom-0 z-30 w-[110%] max-w-[420px] text-center p-6 rounded-3xl bg-bg-color dark:bg-bg-secondary shadow-[0_20px_50px_rgb(0,0,0,0.08)] border border-gray-100 dark:border-border-color border-t-4 border-t-primary">
             <div className="absolute -top-6 left-1/2 -translate-x-1/2 w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-lg border-4 border-white dark:border-bg-color">
               <Award className="text-white fill-white" size={20} />
             </div>

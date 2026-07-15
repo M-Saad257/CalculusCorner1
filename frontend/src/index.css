@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-primary: #2563EB;
   --color-primary-light: #60A5FA;
@@ -24,6 +26,20 @@
   
   --shadow-glow: 0 0 20px rgba(37, 99, 235, 0.2);
   --shadow-glow-accent: 0 0 20px rgba(251, 191, 36, 0.3);
+}
+
+@layer base {
+  .dark {
+    --color-bg-color: #0F172A;
+    --color-bg-secondary: #1E293B;
+    --color-bg-tertiary: #334155;
+    
+    --color-text-primary: #F8FAFC;
+    --color-text-secondary: #CBD5E1;
+    --color-text-tertiary: #94A3B8;
+    
+    --color-border-color: #334155;
+  }
 }
 
 /* Custom global overrides */
@@ -60,6 +76,12 @@ a {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.5) 0%, rgba(15, 23, 42, 0.2) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 
 .dark-glass {

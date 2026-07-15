@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Clock, BarChart } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
+import api from '../../services/api';
 
 const PracticeTab = ({ videos }) => {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ const PracticeTab = ({ videos }) => {
       </div>
 
       {videos.length === 0 ? (
-        <div className="p-12 text-center bg-white border border-border-color rounded-3xl text-text-secondary font-semibold">
+        <div className="p-12 text-center bg-white dark:bg-slate-900 border border-border-color rounded-3xl text-text-secondary font-semibold">
           No video lectures uploaded yet. Check back soon!
         </div>
       ) : (
@@ -34,8 +35,12 @@ const PracticeTab = ({ videos }) => {
           {videos.map(vid => (
             <div
               key={vid.id}
-              onClick={() => window.open(vid.url, '_blank')}
-              className="group cursor-pointer rounded-3xl bg-white border border-border-color p-4 hover:shadow-md hover:border-primary-light transition-all flex flex-col gap-3 text-left"
+              onClick={() => {
+                // Track progress instantly (100% since it opens externally)
+                api.post(`/student/progress/video/${vid.id}`, { progressPercent: 100 }).catch(err => console.error(err));
+                window.open(vid.url, '_blank');
+              }}
+              className="group cursor-pointer rounded-3xl bg-white dark:bg-slate-900 border border-border-color p-4 hover:shadow-md hover:border-primary-light transition-all flex flex-col gap-3 text-left"
             >
               <div className="relative aspect-video rounded-2xl overflow-hidden bg-bg-secondary border border-border-color/40">
                 <img
@@ -48,7 +53,7 @@ const PracticeTab = ({ videos }) => {
                   }}
                 />
                 <div className="absolute inset-0 bg-black/35 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="w-12 h-12 rounded-full bg-white/95 text-primary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+                  <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-900/ text-primary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
                     <Play size={20} className="fill-current ml-0.5" />
                   </div>
                 </div>

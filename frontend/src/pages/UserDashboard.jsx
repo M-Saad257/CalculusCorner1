@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, BookOpen, GraduationCap, User, Play, FileText, BrainCircuit, Loader2, X, Menu, MessageSquare, LayoutDashboard, Star } from 'lucide-react';
+import { LogOut, BookOpen, GraduationCap, User, Play, FileText, BrainCircuit, Loader2, X, Menu, MessageSquare, LayoutDashboard, Star, TrendingUp, Award, Headset } from 'lucide-react';
 import api from '../services/api';
 import Button from '../components/ui/Button';
 import Loader from '../components/ui/Loader';
 import { useSocket } from '../hooks/useSocket';
 import NotificationBell from '../components/ui/NotificationBell';
 import { useDialog } from '../context/DialogContext';
+import { useContent } from '../context/ContentContext';
 
 const defaultCourses = [
   {
@@ -132,6 +133,8 @@ const ConnectionIndicator = ({ status }) => {
 const UserDashboard = ({ defaultTab = 'overview' }) => {
   const navigate = useNavigate();
   const { showToast, alert: showAlert } = useDialog();
+  const { content } = useContent();
+  const visibility = content?.visibility || {};
 
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [selectedCourseForDetail, setSelectedCourseForDetail] = useState(null);
@@ -156,6 +159,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [resources, setResources] = useState([]);
   const [videos, setVideos] = useState([]);
+  const [recentVideos, setRecentVideos] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
 
   const [bio, setBio] = useState('');
@@ -311,6 +315,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
         if (data.analytics) setAnalyticsData(data.analytics);
         if (Array.isArray(data.timeline)) setTimeline(data.timeline);
         if (Array.isArray(data.courseProgress)) setCourseProgress(data.courseProgress);
+        if (Array.isArray(data.recentVideos)) setRecentVideos(data.recentVideos);
         if (data.aiTutorStats) setAiTutorStats({ ...data.aiTutorStats, fetchedAt: Date.now() });
 
         // If videos & resources endpoints are still used for content lists, keep them
@@ -767,7 +772,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
     <div className="flex h-screen w-full max-w-full bg-bg-secondary overflow-hidden font-sans text-left">
       {/* AI Tutor Loading Overlay */}
       {tutorIsLoadingApi && createPortal(
-        <div className="fixed inset-0 z-[9999] backdrop-blur-md bg-white/80 flex flex-col items-center justify-center">
+        <div className="fixed inset-0 z-[9999] backdrop-blur-md bg-bg-color/ flex flex-col items-center justify-center">
           <Loader text="AI Tutor is Thinking..." className="scale-125" />
           <p className="text-text-secondary text-base font-medium mt-2">Breaking down the steps for your equation.</p>
         </div>,
@@ -782,7 +787,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
         ></div>
       )}
 
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-border-color flex flex-col shadow-lg z-50 transition-transform duration-300 lg:static lg:translate-x-0 lg:shadow-sm shrink-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-bg-color border-r border-border-color flex flex-col shadow-lg z-50 transition-transform duration-300 lg:static lg:translate-x-0 lg:shadow-sm shrink-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-5 flex items-center justify-between border-b border-border-color shadow-sm">
           <div className="flex items-center gap-3">
             <h2 className="text-center font-display font-extrabold text-base" style={
@@ -803,26 +808,32 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
           <button onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'overview' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
             <LayoutDashboard size={18} /> <span>Overview</span>
           </button>
-          <button onClick={() => { setActiveTab('courses'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'courses' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <BookOpen size={18} /> <span>Courses</span>
-          </button>
-          <button onClick={() => { setActiveTab('resources'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'resources' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <FileText size={18} /> <span>Formula Sheets</span>
-          </button>
-          <button onClick={() => { setActiveTab('videos'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'videos' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <Play size={18} /> <span>Video Lectures</span>
-          </button>
+          {visibility.courses !== false && (
+            <button onClick={() => { setActiveTab('courses'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'courses' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+              <BookOpen size={18} /> <span>Courses</span>
+            </button>
+          )}
+          {visibility.notes !== false && (
+            <button onClick={() => { setActiveTab('resources'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'resources' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+              <FileText size={18} /> <span>Formula Sheets</span>
+            </button>
+          )}
+          {visibility.lectures !== false && (
+            <button onClick={() => { setActiveTab('videos'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'videos' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+              <Play size={18} /> <span>Video Lectures</span>
+            </button>
+          )}
           <button onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'profile' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
             <User size={18} /> <span>My Profile</span>
           </button>
           <button onClick={() => { setActiveTab('performance'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'performance' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <MessageSquare size={18} /> <span>Performance Reports</span>
+            <TrendingUp size={18} /> <span>Performance Reports</span>
           </button>
           <button onClick={() => { setActiveTab('badges'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'badges' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <MessageSquare size={18} /> <span>Achievement Badges</span>
+            <Award size={18} /> <span>Achievement Badges</span>
           </button>
           <button onClick={() => { setActiveTab('support_chat'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'support_chat' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <MessageSquare size={18} /> <span>Support Chat</span>
+            <Headset size={18} /> <span>Support Chat</span>
           </button>
         </nav>
 
@@ -834,7 +845,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
       </aside>
 
       <main className="grow flex flex-col overflow-hidden">
-        <header className="relative h-18 p-10 bg-white border-b border-border-color flex items-center justify-between px-8 shadow-sm z-40">
+        <header className="relative h-18 p-10 bg-bg-color border-b border-border-color flex items-center justify-between px-8 shadow-sm z-40">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -853,7 +864,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
           </div>
         </header>
 
-        <div ref={containerRef} className="grow p-8 overflow-y-auto">
+        <div ref={containerRef} className="grow p-8 overflow-y-auto relative z-10">
           {loading ? (
             <Loader text="Syncing credentials & content database..." />
           ) : error && !student ? (
@@ -892,6 +903,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
                   student={student}
                   stats={stats}
                   videos={videos}
+                  recentVideos={recentVideos}
                   enrolledCourses={enrolledCourses}
                   setActiveTab={setActiveTab}
                   setSelectedCourseForDetail={setSelectedCourseForDetail}
@@ -989,7 +1001,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
       {/* Review Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
+          <div className="bg-bg-color rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-200">
             <div className="p-6 border-b border-border-color flex items-center justify-between bg-bg-secondary/30">
               <h3 className="font-display font-bold text-xl text-text-primary m-0 flex items-center gap-2">
                 <Star className="text-amber-400" /> Write a Review

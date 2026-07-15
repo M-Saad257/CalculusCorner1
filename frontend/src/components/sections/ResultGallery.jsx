@@ -47,7 +47,7 @@ const ResultGallery = () => {
   };
 
   return (
-    <section className="py-16 md:py-24 bg-bg-color relative" ref={containerRef}>
+    <section className="py-10 md:py-16 bg-bg-color relative" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8">
         
         <div className="text-center max-w-2xl mx-auto mb-16">

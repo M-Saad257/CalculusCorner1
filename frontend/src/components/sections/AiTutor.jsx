@@ -49,7 +49,7 @@ const AiTutor = () => {
   };
 
   return (
-    <section id="ai" className="py-16 md:py-24 bg-bg-secondary overflow-hidden" ref={containerRef}>
+    <section id="ai" className="py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] overflow-hidden" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
         
         {/* Left column: Information */}
@@ -67,7 +67,7 @@ const AiTutor = () => {
               <h2 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-text-primary mb-6 leading-tight">
                 Solve Your <span className="text-gradient">Complex Equations</span>
               </h2>
-              <div className="bg-white border border-border-color rounded-3xl p-6 md:p-8 shadow-sm">
+              <div className="bg-bg-color border border-border-color rounded-3xl p-6 md:p-8 shadow-sm">
                 <ol className="list-decimal list-inside flex flex-col gap-5 text-text-secondary text-base md:text-lg">
                   <li><span className="font-semibold text-text-primary">First, <Link to="/auth" className="text-primary hover:underline font-bold">Log In</Link> to your account.</span></li>
                   <li><span className="font-semibold text-text-primary">Go to the <span className="text-primary font-bold">AI Tutor</span> in the sidebar of your dashboard.</span></li>
@@ -114,10 +114,10 @@ const AiTutor = () => {
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <div className="rounded-3xl overflow-hidden shadow-xl border border-border-color bg-white flex flex-col h-[500px]">
+          <div className="rounded-3xl overflow-hidden shadow-xl border border-border-color bg-bg-color flex flex-col h-[500px]">
             
             <div className="flex items-center gap-4 px-6 py-4 bg-gradient-to-r from-primary to-primary-dark text-white">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-white/20 shadow-inner">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-bg-color/ shadow-inner">
                 <Bot size={24} />
               </div>
               <div className="flex flex-col text-left">
@@ -132,7 +132,7 @@ const AiTutor = () => {
                 <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary text-white shrink-0 shadow-sm">
                   <Bot size={16} />
                 </div>
-                <div className="p-3 px-4 rounded-2xl rounded-bl-sm bg-white text-text-primary text-sm md:text-base border border-border-color shadow-sm leading-relaxed">
+                <div className="p-3 px-4 rounded-2xl rounded-bl-sm bg-bg-color text-text-primary text-sm md:text-base border border-border-color shadow-sm leading-relaxed">
                   Hi! I'm your AI Math Tutor. What problem can I help you solve today?
                 </div>
               </div>
@@ -181,7 +181,7 @@ const AiTutor = () => {
             </div>
 
             {/* Input Form Footer */}
-            <div className="p-4 bg-white border-t border-border-color">
+            <div className="p-4 bg-bg-color border-t border-border-color">
               <form onSubmit={handleSolve} className="flex gap-2">
                 <input 
                   type="text" 

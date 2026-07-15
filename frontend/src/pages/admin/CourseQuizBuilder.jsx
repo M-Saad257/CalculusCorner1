@@ -122,7 +122,7 @@ const CourseQuizBuilder = () => {
       <div className="flex flex-col gap-3 md:hidden">
         {/* Row 1: Arrow + Title */}
         <div className="flex items-start gap-3">
-          <button onClick={() => navigate('/admin/courses')} className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 cursor-pointer shrink-0 mt-0.5">
+          <button onClick={() => navigate('/admin/courses')} className="p-2 bg-bg-color border border-border-color rounded-xl hover:bg-slate-50 cursor-pointer shrink-0 mt-0.5">
             <ArrowLeft size={18} className="text-text-secondary" />
           </button>
           <div>
@@ -134,7 +134,7 @@ const CourseQuizBuilder = () => {
         <div className="flex gap-2 justify-center">
           <button
             onClick={() => handleOpenForm()}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white text-primary border border-primary font-semibold text-sm rounded-lg hover:bg-primary-50 cursor-pointer shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-bg-color text-primary border border-primary font-semibold text-sm rounded-lg hover:bg-primary-50 cursor-pointer shadow-sm transition-all"
           >
             <Plus size={16} /> Add Question
           </button>
@@ -151,7 +151,7 @@ const CourseQuizBuilder = () => {
       {/* Desktop layout (hidden below md) */}
       <div className="hidden md:flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/admin/courses')} className="p-2 bg-white border border-border-color rounded-xl hover:bg-slate-50 cursor-pointer">
+          <button onClick={() => navigate('/admin/courses')} className="p-2 bg-bg-color border border-border-color rounded-xl hover:bg-slate-50 cursor-pointer">
             <ArrowLeft size={18} className="text-text-secondary" />
           </button>
           <div>
@@ -162,7 +162,7 @@ const CourseQuizBuilder = () => {
         <div className="flex gap-2">
           <button
             onClick={() => handleOpenForm()}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-primary border border-primary font-semibold text-sm rounded-lg hover:bg-primary-50 cursor-pointer shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-bg-color text-primary border border-primary font-semibold text-sm rounded-lg hover:bg-primary-50 cursor-pointer shadow-sm transition-all"
           >
             <Plus size={16} /> Add Question
           </button>
@@ -176,7 +176,7 @@ const CourseQuizBuilder = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border-color shadow-sm p-6">
+      <div className="bg-bg-color rounded-2xl border border-border-color shadow-sm p-6">
         {questions.length === 0 ? (
           <div className="text-center py-12 text-text-secondary">
             <p>No questions added yet. Click "Add Question" to begin.</p>
@@ -200,7 +200,7 @@ const CourseQuizBuilder = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {q.options.map((opt, oIdx) => (
-                    <div key={oIdx} className={`p-2 rounded-lg border ${opt === q.correctAnswer ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold' : 'bg-white border-border-color text-text-secondary'}`}>
+                    <div key={oIdx} className={`p-2 rounded-lg border ${opt === q.correctAnswer ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-bold' : 'bg-bg-color border-border-color text-text-secondary'}`}>
                       {String.fromCharCode(65 + oIdx)}. {opt}
                     </div>
                   ))}
@@ -213,7 +213,7 @@ const CourseQuizBuilder = () => {
 
       {editingIndex !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-bg-color rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
             <div className="p-6 md:p-8 pb-4 border-b border-border-color flex justify-between items-center shrink-0">
               <h3 className="font-display font-bold text-xl text-text-primary m-0">
                 {editingIndex === 'new' ? 'Add Question' : 'Edit Question'}

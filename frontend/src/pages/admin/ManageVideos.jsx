@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Link as LinkIcon, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Link as LinkIcon, AlertCircle, CheckCircle, Film } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
-
-const STANDARD_CATEGORIES = ['Calculus', 'Trigonometry', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12', 'General'];
+import { RESOURCE_CATEGORIES } from '../../utils/categories';
 
 const ManageVideos = () => {
   const [videos, setVideos] = useState([]);
@@ -17,14 +16,13 @@ const ManageVideos = () => {
     url: '',
     videoId: '',
     thumbnail: '',
-    category: 'Calculus'
+    category: '',
+    subcategory: ''
   });
 
   const [formError, setFormError] = useState('');
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   const [isValidUrl, setIsValidUrl] = useState(false);
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
-  const [customCategory, setCustomCategory] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
 
@@ -62,23 +60,14 @@ const ManageVideos = () => {
 
   const handleEdit = (video) => {
     setEditingId(video.id);
-    const isStandard = STANDARD_CATEGORIES.includes(video.category);
-    
     setFormData({
       title: video.title || '',
       url: video.url || '',
       videoId: video.videoId || '',
       thumbnail: video.thumbnail || '',
-      category: isStandard ? video.category : 'Calculus'
+      category: video.category || '',
+      subcategory: video.subcategory || ''
     });
-
-    if (!isStandard && video.category) {
-      setShowCustomCategory(true);
-      setCustomCategory(video.category);
-    } else {
-      setShowCustomCategory(false);
-      setCustomCategory('');
-    }
 
     setFormError('');
     setIsFetchingMetadata(false);
@@ -116,8 +105,8 @@ const ManageVideos = () => {
       return;
     }
 
-    // YouTube URL regex matching youtu.be, watch?v=, embed/, etc. and capturing 11 char ID
-    const regex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})([#&?].*)?$/;
+    // YouTube URL regex
+    const regex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})([#&?].*)?$/;
     const match = urlVal.match(regex);
 
     if (!match) {
@@ -129,7 +118,7 @@ const ManageVideos = () => {
     const videoId = match[1];
     setIsValidUrl(true);
 
-    // Duplicate check client-side
+    // Duplicate check
     const isDuplicate = videos.some(v => v.videoId === videoId && v.id !== editingId);
     if (isDuplicate) {
       setFormError('This video has already been added to the library.');
@@ -140,7 +129,6 @@ const ManageVideos = () => {
 
     setFormData(prev => ({ ...prev, videoId }));
 
-    // Fetch metadata
     try {
       setIsFetchingMetadata(true);
       const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(urlVal)}`);
@@ -172,35 +160,19 @@ const ManageVideos = () => {
     }
   };
 
-  const handleCategoryChange = (val) => {
-    if (val === 'custom') {
-      setShowCustomCategory(true);
-      setFormData(prev => ({ ...prev, category: '' }));
-    } else {
-      setShowCustomCategory(false);
-      setFormData(prev => ({ ...prev, category: val }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const finalCategory = showCustomCategory ? (customCategory.trim() || 'Calculus') : formData.category;
-    const finalPayload = {
-      ...formData,
-      category: finalCategory
-    };
-
-    if (!finalPayload.title || !finalPayload.url || !finalPayload.videoId) {
+    if (!formData.title || !formData.url || !formData.videoId || !formData.category) {
       showToast('Please fill out all fields and ensure the YouTube URL is valid.', 'error');
       return;
     }
 
     try {
       if (editingId === 'new') {
-        await api.post('/admin/videos', finalPayload);
+        await api.post('/admin/videos', formData);
         showToast('Video added successfully.', 'success');
       } else {
-        await api.put(`/admin/videos/${editingId}`, finalPayload);
+        await api.put(`/admin/videos/${editingId}`, formData);
         showToast('Video updated successfully.', 'success');
       }
       setEditingId(null);
@@ -217,23 +189,22 @@ const ManageVideos = () => {
       url: '',
       videoId: '',
       thumbnail: '',
-      category: 'Calculus'
+      category: '',
+      subcategory: ''
     });
     setFormError('');
-    setShowCustomCategory(false);
-    setCustomCategory('');
     setIsFetchingMetadata(false);
     setIsValidUrl(false);
   };
 
-  // Form rendered directly inside modal dialog
+  const availableSubcategories = formData.category ? (RESOURCE_CATEGORIES[formData.category] || []) : [];
 
   return (
     <div className="flex flex-col gap-6 text-left">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
         <div>
-          <h2 className="font-display font-bold text-xl text-text-primary">Manage Videos</h2>
-          <p className="text-text-secondary text-xs md:text-sm">Manage embed video links for student lecture modules.</p>
+          <h2 className="text-2xl font-bold text-slate-800">Manage Videos</h2>
+          <p className="text-slate-500 text-sm mt-1">Manage embed video links for student lecture modules.</p>
         </div>
         <button 
           onClick={handleAddNew}
@@ -248,221 +219,199 @@ const ManageVideos = () => {
           Loading lecture videos...
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {videos.map(video => (
-            <div key={video.id} className="p-4 rounded-2xl bg-white border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative text-left overflow-hidden">
+            <div key={video.id} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative text-left">
               <div className="flex flex-col gap-3">
-                {/* Thumbnail Preview */}
-                <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-bg-secondary border border-border-color/60 shadow-sm">
-                  <img 
-                    src={video.thumbnail || `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`} 
-                    alt={video.title} 
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=60';
-                    }}
-                  />
-                  <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-xxs font-extrabold bg-primary/95 text-white shadow-sm uppercase tracking-wider">
-                    {video.category || 'Calculus'}
+                <div className="relative w-full h-36 rounded-xl overflow-hidden bg-slate-100 group">
+                  {video.thumbnail ? (
+                    <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full text-slate-400">
+                      <Film size={32} />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+                     <a 
+                      href={video.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-white/20 hover:bg-white text-white hover:text-slate-900 rounded-full text-sm font-semibold transition-all backdrop-blur-md"
+                     >
+                       Watch on YouTube
+                     </a>
                   </div>
                 </div>
-                <h3 className="font-display font-bold text-base text-text-primary m-0 line-clamp-2" title={video.title}>{video.title}</h3>
-                <a 
-                  href={video.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-xs text-text-tertiary hover:text-primary break-all"
-                >
-                  <LinkIcon size={12} className="shrink-0" />
-                  <span className="line-clamp-1">{video.url}</span>
-                </a>
+                
+                <h3 className="font-display font-bold text-base text-slate-800 m-0 line-clamp-2" title={video.title}>{video.title}</h3>
               </div>
-              <div className="flex gap-2 mt-4 pt-3 border-t border-border-color/60">
-                <button className="flex items-center justify-center gap-1.5 px-3 py-2 bg-bg-secondary text-primary font-bold text-xs rounded-lg hover:bg-primary-light hover:text-white transition-all border-0 grow cursor-pointer" onClick={() => handleEdit(video)}>
-                  <Edit2 size={14} /> Edit
-                </button>
-                <button className="flex items-center justify-center gap-1.5 px-3 py-2 bg-red-50 text-red-500 font-bold text-xs rounded-lg hover:bg-red-500 hover:text-white transition-all border-0 grow cursor-pointer" onClick={() => handleDelete(video)}>
-                  <Trash2 size={14} /> Delete
-                </button>
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-slate-50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50 px-2 py-1 rounded-md">
+                  {video.category} {video.subcategory ? `> ${video.subcategory}` : ''}
+                </span>
+                <div className="flex gap-1">
+                  <button onClick={() => handleEdit(video)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors cursor-pointer border-0 bg-transparent">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleDelete(video)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer border-0 bg-transparent">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             </div>
           ))}
+          {videos.length === 0 && (
+            <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 gap-3 border-2 border-dashed border-slate-100 rounded-2xl">
+              <Film size={48} className="text-slate-300" />
+              <p>No videos added yet.</p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Modal Dialog for Add/Edit Form */}
-      {editingId !== null && (() => {
-        const isSaveDisabled = !formData.title.trim() || !formData.url.trim() || !formData.videoId || isFetchingMetadata || !!formError;
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-            <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
-              
-              {/* Header: Sticky */}
-              <div className="p-6 md:p-8 pb-4 border-b border-border-color flex justify-between items-center shrink-0">
-                <h3 className="font-display font-bold text-xl text-text-primary m-0">
-                  {editingId === 'new' ? 'Add New Video' : 'Edit Video'}
-                </h3>
-                <button 
-                  onClick={() => setEditingId(null)}
-                  className="p-2 bg-bg-secondary hover:bg-slate-200 text-text-secondary rounded-full transition-colors border-0 cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
+      {/* Editor Modal */}
+      {editingId !== null && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col my-auto border border-slate-100/50">
+            <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-display font-bold text-lg text-slate-800 m-0">
+                {editingId === 'new' ? 'Add New Video' : 'Edit Video Details'}
+              </h3>
+              <button 
+                onClick={() => setEditingId(null)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-white transition-all cursor-pointer border-0 bg-transparent shadow-sm"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5 text-left">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-slate-700">YouTube URL</label>
+                <div className="relative">
+                  <input
+                    type="url"
+                    value={formData.url}
+                    onChange={(e) => handleUrlChange(e.target.value)}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className={`w-full px-4 py-2.5 pl-11 rounded-xl border bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all text-slate-700 ${formError ? 'border-red-300 focus:border-red-500 bg-red-50/30' : isValidUrl ? 'border-emerald-300 focus:border-emerald-500 bg-emerald-50/30' : 'border-slate-200 focus:border-primary'}`}
+                    required
+                  />
+                  <LinkIcon className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isValidUrl ? 'text-emerald-500' : 'text-slate-400'}`} size={18} />
+                  {isFetchingMetadata && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-slate-300 border-t-primary rounded-full animate-spin"></div>
+                    </div>
+                  )}
+                  {isValidUrl && !isFetchingMetadata && (
+                    <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" size={18} />
+                  )}
+                </div>
+                {formError && <p className="text-xs text-red-600 font-medium pl-1 mt-1">{formError}</p>}
+                {!formError && isValidUrl && formData.videoId && (
+                  <p className="text-xs text-emerald-600 font-medium pl-1 mt-1">Valid video ID: {formData.videoId}</p>
+                )}
               </div>
 
-              {/* Form wrapper */}
-              <form onSubmit={handleSubmit} className="grow flex flex-col overflow-hidden">
-                {/* Form Body: Scrollable */}
-                <div className="grow p-6 md:p-8 overflow-y-auto flex flex-col gap-4">
-                  {/* URL Input */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-text-secondary uppercase">YouTube URL / Link</label>
-                    <div className="relative">
-                      <input 
-                        type="url" 
-                        placeholder="e.g. https://www.youtube.com/watch?v=..." 
-                        value={formData.url} 
-                        onChange={e => handleUrlChange(e.target.value)} 
-                        required 
-                        className={`w-full p-3 pr-16 border rounded-lg text-sm focus:outline-none focus:ring-1 ${
-                          formError 
-                            ? 'border-red-500 focus:border-red-500 focus:ring-red-200' 
-                            : isValidUrl 
-                              ? 'border-emerald-500 focus:border-emerald-500 focus:ring-emerald-200' 
-                              : 'border-border-color focus:border-primary focus:ring-primary/20'
-                        }`}
-                      />
-                      {isFetchingMetadata && (
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-text-secondary animate-pulse">
-                          Fetching...
-                        </span>
-                      )}
-                    </div>
-                    {formError && <p className="text-red-500 text-xs mt-1 font-semibold">{formError}</p>}
-                    {isValidUrl && !isFetchingMetadata && !formError && (
-                      <p className="text-emerald-600 text-xs mt-1 font-semibold flex items-center gap-1"><CheckCircle size={12} /> Valid YouTube Video</p>
-                    )}
-                  </div>
-
-                  {/* Thumbnail Preview */}
-                  {formData.thumbnail && (
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-text-secondary uppercase">Thumbnail Preview</label>
-                      <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-bg-secondary border border-border-color shadow-sm">
-                        <img 
-                          src={formData.thumbnail} 
-                          alt="Video Thumbnail" 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=60';
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Title Input */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-text-secondary uppercase">Video Title</label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Limits & Derivatives" 
-                      value={formData.title} 
-                      onChange={e => setFormData({...formData, title: e.target.value})} 
-                      required 
-                      className="w-full p-3 border border-border-color rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  {/* Category Dropdown */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-text-secondary uppercase">Category</label>
-                    <select
-                      value={showCustomCategory ? 'custom' : formData.category}
-                      onChange={e => handleCategoryChange(e.target.value)}
-                      className="w-full p-3 border border-border-color rounded-lg text-sm bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    >
-                      {STANDARD_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                      <option value="custom">Other (Custom Category)</option>
-                    </select>
-                  </div>
-
-                  {/* Custom Category Input */}
-                  {showCustomCategory && (
-                    <div className="flex flex-col gap-1 animate-fadeIn">
-                      <label className="text-xs font-bold text-text-secondary uppercase">Custom Category Name</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Integration" 
-                        value={customCategory} 
-                        onChange={e => setCustomCategory(e.target.value)} 
-                        required 
-                        maxLength={50}
-                        className="w-full p-3 border border-border-color rounded-lg text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                      />
-                    </div>
-                  )}
+              {formData.thumbnail && (
+                <div className="rounded-xl overflow-hidden bg-slate-100 border border-slate-200 aspect-video w-full flex-shrink-0 relative">
+                  <img src={formData.thumbnail} alt="Video preview" className="w-full h-full object-cover" />
+                  <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm">PREVIEW</div>
                 </div>
+              )}
 
-                {/* Footer: Sticky */}
-                <div className="p-6 md:p-8 pt-4 border-t border-border-color flex gap-3 shrink-0 bg-bg-secondary/40">
-                  <button 
-                    type="submit" 
-                    disabled={isSaveDisabled}
-                    className={`flex items-center justify-center gap-1.5 px-4 py-2.5 text-white font-bold text-sm rounded-lg border-0 shadow-sm grow cursor-pointer transition-all ${
-                      isSaveDisabled 
-                        ? 'bg-slate-300 cursor-not-allowed opacity-60' 
-                        : 'bg-primary hover:bg-primary-dark'
-                    }`}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-slate-700">Title</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Video title"
+                  className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-700"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-semibold text-slate-700">Category</label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value, subcategory: '' })}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-700"
+                    required
                   >
-                    <Save size={16} /> {editingId === 'new' ? 'Save' : 'Update'}
-                  </button>
-                  <button 
-                    type="button" 
-                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary text-text-secondary font-bold text-sm rounded-lg hover:bg-slate-200 border-0 grow cursor-pointer transition-all" 
-                    onClick={() => setEditingId(null)}
-                  >
-                    <X size={16} /> Cancel
-                  </button>
+                    <option value="">Select Category</option>
+                    {Object.keys(RESOURCE_CATEGORIES).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
                 </div>
-              </form>
-            </div>
+                
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-semibold text-slate-700">Subcategory</label>
+                  <select
+                    value={formData.subcategory}
+                    onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                    className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-slate-700 disabled:opacity-50"
+                    disabled={!formData.category}
+                  >
+                    <option value="">Optional</option>
+                    {availableSubcategories.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingId(null)}
+                  className="px-5 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={!isValidUrl || !!formError || !formData.title || !formData.category}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white border-0 font-semibold text-sm hover:bg-primary-dark transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-primary/20"
+                >
+                  <Save size={16} /> {editingId === 'new' ? 'Add Video' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
-        );
-      })()}
+        </div>
+      )}
 
-      {/* Custom Delete Confirmation Modal */}
-      {deleteConfirmId !== null && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
-            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-2">
-              <AlertCircle size={24} />
+      {/* Delete Confirmation */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 text-left">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-6 flex flex-col gap-4 border border-slate-100/50">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                <AlertCircle size={20} />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg m-0">Remove Video</h3>
+                <p className="text-slate-500 text-sm mt-1 mb-0 leading-relaxed">
+                  Are you sure you want to remove <span className="font-semibold text-slate-700">"{deleteConfirmName}"</span> from the lecture library?
+                </p>
+              </div>
             </div>
-            
-            <h3 className="font-display font-bold text-lg text-text-primary">
-              Confirm Deletion
-            </h3>
-            
-            <p className="text-text-secondary text-sm leading-relaxed">
-              Are you sure you want to permanently delete the video <span className="font-semibold text-text-primary">"{deleteConfirmName}"</span>? This action cannot be undone.
-            </p>
-            
-            <div className="flex gap-3 mt-4">
+            <div className="flex justify-end gap-3 mt-2">
               <button 
-                onClick={handleConfirmDelete} 
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-lg border-0 shadow-sm grow cursor-pointer transition-all"
-              >
-                Delete Video
-              </button>
-              <button 
-                onClick={() => { setDeleteConfirmId(null); setDeleteConfirmName(''); }} 
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary hover:bg-slate-200 text-text-secondary font-bold text-sm rounded-lg border-0 grow cursor-pointer transition-all"
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors cursor-pointer bg-white"
               >
                 Cancel
+              </button>
+              <button 
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white border-0 font-semibold text-sm hover:bg-red-700 transition-colors cursor-pointer shadow-sm shadow-red-600/20"
+              >
+                Remove
               </button>
             </div>
           </div>

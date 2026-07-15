@@ -6,12 +6,19 @@ import SubjectDetailPage from './pages/SubjectDetailPage';
 import UserDashboard from './pages/UserDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ResourceLibraryPage from './pages/ResourceLibraryPage';
+import NotesPage from './pages/NotesPage';
+import LecturesPage from './pages/LecturesPage';
+import BooksPage from './pages/BooksPage';
+import AboutPage from './pages/AboutPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Unauthorized from './pages/Unauthorized';
 import ProtectedRoute from './components/ProtectedRoute';
+import VisibilityRoute from './components/VisibilityRoute';
 import ScrollToTop from './components/ScrollToTop';
 import YoutubeSubscribePopup from './components/YoutubeSubscribePopup';
+import GlobalMathBackground from './components/layout/GlobalMathBackground';
+import DynamicFavicon from './components/DynamicFavicon';
 import { ContentProvider } from './context/ContentContext';
 import { SocketProvider } from './context/SocketContext';
 import { DialogProvider } from './context/DialogContext';
@@ -21,16 +28,22 @@ function App() {
     <DialogProvider>
       <SocketProvider>
         <ContentProvider>
+          <DynamicFavicon />
           <Router>
             <ScrollToTop />
 	    <YoutubeSubscribePopup />
-            <div className="min-h-screen bg-bg-color font-sans antialiased text-text-primary selection:bg-primary-light selection:text-white">
+            <div className="min-h-screen flex flex-col bg-bg-color font-sans antialiased text-text-primary selection:bg-primary-light selection:text-white relative">
+              <GlobalMathBackground />
               <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/auth" element={<AuthPage />} />
-                <Route path="/courses" element={<CoursesPage />} />
-                <Route path="/subjects/:slug" element={<SubjectDetailPage />} />
+                <Route path="/courses" element={<VisibilityRoute feature="courses"><CoursesPage /></VisibilityRoute>} />
+                <Route path="/subjects/:slug" element={<VisibilityRoute feature="books"><SubjectDetailPage /></VisibilityRoute>} />
+                <Route path="/notes" element={<VisibilityRoute feature="notes"><NotesPage /></VisibilityRoute>} />
+                <Route path="/lectures" element={<VisibilityRoute feature="lectures"><LecturesPage /></VisibilityRoute>} />
+                <Route path="/books" element={<VisibilityRoute feature="books"><BooksPage /></VisibilityRoute>} />
+                <Route path="/about" element={<VisibilityRoute feature="about"><AboutPage /></VisibilityRoute>} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />

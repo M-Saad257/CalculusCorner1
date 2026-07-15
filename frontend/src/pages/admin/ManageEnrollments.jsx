@@ -103,7 +103,7 @@ const ManageEnrollments = () => {
         <p className="text-text-secondary text-xs md:text-sm">Review and approve course enrollments after verifying bank payments.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-border-color shadow-sm overflow-hidden">
+      <div className="bg-bg-color rounded-2xl border border-border-color shadow-sm overflow-hidden">
         {enrollments.length === 0 ? (
           <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
             <CheckCircle className="text-emerald-400" size={48} />
@@ -124,7 +124,7 @@ const ManageEnrollments = () => {
               </thead>
               <tbody className="divide-y divide-border-color/50">
                 {enrollments.map((enrollment) => (
-                  <tr key={enrollment.enrollmentId} className="hover:bg-slate-50 transition-colors">
+                  <tr key={enrollment.enrollmentId} className="dark:hover:bg-bg-secondary hover:bg-slate-50 transition-colors">
                     <td className="p-4 pl-6">
                       <div className="flex flex-col gap-0.5">
                         <span className="font-semibold text-sm text-text-primary">{enrollment.studentName}</span>

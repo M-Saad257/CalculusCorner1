@@ -73,8 +73,19 @@ const Contact = () => {
     }
   };
 
+  const targetEmail = contactData.email || 'calculuscorner.official@gmail.com';
+  const emailSubject = encodeURIComponent('Inquiry from Calculus Corner');
+  const emailBody = encodeURIComponent('Hi Calculus Corner Team,\n\nI am reaching out to learn more about your courses. Please provide me with more information.\n\nThank you!');
+  const mailtoLink = `mailto:${targetEmail}?subject=${emailSubject}&body=${emailBody}`;
+
+  const rawPhone = contactData.phone || '+92 302 8983263';
+  const whatsappNumber = rawPhone.replace(/[^0-9]/g, '');
+  const whatsappMessage = encodeURIComponent('Hi Calculus Corner Team! I am interested in your courses and would like to know more.');
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
+
+
   return (
-    <section id="contact" className="py-16 md:py-24 bg-bg-secondary relative" ref={containerRef}>
+    <section id="contact" className="py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] relative" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8">
         
         <div className="text-center max-w-2xl mx-auto mb-12">
@@ -91,157 +102,47 @@ const Contact = () => {
         </div>
 
         <motion.div 
-          className="grid grid-cols-1 lg:grid-cols-[1fr_1.5fr] gap-12 items-start"
+          className="w-full max-w-4xl mx-auto"
           variants={containerVariants}
           initial="hidden"
           animate={isInView ? "visible" : "hidden"}
         >
-          {/* Contact Info */}
-          <motion.div variants={itemVariants} className="flex flex-col gap-6 w-full">
-            <div className="flex items-center gap-4 p-5 bg-white rounded-2xl shadow-sm border border-border-color hover:translate-x-2 hover:border-primary-light transition-all duration-300 text-left">
-              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-primary/10 to-primary-light/5 text-primary rounded-full shrink-0">
-                <Mail size={24} />
-              </div>
-              <div className="flex flex-col">
-                <h3 className="font-display font-bold text-base md:text-lg text-text-primary mb-0.5">Email Us</h3>
-                <p className="text-sm md:text-base text-text-secondary">{contactData.email || 'calculuscorner.official@gmail.com'}</p>
-              </div>
-            </div>
+          {/* Elegant Contact Cards */}
+          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row bg-bg-color rounded-3xl shadow-xl border border-border-color overflow-hidden relative">
+            {/* Background Accent */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-primary to-emerald-500"></div>
 
-            <div className="flex items-center gap-4 p-5 bg-white rounded-2xl shadow-sm border border-border-color hover:translate-x-2 hover:border-primary-light transition-all duration-300 text-left">
-              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-primary/10 to-primary-light/5 text-primary rounded-full shrink-0">
-                <Phone size={24} />
+            {/* Email Section */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-10 border-b sm:border-b-0 sm:border-r border-border-color/60 hover:bg-bg-secondary/30 transition-colors group">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                <Mail size={32} />
               </div>
-              <div className="flex flex-col">
-                <h3 className="font-display font-bold text-base md:text-lg text-text-primary mb-0.5">Call Us</h3>
-                <p className="text-sm md:text-base text-text-secondary">{contactData.phone || '+92 302 8983263'}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 p-5 bg-white rounded-2xl shadow-sm border border-border-color hover:translate-x-2 hover:border-primary-light transition-all duration-300 text-left">
-              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-tr from-primary/10 to-primary-light/5 text-primary rounded-full shrink-0">
-                <MapPin size={24} />
-              </div>
-              <div className="flex flex-col">
-                <h3 className="font-display font-bold text-base md:text-lg text-text-primary mb-0.5">Location</h3>
-                <p className="text-sm md:text-base text-text-secondary">{contactData.address || 'Islamabad, Pakistan'}</p>
-              </div>
-            </div>
-          </motion.div>
- 
-          {/* Contact Form */}
-          <motion.div variants={itemVariants} className="bg-white p-8 md:p-12 rounded-3xl shadow-xl border border-border-color glass w-full">
-
-            {/* Success Banner */}
-            {status === 'success' && (
-              <div className="flex items-start gap-3 p-4 mb-6 bg-green-50 border border-green-200 rounded-xl text-green-700">
-                <CheckCircle size={20} className="shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-sm">Message sent successfully!</p>
-                  <p className="text-xs mt-0.5">We'll get back to you as soon as possible.</p>
-                </div>
-              </div>
-            )}
-
-            {/* Error Banner */}
-            {status === 'error' && (
-              <div className="flex items-start gap-3 p-4 mb-6 bg-red-50 border border-red-200 rounded-xl text-red-700">
-                <AlertCircle size={20} className="shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-sm">Failed to send message</p>
-                  <p className="text-xs mt-0.5">{errorMsg}</p>
-                </div>
-              </div>
-            )}
-
-            <form className="flex flex-col gap-6" onSubmit={handleSubmit} noValidate>
-              <div className="flex flex-col gap-2 text-left">
-                <label htmlFor="name" className="text-sm font-bold text-text-primary">Full Name</label>
-                <input 
-                  type="text" 
-                  id="name"
-                  name="name"
-                  value={form.name}
-                  onChange={handleChange}
-                  required
-                  placeholder="SamiUllah" 
-                  className="w-full px-4 py-3 border border-border-color rounded-xl font-sans text-sm md:text-base text-text-primary bg-bg-secondary focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all duration-200" 
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-2 text-left">
-                  <label htmlFor="email" className="text-sm font-bold text-text-primary">Email Address</label>
-                  <input 
-                    type="email" 
-                    id="email"
-                    name="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    required
-                    placeholder="example@gmail.com" 
-                    className="w-full px-4 py-3 border border-border-color rounded-xl font-sans text-sm md:text-base text-text-primary bg-bg-secondary focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all duration-200" 
-                  />
-                </div>
-                <div className="flex flex-col gap-2 text-left">
-                  <label htmlFor="phone" className="text-sm font-bold text-text-primary">Phone Number</label>
-                  <input 
-                    type="tel" 
-                    id="phone"
-                    name="phone"
-                    value={form.phone}
-                    onChange={handleChange}
-                    placeholder="+92000 0000000" 
-                    className="w-full px-4 py-3 border border-border-color rounded-xl font-sans text-sm md:text-base text-text-primary bg-bg-secondary focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all duration-200" 
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 text-left">
-                <label htmlFor="subject" className="text-sm font-bold text-text-primary">Subject</label>
-                <select 
-                  id="subject"
-                  name="subject"
-                  value={form.subject}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-border-color rounded-xl font-sans text-sm md:text-base text-text-primary bg-bg-secondary focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 transition-all duration-200"
-                >
-                  <option>Course Inquiry</option>
-                  <option>Technical Support</option>
-                  <option>Billing Question</option>
-                  <option>Other</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-2 text-left">
-                <label htmlFor="message" className="text-sm font-bold text-text-primary">Message</label>
-                <textarea 
-                  id="message"
-                  name="message"
-                  rows="4"
-                  value={form.message}
-                  onChange={handleChange}
-                  required
-                  placeholder="How can we help you?" 
-                  className="w-full px-4 py-3 border border-border-color rounded-xl font-sans text-sm md:text-base text-text-primary bg-bg-secondary focus:outline-none focus:border-primary focus:bg-white focus:ring-2 focus:ring-primary/10 resize-y min-h-[120px] transition-all duration-200"
-                ></textarea>
-              </div>
-
-              <Button
-                type="submit"
-                variant="primary"
-                fullWidth
-                size="lg"
-                disabled={status === 'loading'}
-                className="flex items-center justify-center gap-2 mt-2"
+              <h3 className="font-display font-bold text-xl text-text-primary mb-2">Email Support</h3>
+              <p className="text-sm text-text-secondary mb-6 max-w-[250px] mx-auto">Drop us an email anytime and we'll get back to you within 24 hours.</p>
+              <a 
+                href={mailtoLink}
+                className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold text-sm hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white transition-colors"
               >
-                {status === 'loading' ? (
-                  <><Loader size={18} className="animate-spin" /> Sending...</>
-                ) : (
-                  <><Send size={18} /> Send Message</>
-                )}
-              </Button>
-            </form>
+                Email Us
+              </a>
+            </div>
+
+            {/* Phone Section */}
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-10 hover:bg-bg-secondary/30 transition-colors group">
+              <div className="w-16 h-16 bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400 rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                <Phone size={32} />
+              </div>
+              <h3 className="font-display font-bold text-xl text-text-primary mb-2">Contact Support</h3>
+              <p className="text-sm text-text-secondary mb-6 max-w-[250px] mx-auto">Need immediate assistance? Feel free to message us on WhatsApp.</p>
+              <a 
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold text-sm hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-500 dark:hover:text-white transition-colors"
+              >
+              Contact Us
+              </a>
+            </div>
           </motion.div>
         </motion.div>
 

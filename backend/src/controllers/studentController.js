@@ -8,6 +8,7 @@ const BadgeModel = require('../models/BadgeModel');
 const QuestionModel = require('../models/QuestionModel');
 const UnbanRequestModel = require('../models/UnbanRequestModel');
 const EnrollmentModel = require('../models/EnrollmentModel');
+const ProgressModel = require('../models/ProgressModel');
 const { getIO } = require('../socket');
 
 // Simple in-memory cache for student dashboards

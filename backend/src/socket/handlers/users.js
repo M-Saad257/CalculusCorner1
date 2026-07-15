@@ -1,7 +1,6 @@
 const CourseModel = require('../../models/CourseModel');
 const ResourceModel = require('../../models/ResourceModel');
 const VideoModel = require('../../models/VideoModel');
-const AiModel = require('../../models/AiModel');
 const NotificationModel = require('../../models/NotificationModel');
 const db = require('../../config/db');
 
@@ -41,7 +40,8 @@ const getAnalyticsData = async () => {
     const coursesCount = await CourseModel.getCount();
     const resourcesCount = await ResourceModel.getCount();
     const videosCount = await VideoModel.getCount();
-    const aiStats = await AiModel.getAnalytics();
+    // AI features were removed, mock the analytics
+    const aiStats = { totalConversations: 0, totalMessages: 0 };
 
     return {
       studentsCount: studentRows[0].count,

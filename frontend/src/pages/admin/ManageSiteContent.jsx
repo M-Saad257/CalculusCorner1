@@ -546,6 +546,16 @@ const ManageSiteContent = () => {
     newsletter: {
       heading: 'Subscribe to Newsletter',
       subheading: 'Get the latest study tips, new video alerts, and exclusive resources delivered directly to your inbox.'
+    },
+    visibility: {
+      courses: true,
+      practice: true,
+      lectures: true,
+      notes: true,
+      books: true,
+      about: true,
+      contact: true,
+      success_stories: true
     }
   };
 
@@ -998,10 +1008,15 @@ const ManageSiteContent = () => {
 
   const getLogoSrc = () => {
     if (content?.logo?.logo_url) {
-      if (content.logo.logo_url.startsWith('http')) {
-        return content.logo.logo_url;
+      let url = content.logo.logo_url;
+      url = url.replace('localost', 'localhost');
+      if (url.startsWith('http')) {
+        return url;
       }
-      return `https://localhost:5173${content.logo.logo_url}`;
+      if (!url.startsWith('/')) {
+        url = `/uploads/logo/${url}`;
+      }
+      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
     }
     return "/CClogo.png";
   };
@@ -1028,7 +1043,7 @@ const ManageSiteContent = () => {
 
       {/* Tabs list */}
       <div className="flex flex-wrap gap-2.5 border-b border-border-color pb-3">
-        {['hero', 'about', 'contact', 'logo', 'announcements', 'question_pool', 'newsletter', 'bank_details'].map(tab => (
+        {['hero', 'about', 'contact', 'logo', 'announcements', 'question_pool', 'newsletter', 'bank_details', 'visibility'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1037,7 +1052,7 @@ const ManageSiteContent = () => {
               : 'bg-transparent text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
               }`}
           >
-            {tab === 'hero' ? 'Hero Section' : tab === 'about' ? 'About Section' : tab === 'contact' ? 'Contact Details' : tab === 'logo' ? 'Site Logo' : tab === 'announcements' ? 'Announcements Banner' : tab === 'newsletter' ? 'Newsletter' : tab === 'bank_details' ? 'Global Bank Details' : 'Question Pool'}
+            {tab === 'hero' ? 'Hero Section' : tab === 'about' ? 'About Section' : tab === 'contact' ? 'Contact Details' : tab === 'logo' ? 'Site Logo' : tab === 'announcements' ? 'Announcements Banner' : tab === 'newsletter' ? 'Newsletter' : tab === 'bank_details' ? 'Global Bank Details' : tab === 'visibility' ? 'Page Visibility' : 'Question Pool'}
           </button>
         ))}
       </div>
@@ -1049,7 +1064,7 @@ const ManageSiteContent = () => {
             /* Universal Import Workspace */
             <div className="flex flex-col gap-8 text-left animate-fadeIn">
               {/* Metadata Section */}
-              <div className="p-8 rounded-3xl bg-white border border-border-color shadow-sm flex flex-col gap-6">
+              <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-6">
                 <div>
                   <h3 className="font-display font-bold text-lg text-text-primary m-0">Quiz Metadata & Configuration</h3>
                   <p className="text-text-secondary text-xs md:text-sm mt-1">Configure quiz tags, difficulty, and target topic settings before importing questions.</p>
@@ -1158,7 +1173,7 @@ const ManageSiteContent = () => {
               </div>
 
               {/* Parsing Metrics, Backup JSON, and Draft Controls */}
-              <div className="p-8 rounded-3xl bg-white border border-border-color shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 text-left">
+              <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 text-left">
                 <div className="flex flex-col gap-1">
                   <h4 className="text-sm font-bold text-text-primary m-0">Parsing Metrics & Local Progress</h4>
                   <p className="text-xxs text-text-secondary leading-relaxed m-0">
@@ -1175,7 +1190,7 @@ const ManageSiteContent = () => {
 
                   <button
                     onClick={downloadParsedJson}
-                    className="py-2.5 px-4 bg-white border border-border-color text-text-secondary font-bold text-xs rounded-xl hover:bg-bg-secondary cursor-pointer transition-colors flex items-center gap-1.5"
+                    className="py-2.5 px-4 bg-bg-color border border-border-color text-text-secondary font-bold text-xs rounded-xl hover:bg-bg-secondary cursor-pointer transition-colors flex items-center gap-1.5"
                     title="Export as JSON Backup"
                   >
                     <Download size={14} /> Backup JSON
@@ -1233,7 +1248,7 @@ const ManageSiteContent = () => {
                   {parsedQuestions.map((q, idx) => (
                     <div
                       key={q.id || idx}
-                      className={`p-6 rounded-3xl bg-white border shadow-sm flex flex-col gap-4 text-left transition-all ${q.needsReview ? 'border-red-300 ring-2 ring-red-100 bg-red-50/10' : 'border-border-color'
+                      className={`p-6 rounded-3xl bg-bg-color border shadow-sm flex flex-col gap-4 text-left transition-all ${q.needsReview ? 'border-red-300 ring-2 ring-red-100 bg-red-50/10' : 'border-border-color'
                         }`}
                     >
                       <div className="flex justify-between items-start border-b border-border-color pb-3">
@@ -1367,7 +1382,7 @@ const ManageSiteContent = () => {
             /* Normal Question Pool / AI Generator Views */
             <>
               {aiGenerating && createPortal(
-                <div className="fixed inset-0 z-[9999] backdrop-blur-md bg-white/80 flex flex-col items-center justify-center">
+                <div className="fixed inset-0 z-[9999] backdrop-blur-md bg-bg-color/ flex flex-col items-center justify-center">
                   <Loader text="Generating AI Quiz... Please wait" className="scale-125" />
                   <p className="text-text-secondary text-base font-medium mt-2">Crafting unique, high-quality questions just for you.</p>
                 </div>,
@@ -1383,15 +1398,15 @@ const ManageSiteContent = () => {
                 <div className="w-full flex flex-col gap-8">
                   {/* Statistics Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="p-6 rounded-2xl bg-white border border-border-color shadow-sm">
+                    <div className="p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm">
                       <span className="text-xxs font-extrabold text-text-tertiary uppercase tracking-wider block text-left">Total Questions</span>
                       <span className="font-display font-black text-3xl text-primary mt-1 block text-left">{questionStats.totalQuestions}</span>
                     </div>
-                    <div className="p-6 rounded-2xl bg-white border border-border-color shadow-sm">
+                    <div className="p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm">
                       <span className="text-xxs font-extrabold text-text-tertiary uppercase tracking-wider block text-left">Total Topics</span>
                       <span className="font-display font-black text-3xl text-indigo-600 mt-1 block text-left">{questionStats.totalTopics}</span>
                     </div>
-                    <div className="p-6 rounded-2xl bg-white border border-border-color shadow-sm flex items-center justify-center">
+                    <div className="p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm flex items-center justify-center">
                       <button
                         onClick={() => setShowGenerateModal(true)}
                         className="px-6 py-3 bg-gradient-to-r from-primary to-primary-dark hover:from-primary-light hover:to-primary text-white font-bold text-sm rounded-xl border-0 shadow-md hover:shadow-glow hover:-translate-y-0.5 transition-all duration-300 cursor-pointer flex items-center gap-2 w-full justify-center"
@@ -1402,7 +1417,7 @@ const ManageSiteContent = () => {
                   </div>
 
                   {/* Question Bank Table (Full Screen Width) */}
-                  <div className="p-6 rounded-3xl bg-white border border-border-color shadow-sm flex flex-col gap-4 overflow-hidden w-full">
+                  <div className="p-6 rounded-3xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-4 overflow-hidden w-full">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                       <h3 className="font-display font-bold text-xl text-text-primary m-0 text-left">Question Bank Database</h3>
                       <div className="relative max-w-sm w-full">
@@ -1466,14 +1481,14 @@ const ManageSiteContent = () => {
                                   <div className="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                     <button
                                       onClick={() => handleEditQuestion(q)}
-                                      className="p-2.5 bg-white shadow-sm border border-border-color hover:border-primary hover:bg-primary/5 text-text-secondary hover:text-primary rounded-xl cursor-pointer transition-all"
+                                      className="p-2.5 bg-bg-color shadow-sm border border-border-color hover:border-primary hover:bg-primary/5 text-text-secondary hover:text-primary rounded-xl cursor-pointer transition-all"
                                       title="Edit Question"
                                     >
                                       <Edit2 size={16} />
                                     </button>
                                     <button
                                       onClick={() => handleDeleteQuestion(q.id)}
-                                      className="p-2.5 bg-white shadow-sm border border-red-100 hover:border-red-500 hover:bg-red-50 text-text-tertiary hover:text-red-500 rounded-xl cursor-pointer transition-all"
+                                      className="p-2.5 bg-bg-color shadow-sm border border-red-100 hover:border-red-500 hover:bg-red-50 text-text-tertiary hover:text-red-500 rounded-xl cursor-pointer transition-all"
                                       title="Delete Question"
                                     >
                                       <Trash2 size={16} />
@@ -1495,14 +1510,14 @@ const ManageSiteContent = () => {
                               <button
                                 disabled={questionsPage === 1}
                                 onClick={() => setQuestionsPage(prev => prev - 1)}
-                                className="p-2.5 rounded-xl border border-border-color bg-white hover:bg-bg-secondary hover:border-text-secondary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
+                                className="p-2.5 rounded-xl border border-border-color bg-bg-color hover:bg-bg-secondary hover:border-text-secondary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
                               >
                                 <ChevronLeft size={18} />
                               </button>
                               <button
                                 disabled={questionsPage === questionsTotalPages}
                                 onClick={() => setQuestionsPage(prev => prev + 1)}
-                                className="p-2.5 rounded-xl border border-border-color bg-white hover:bg-bg-secondary hover:border-text-secondary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
+                                className="p-2.5 rounded-xl border border-border-color bg-bg-color hover:bg-bg-secondary hover:border-text-secondary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
                               >
                                 <ChevronRight size={18} />
                               </button>
@@ -1516,10 +1531,10 @@ const ManageSiteContent = () => {
               ) : (
                 <div className="w-full flex flex-col gap-8">
                   {/* AI Generation Form */}
-                  <div className="p-8 rounded-3xl bg-white border border-border-color shadow-lg w-full max-w-3xl mx-auto flex flex-col gap-8 relative overflow-hidden">
+                  <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-lg w-full max-w-3xl mx-auto flex flex-col gap-8 relative overflow-hidden">
                     {aiRestrictionSeconds > 0 &&
                       (
-                        <div className="absolute inset-0 z-50 bg-white/40 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-fadeIn">
+                        <div className="absolute inset-0 z-50 bg-bg-color/ backdrop-blur-md flex flex-col items-center justify-center p-8 text-center animate-fadeIn">
                           <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mb-6 shadow-inner border border-rose-100">
                             <Clock size={40} />
                           </div>
@@ -1527,7 +1542,7 @@ const ManageSiteContent = () => {
                           <p className="text-text-secondary font-medium max-w-sm mx-auto mb-8">
                             To ensure API limits are not exceeded, there is an 8-hour cooldown after every AI generation.
                           </p>
-                          <div className="bg-white px-8 py-5 rounded-2xl border border-border-color shadow-sm">
+                          <div className="bg-bg-color px-8 py-5 rounded-2xl border border-border-color shadow-sm">
                             <span className="text-xs font-bold text-text-tertiary uppercase tracking-widest block mb-2">Time Remaining</span>
                             <span className="font-display font-black text-4xl text-primary tracking-tight">
                               {Math.floor(aiRestrictionSeconds / 3600).toString().padStart(2, '0')}:
@@ -1567,7 +1582,7 @@ const ManageSiteContent = () => {
                           <select
                             value={aiDifficulty}
                             onChange={e => setAiDifficulty(e.target.value)}
-                            className="w-full p-4 border-2 border-border-color rounded-2xl font-sans text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-inner bg-white"
+                            className="w-full p-4 border-2 border-border-color rounded-2xl font-sans text-sm focus:outline-none focus:border-indigo-500 transition-colors shadow-inner bg-bg-color"
                           >
                             <option value="easy">Easy</option>
                             <option value="medium">Medium</option>
@@ -1600,7 +1615,7 @@ const ManageSiteContent = () => {
                   {/* AI Generated Questions Editor */}
                   {aiGeneratedQuestions.length > 0 && (
                     <div className="flex flex-col gap-6 w-full">
-                      <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-border-color shadow-md sticky top-6 z-10">
+                      <div className="flex justify-between items-center bg-bg-color p-6 rounded-3xl border border-border-color shadow-md sticky top-6 z-10">
                         <div className="flex items-center gap-4">
                           <h3 className="font-display font-black text-2xl text-text-primary m-0">Generated Preview</h3>
                           <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-sm border border-emerald-200">
@@ -1621,14 +1636,14 @@ const ManageSiteContent = () => {
                         {aiGeneratedQuestions.slice((aiGeneratedPage - 1) * aiQuestionsLimit, aiGeneratedPage * aiQuestionsLimit).map((q, idx) => {
                           const globalIdx = (aiGeneratedPage - 1) * aiQuestionsLimit + idx;
                           return (
-                            <div key={q._aiId} className={`p-8 rounded-3xl border transition-all shadow-sm ${q.isEditing ? 'bg-indigo-50/50 border-indigo-200 shadow-md' : 'bg-white border-border-color hover:border-primary/30 hover:shadow-md'}`}>
+                            <div key={q._aiId} className={`p-8 rounded-3xl border transition-all shadow-sm ${q.isEditing ? 'bg-indigo-50/50 border-indigo-200 shadow-md' : 'bg-bg-color border-border-color hover:border-primary/30 hover:shadow-md'}`}>
                               <div className="flex justify-between items-start mb-6">
                                 <span className="px-4 py-2 bg-indigo-100 text-indigo-800 rounded-xl font-bold text-sm shadow-sm border border-indigo-200">
                                   Question {globalIdx + 1}
                                 </span>
                                 <button
                                   onClick={() => toggleEditAIGeneratedQuestion(q._aiId)}
-                                  className={`px-5 py-2.5 rounded-xl border flex items-center gap-2 text-sm font-bold cursor-pointer transition-all ${q.isEditing ? 'bg-primary text-white border-primary shadow-md' : 'bg-white border-border-color text-text-secondary hover:text-primary hover:border-primary/50 hover:bg-primary/5'}`}
+                                  className={`px-5 py-2.5 rounded-xl border flex items-center gap-2 text-sm font-bold cursor-pointer transition-all ${q.isEditing ? 'bg-primary text-white border-primary shadow-md' : 'bg-bg-color border-border-color text-text-secondary hover:text-primary hover:border-primary/50 hover:bg-primary/5'}`}
                                 >
                                   {q.isEditing ? <CheckCircle2 size={18} /> : <Edit2 size={18} />}
                                   {q.isEditing ? 'Done' : 'Edit'}
@@ -1678,7 +1693,7 @@ const ManageSiteContent = () => {
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {q.options.map((opt, oIdx) => (
                                       <div key={oIdx} className={`p-5 rounded-2xl border text-sm font-semibold transition-all ${q.correctAnswer === opt ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-sm scale-[1.02]' : 'bg-bg-secondary/40 border-border-color text-text-secondary hover:bg-bg-secondary'}`}>
-                                        <span className="font-black mr-3 opacity-50 px-2 py-1 bg-white rounded-lg shadow-sm">{String.fromCharCode(65 + oIdx)}</span> {opt}
+                                        <span className="font-black mr-3 opacity-50 px-2 py-1 bg-bg-color rounded-lg shadow-sm">{String.fromCharCode(65 + oIdx)}</span> {opt}
                                       </div>
                                     ))}
                                   </div>
@@ -1691,7 +1706,7 @@ const ManageSiteContent = () => {
 
                       {/* Pagination for Generated Questions */}
                       {aiGeneratedQuestions.length > aiQuestionsLimit && (
-                        <div className="flex items-center justify-between bg-white p-5 rounded-3xl border border-border-color shadow-sm mt-4">
+                        <div className="flex items-center justify-between bg-bg-color p-5 rounded-3xl border border-border-color shadow-sm mt-4">
                           <span className="text-sm font-bold text-text-secondary bg-bg-secondary px-5 py-2.5 rounded-xl shadow-inner">
                             Page {aiGeneratedPage} of {Math.ceil(aiGeneratedQuestions.length / aiQuestionsLimit)}
                           </span>
@@ -1699,14 +1714,14 @@ const ManageSiteContent = () => {
                             <button
                               disabled={aiGeneratedPage === 1}
                               onClick={() => setAiGeneratedPage(prev => prev - 1)}
-                              className="p-3 rounded-xl border border-border-color bg-white hover:bg-primary/10 hover:border-primary hover:text-primary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
+                              className="p-3 rounded-xl border border-border-color bg-bg-color hover:bg-primary/10 hover:border-primary hover:text-primary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
                             >
                               <ChevronLeft size={20} />
                             </button>
                             <button
                               disabled={aiGeneratedPage === Math.ceil(aiGeneratedQuestions.length / aiQuestionsLimit)}
                               onClick={() => setAiGeneratedPage(prev => prev + 1)}
-                              className="p-3 rounded-xl border border-border-color bg-white hover:bg-primary/10 hover:border-primary hover:text-primary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
+                              className="p-3 rounded-xl border border-border-color bg-bg-color hover:bg-primary/10 hover:border-primary hover:text-primary text-text-secondary disabled:opacity-50 cursor-pointer flex items-center justify-center transition-all shadow-sm"
                             >
                               <ChevronRight size={20} />
                             </button>
@@ -1726,11 +1741,11 @@ const ManageSiteContent = () => {
             Loading announcements list...
           </div>
         ) : announcements.length === 0 ? (
-          <div className="p-8 text-center bg-white border border-border-color rounded-2xl text-text-secondary text-sm">
+          <div className="p-8 text-center bg-bg-color border border-border-color rounded-2xl text-text-secondary text-sm">
             No announcements set yet. Click "Add Announcement" to publish a live notice banner!
           </div>
         ) : (
-          <div className="bg-white border border-border-color rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-bg-color border border-border-color rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
@@ -1818,7 +1833,7 @@ const ManageSiteContent = () => {
           </div>
         )
       ) : activeTab === 'logo' ? (
-        <div className="p-8 rounded-3xl bg-white border border-border-color shadow-xl max-w-2xl glass flex flex-col gap-6 text-left animate-fadeIn">
+        <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-xl max-w-2xl glass flex flex-col gap-6 text-left animate-fadeIn">
           <div>
             <h3 className="font-display font-bold text-lg text-text-primary m-0">Upload Site Logo</h3>
             <p className="text-text-secondary text-xs md:text-sm mt-1">Upload a high-quality SVG or image to update the website header and footer logo globally.</p>
@@ -1873,9 +1888,47 @@ const ManageSiteContent = () => {
             </div>
           </form>
         </div>
-      ) : (
+      ) : activeTab === 'visibility' ? (
+        <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-xl max-w-3xl glass flex flex-col gap-6 text-left">
+          <h3 className="font-display font-bold text-lg text-text-primary capitalize m-0">
+            Page Visibility Settings
+          </h3>
+          <p className="text-sm text-text-secondary m-0">
+            Toggle which sections and pages are visible across the platform. Disabling a section hides it from the Landing Page, Navbar, Footer, and blocks access to its dedicated page.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            {Object.keys(formData).map(key => (
+              <div key={key} className="flex items-center justify-between p-4 border border-border-color rounded-2xl bg-bg-secondary/50">
+                <span className="font-semibold text-sm text-text-primary capitalize">
+                  {key.replace(/_/g, ' ')}
+                </span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={formData[key] !== false}
+                    onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.checked }))}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex">
+            <button
+              className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-bold text-sm rounded-xl hover:bg-primary-dark cursor-pointer disabled:opacity-50 transition-all border-0 shadow-md"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              <Save size={18} /> {saving ? 'Saving...' : 'Save & Publish'}
+            </button>
+          </div>
+        </div>
+      ) : ['bank_details', 'announcements', 'newsletter', 'question_pool'].includes(activeTab) ? null : (
         /* Regular section config forms */
-        <div className="p-8 rounded-3xl bg-white border border-border-color shadow-xl max-w-3xl glass flex flex-col gap-6">
+        <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-xl max-w-3xl glass flex flex-col gap-6">
           <h3 className="font-display font-bold text-lg text-text-primary capitalize">
             Editing {activeTab} Section Settings
           </h3>
@@ -1902,7 +1955,7 @@ const ManageSiteContent = () => {
                                   : '/SirMehtabPhoto.png'
                               }
                               alt="Section Preview"
-                              className="w-full h-full object-contain p-1 bg-white"
+                              className="w-full h-full object-contain p-1 bg-bg-color"
                               onError={(e) => {
                                 const fallback = window.location.origin + '/SirMehtabPhoto.png';
                                 if (e.target.src !== fallback) {
@@ -1976,7 +2029,7 @@ const ManageSiteContent = () => {
       {/* Add/Edit Announcement Form Modal */}
       {editingId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-bg-color rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
 
             {/* Header */}
             <div className="p-6 md:p-8 pb-4 border-b border-border-color flex justify-between items-center shrink-0">
@@ -2115,7 +2168,7 @@ const ManageSiteContent = () => {
       {/* Delete Confirmation Modal */}
       {deleteConfirmId !== null && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
+          <div className="relative w-full max-w-md bg-bg-color rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-2">
               <AlertCircle size={24} />
             </div>
@@ -2150,7 +2203,7 @@ const ManageSiteContent = () => {
       {/* Edit Question Modal */}
       {editingQuestion !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-bg-color rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
 
             {/* Header */}
             <div className="p-6 md:p-8 pb-4 border-b border-border-color flex justify-between items-center shrink-0">
@@ -2263,7 +2316,7 @@ const ManageSiteContent = () => {
       {activeTab === 'newsletter' && (
         <div className="flex flex-col gap-6 animate-fadeIn text-left">
 
-          <div className="p-8 rounded-3xl bg-white border border-border-color shadow-sm flex flex-col gap-6">
+          <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-6">
             <h3 className="font-display font-bold text-lg text-text-primary capitalize">
               Newsletter Text Settings
             </h3>
@@ -2295,26 +2348,26 @@ const ManageSiteContent = () => {
 
           {/* Analytics Dashboard Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="p-4 bg-white border border-border-color rounded-2xl shadow-sm">
+            <div className="p-4 bg-bg-color border border-border-color rounded-2xl shadow-sm">
               <span className="text-xxs font-extrabold text-text-tertiary uppercase tracking-wider block">Total Subscribers</span>
               <span className="font-display font-black text-2xl text-primary mt-1 block">{newsletterAnalytics.total}</span>
             </div>
-            <div className="p-4 bg-white border border-border-color rounded-2xl shadow-sm">
+            <div className="p-4 bg-bg-color border border-border-color rounded-2xl shadow-sm">
               <span className="text-xxs font-extrabold text-text-tertiary uppercase tracking-wider block text-emerald-600">Active</span>
               <span className="font-display font-black text-2xl text-emerald-600 mt-1 block">{newsletterAnalytics.active}</span>
             </div>
-            <div className="p-4 bg-white border border-border-color rounded-2xl shadow-sm">
+            <div className="p-4 bg-bg-color border border-border-color rounded-2xl shadow-sm">
               <span className="text-xxs font-extrabold text-text-tertiary uppercase tracking-wider block text-amber-500">Deactivated</span>
               <span className="font-display font-black text-2xl text-amber-500 mt-1 block">{newsletterAnalytics.inactive}</span>
             </div>
-            <div className="p-4 bg-white border border-border-color rounded-2xl shadow-sm">
+            <div className="p-4 bg-bg-color border border-border-color rounded-2xl shadow-sm">
               <span className="text-xxs font-extrabold text-text-tertiary uppercase tracking-wider block text-indigo-600">Joined Last 24h</span>
               <span className="font-display font-black text-2xl text-indigo-600 mt-1 block">{newsletterAnalytics.recent24h}</span>
             </div>
           </div>
 
           {/* Filters, Search and Actions bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-white border border-border-color rounded-2xl shadow-sm">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 bg-bg-color border border-border-color rounded-2xl shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3 grow">
               {/* Search Bar */}
               <div className="relative grow">
@@ -2360,12 +2413,12 @@ const ManageSiteContent = () => {
           {subscribersLoading ? (
             <div className="p-10 text-center text-text-secondary text-sm">Loading subscribers...</div>
           ) : subscribers.length === 0 ? (
-            <div className="p-10 text-center bg-white border border-border-color rounded-2xl">
+            <div className="p-10 text-center bg-bg-color border border-border-color rounded-2xl">
               <Mail size={32} className="text-text-tertiary mx-auto mb-3" />
               <p className="text-sm font-semibold text-text-secondary">No matching subscribers found.</p>
             </div>
           ) : (
-            <div className="bg-white border border-border-color rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-bg-color border border-border-color rounded-2xl overflow-hidden shadow-sm">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-bg-secondary border-b border-border-color">
@@ -2438,14 +2491,14 @@ const ManageSiteContent = () => {
                     <button
                       onClick={() => setSubscribersPage(prev => Math.max(prev - 1, 1))}
                       disabled={subscribersPage === 1}
-                      className="p-2 border border-border-color bg-white hover:bg-slate-100 rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
+                      className="p-2 border border-border-color bg-bg-color hover:bg-slate-100 rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
                     >
                       <ChevronLeft size={14} />
                     </button>
                     <button
                       onClick={() => setSubscribersPage(prev => Math.min(prev + 1, Math.ceil(subscribersTotal / subscribersLimit)))}
                       disabled={subscribersPage >= Math.ceil(subscribersTotal / subscribersLimit)}
-                      className="p-2 border border-border-color bg-white hover:bg-slate-100 rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
+                      className="p-2 border border-border-color bg-bg-color hover:bg-slate-100 rounded-lg disabled:opacity-50 transition-colors cursor-pointer"
                     >
                       <ChevronRight size={14} />
                     </button>
@@ -2461,7 +2514,7 @@ const ManageSiteContent = () => {
 
       {activeTab === 'bank_details' && (
         <div className="flex flex-col gap-8 animate-fadeIn text-left">
-          <div className="p-8 rounded-3xl bg-white border border-border-color shadow-sm flex flex-col gap-6">
+          <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-6">
             <div>
               <h3 className="font-display font-bold text-lg text-text-primary m-0">Global Bank Details</h3>
               <p className="text-text-secondary text-xs md:text-sm mt-1">Configure the bank account details shown to students for course enrollments and certificate payments.</p>
@@ -2515,7 +2568,7 @@ const ManageSiteContent = () => {
       {/* Bulk Import Success Summary Overlay Modal */}
       {importSummary !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-border-color p-8 text-center animate-fadeIn">
+          <div className="relative w-full max-w-md bg-bg-color rounded-3xl shadow-2xl border border-border-color p-8 text-center animate-fadeIn">
             <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
               <CheckCircle2 size={32} />
             </div>
@@ -2550,10 +2603,10 @@ const ManageSiteContent = () => {
       {/* Generate Quiz Modal */}
       {showGenerateModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-border-color flex flex-col relative">
+          <div className="bg-bg-color rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-border-color flex flex-col relative">
 
             {/* Header - Sticky */}
-            <div className="flex justify-between items-center p-6 border-b border-border-color bg-white z-10 sticky top-0 shadow-sm">
+            <div className="flex justify-between items-center p-6 border-b border-border-color bg-bg-color z-10 sticky top-0 shadow-sm">
               <h3 className="font-display font-black text-2xl text-text-primary m-0">Generate Manual Quiz</h3>
               <button
                 onClick={() => setShowGenerateModal(false)}
@@ -2566,21 +2619,21 @@ const ManageSiteContent = () => {
             {/* Scrollable Content */}
             <div className="p-8 overflow-y-auto bg-bg-secondary/20 flex-1">
               {/* Topic Field */}
-              <div className="mb-8 p-6 bg-white border border-border-color rounded-2xl shadow-sm">
+              <div className="mb-8 p-6 bg-bg-color border border-border-color rounded-2xl shadow-sm">
                 <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Topic</label>
                 <input
                   type="text"
                   value={manualTopic}
                   onChange={(e) => setManualTopic(e.target.value)}
                   placeholder="e.g. Derivatives"
-                  className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white transition-all shadow-inner"
+                  className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-bg-color transition-all shadow-inner"
                 />
               </div>
 
               {/* Quizzes List */}
               <div className="flex flex-col gap-6">
                 {manualQuizzes.map((quiz, qIndex) => (
-                  <div key={quiz.id} className="p-6 bg-white border border-border-color rounded-2xl shadow-sm relative group transition-all hover:shadow-md hover:border-primary/30">
+                  <div key={quiz.id} className="p-6 bg-bg-color border border-border-color rounded-2xl shadow-sm relative group transition-all hover:shadow-md hover:border-primary/30">
 
                     {/* Delete Quiz Button */}
                     {manualQuizzes.length > 1 && (
@@ -2608,7 +2661,7 @@ const ManageSiteContent = () => {
                         }}
                         placeholder="What is the derivative of..."
                         rows={3}
-                        className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white transition-all shadow-inner resize-y"
+                        className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-bg-color transition-all shadow-inner resize-y"
                       />
                     </div>
 
@@ -2627,7 +2680,7 @@ const ManageSiteContent = () => {
                                 setManualQuizzes(newQuizzes);
                               }}
                               placeholder={`Option ${label}`}
-                              className="flex-1 px-4 py-2.5 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white transition-all shadow-inner"
+                              className="flex-1 px-4 py-2.5 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-bg-color transition-all shadow-inner"
                             />
                           </div>
                         ))}
@@ -2644,7 +2697,7 @@ const ManageSiteContent = () => {
                             newQuizzes[qIndex].correctAnswer = e.target.value;
                             setManualQuizzes(newQuizzes);
                           }}
-                          className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white transition-all appearance-none cursor-pointer"
+                          className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-bg-color transition-all appearance-none cursor-pointer"
                         >
                           <option value="" disabled>Select correct answer</option>
                           {quiz.options.filter(opt => opt.trim() !== '').map((opt, i) => (
@@ -2662,7 +2715,7 @@ const ManageSiteContent = () => {
                             newQuizzes[qIndex].difficulty = e.target.value;
                             setManualQuizzes(newQuizzes);
                           }}
-                          className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-white transition-all appearance-none cursor-pointer"
+                          className="w-full px-4 py-3 rounded-xl border border-border-color font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-bg-color transition-all appearance-none cursor-pointer"
                         >
                           <option value="Easy">Easy</option>
                           <option value="Medium">Medium</option>
@@ -2685,7 +2738,7 @@ const ManageSiteContent = () => {
                       difficulty: 'Easy'
                     }]);
                   }}
-                  className="py-4 border-2 border-dashed border-primary/30 text-primary font-bold rounded-2xl hover:bg-primary/5 hover:border-primary transition-all flex items-center justify-center gap-2 cursor-pointer bg-white"
+                  className="py-4 border-2 border-dashed border-primary/30 text-primary font-bold rounded-2xl hover:bg-primary/5 hover:border-primary transition-all flex items-center justify-center gap-2 cursor-pointer bg-bg-color"
                 >
                   <Plus size={20} /> Add Another Question
                 </button>
@@ -2693,10 +2746,10 @@ const ManageSiteContent = () => {
             </div>
 
             {/* Footer - Sticky */}
-            <div className="p-6 border-t border-border-color bg-white z-10 sticky bottom-0 flex justify-end gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+            <div className="p-6 border-t border-border-color bg-bg-color z-10 sticky bottom-0 flex justify-end gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
               <button
                 onClick={() => setShowGenerateModal(false)}
-                className="px-8 py-3 rounded-xl border border-border-color text-text-secondary font-bold hover:bg-bg-secondary transition-colors cursor-pointer bg-white flex items-center gap-2"
+                className="px-8 py-3 rounded-xl border border-border-color text-text-secondary font-bold hover:bg-bg-secondary transition-colors cursor-pointer bg-bg-color flex items-center gap-2"
               >
                 <X size={18} /> Cancel
               </button>

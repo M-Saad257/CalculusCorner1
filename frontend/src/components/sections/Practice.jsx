@@ -453,7 +453,7 @@ const Practice = () => {
   };
 
   return (
-    <section id="practice" className="py-16 md:py-24 bg-bg-secondary relative" ref={containerRef}>
+    <section id="practice" className="py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] relative" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8">
 
         <div className="text-center max-w-2xl mx-auto mb-12">
@@ -475,7 +475,7 @@ const Practice = () => {
           animate={isInView ? "visible" : "hidden"}
         >
           {/* Main Dashboard Preview */}
-          <motion.div variants={itemVariants} className="bg-white rounded-3xl overflow-hidden shadow-lg border border-border-color glass min-h-[440px] flex flex-col justify-between">
+          <motion.div variants={itemVariants} className="bg-bg-color rounded-3xl overflow-hidden shadow-lg border border-border-color glass min-h-[440px] flex flex-col justify-between">
             {loadingQuestions ? (
               <Loader text="Loading practice questions..." />
             ) : isCompleted ? (
@@ -515,7 +515,7 @@ const Practice = () => {
 
                   {/* Auth Requirement Overlay */}
                   {!localStorage.getItem('token') && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-white/70 backdrop-blur-xs rounded-2xl text-center border border-border-color/50 shadow-sm animate-fadeIn">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-4 bg-bg-color/ backdrop-blur-xs rounded-2xl text-center border border-border-color/50 shadow-sm animate-fadeIn">
                       <h4 className="font-display font-extrabold text-sm text-text-primary mb-2">Requires Login / Signup</h4>
                       <div className="flex gap-2.5 w-full max-w-[210px]">
                         <button
@@ -530,7 +530,7 @@ const Practice = () => {
                           onClick={() => {
                             navigate('/auth?redirect=/dashboard', { state: { redirectTo: '/dashboard' } });
                           }}
-                          className="flex-1 px-3 py-2 bg-white hover:bg-bg-secondary text-primary hover:text-primary-dark font-bold text-xs rounded-xl border border-border-color hover:border-primary-light hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                          className="flex-1 px-3 py-2 bg-bg-color hover:bg-bg-secondary text-primary hover:text-primary-dark font-bold text-xs rounded-xl border border-border-color hover:border-primary-light hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
                         >
                           Create Account
                         </button>
@@ -574,7 +574,7 @@ const Practice = () => {
                 ) : (
                   <>
                     <MousePointerClick size={56} strokeWidth={1.5} className="mb-5 text-primary/30 animate-pulse" />
-                    <span className="text-base text-slate-500 max-w-xs leading-relaxed">
+                    <span className="text-base text-text-secondary max-w-xs leading-relaxed">
                       Please select a topic and time limit from the options to start your practice session!
                     </span>
                   </>
@@ -583,7 +583,7 @@ const Practice = () => {
             ) : !quizStarted ? (
               /* ── Quiz Ready Screen — shown after questions load, before user starts ── */
               <motion.div
-                className="bg-white p-6 rounded-2xl border-border-color shadow-sm hover:-translate-y-2 hover:shadow-md transition-all duration-300 text-left"
+                className="bg-bg-color p-6 rounded-2xl border-border-color shadow-sm hover:-translate-y-2 hover:shadow-md transition-all duration-300 text-left"
               >
                 <div className="p-8 text-center flex flex-col items-center justify-center grow gap-5">
                   <div>
@@ -681,7 +681,7 @@ const Practice = () => {
                 setFlowOrigin('topic');
                 setShowTopicModal(true);
               }}
-              className={`bg-white p-6 rounded-2xl border border-border-color shadow-sm transition-all duration-300 text-left ${isAdmin ? 'opacity-50 cursor-not-allowed blur-[2px] pointer-events-none' : 'hover:-translate-y-1 hover:shadow-md cursor-pointer group'}`}
+              className={`bg-bg-color p-6 rounded-2xl border border-border-color shadow-sm transition-all duration-300 text-left ${isAdmin ? 'opacity-50 cursor-not-allowed blur-[2px] pointer-events-none' : 'hover:-translate-y-1 hover:shadow-md cursor-pointer group'}`}
             >
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-indigo-50 text-indigo-600 shadow-inner group-hover:bg-primary group-hover:text-white transition-colors">
                 <CheckCircle size={24} />
@@ -698,7 +698,7 @@ const Practice = () => {
                 setFlowOrigin('timed');
                 setShowTimedModal(true);
               }}
-              className={`bg-white p-6 rounded-2xl border border-border-color shadow-sm transition-all duration-300 text-left ${isAdmin ? 'opacity-50 cursor-not-allowed blur-[2px] pointer-events-none' : 'hover:-translate-y-1 hover:shadow-md cursor-pointer group'}`}
+              className={`bg-bg-color p-6 rounded-2xl border border-border-color shadow-sm transition-all duration-300 text-left ${isAdmin ? 'opacity-50 cursor-not-allowed blur-[2px] pointer-events-none' : 'hover:-translate-y-1 hover:shadow-md cursor-pointer group'}`}
             >
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-red-50 text-red-500 shadow-inner group-hover:bg-red-500 group-hover:text-white transition-colors">
                 <Clock size={24} />
@@ -710,7 +710,7 @@ const Practice = () => {
             <motion.div
               variants={itemVariants}
               onClick={handleReportsClick}
-              className="bg-white p-6 rounded-2xl border border-border-color shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left cursor-pointer group"
+              className="bg-bg-color p-6 rounded-2xl border border-border-color shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left cursor-pointer group"
             >
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-emerald-50 text-emerald-600 shadow-inner group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                 <BarChart size={24} />
@@ -722,7 +722,7 @@ const Practice = () => {
             <motion.div
               variants={itemVariants}
               onClick={handleBadgesClick}
-              className="bg-white p-6 rounded-2xl border border-border-color shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left cursor-pointer group"
+              className="bg-bg-color p-6 rounded-2xl border border-border-color shadow-sm hover:-translate-y-1 hover:shadow-md transition-all duration-300 text-left cursor-pointer group"
             >
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-amber-50 text-amber-600 shadow-inner group-hover:bg-amber-500 group-hover:text-white transition-colors">
                 <Medal size={24} />
@@ -738,7 +738,7 @@ const Practice = () => {
       {/* Topic Selection Modal */}
       {showTopicModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-md text-left animate-fadeIn">
+          <div className="bg-bg-color p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-md text-left animate-fadeIn">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-display font-bold text-lg text-text-primary m-0">Select Topic Test</h3>
               <button onClick={() => setShowTopicModal(false)} className="p-1.5 bg-bg-secondary hover:bg-slate-200 text-text-secondary rounded-full transition-colors border-0 cursor-pointer">
@@ -768,7 +768,7 @@ const Practice = () => {
       {/* Timed Quiz Modal */}
       {showTimedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md" onClick={() => setShowTimedModal(false)}>
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-3xl text-left animate-fadeIn" onClick={e => e.stopPropagation()}>
+          <div className="bg-bg-color p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-3xl text-left animate-fadeIn" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="font-display font-bold text-xl text-text-primary m-0">Select Timed Quiz Mode</h3>
@@ -818,7 +818,7 @@ const Practice = () => {
       {/* Auth Prompt Modal */}
       {showAuthModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="bg-white p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-sm text-center animate-fadeIn flex flex-col items-center gap-4">
+          <div className="bg-bg-color p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-sm text-center animate-fadeIn flex flex-col items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-indigo-50 text-primary flex items-center justify-center shadow-inner">
               <Award size={24} />
             </div>
@@ -845,7 +845,7 @@ const Practice = () => {
                   const target = authModalReason === 'reports' ? '/dashboard?tab=performance' : '/dashboard?tab=badges';
                   navigate(`/auth?redirect=${encodeURIComponent(target)}`, { state: { redirectTo: target } });
                 }}
-                className="grow py-2.5 bg-white hover:bg-bg-secondary text-primary hover:text-primary-dark font-bold text-xs rounded-xl border border-border-color hover:border-primary-light hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
+                className="grow py-2.5 bg-bg-color hover:bg-bg-secondary text-primary hover:text-primary-dark font-bold text-xs rounded-xl border border-border-color hover:border-primary-light hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
               >
                 Create Account
               </button>

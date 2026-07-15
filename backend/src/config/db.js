@@ -71,6 +71,36 @@ pool.getConnection()
       `);
 
       await conn.query(`
+        CREATE TABLE IF NOT EXISTS \`video_progress\` (
+          \`id\` int(11) NOT NULL AUTO_INCREMENT,
+          \`user_id\` int(11) NOT NULL,
+          \`video_id\` int(11) NOT NULL,
+          \`progress_percent\` decimal(5,2) NOT NULL DEFAULT 0.00,
+          \`is_completed\` tinyint(1) NOT NULL DEFAULT 0,
+          \`last_watched_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`),
+          UNIQUE KEY \`uq_video_progress\` (\`user_id\`, \`video_id\`),
+          CONSTRAINT \`fk_video_progress_user\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE,
+          CONSTRAINT \`fk_video_progress_video\` FOREIGN KEY (\`video_id\`) REFERENCES \`videos\` (\`id\`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS \`course_progress\` (
+          \`id\` int(11) NOT NULL AUTO_INCREMENT,
+          \`user_id\` int(11) NOT NULL,
+          \`course_id\` int(11) NOT NULL,
+          \`progress_percent\` decimal(5,2) NOT NULL DEFAULT 0.00,
+          \`is_completed\` tinyint(1) NOT NULL DEFAULT 0,
+          \`last_accessed_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`),
+          UNIQUE KEY \`uq_course_progress\` (\`user_id\`, \`course_id\`),
+          CONSTRAINT \`fk_course_progress_user\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE,
+          CONSTRAINT \`fk_course_progress_course\` FOREIGN KEY (\`course_id\`) REFERENCES \`courses\` (\`id\`) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      await conn.query(`
         CREATE TABLE IF NOT EXISTS \`user_badges\` (
           \`id\` int(11) NOT NULL AUTO_INCREMENT,
           \`userId\` int(11) NOT NULL,
@@ -129,6 +159,72 @@ pool.getConnection()
         await conn.query("ALTER TABLE `courses` ADD COLUMN `thumbnail` VARCHAR(255) NULL");
       } catch (colErr) { }
 
+      // Add thumbnail and subcategory to resources (Notes)
+      try { await conn.query("ALTER TABLE `resources` ADD COLUMN `thumbnail_url` VARCHAR(255) NULL"); } catch (e) { }
+      try { await conn.query("ALTER TABLE `resources` ADD COLUMN `subcategory` VARCHAR(255) NULL"); } catch (e) { }
+
+      // Add subcategory to videos
+      try { await conn.query("ALTER TABLE `videos` ADD COLUMN `subcategory` VARCHAR(255) NULL"); } catch (e) { }
+
+      // Create books table
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS \`books\` (
+          \`id\` int(11) NOT NULL AUTO_INCREMENT,
+          \`title\` varchar(255) NOT NULL,
+          \`category\` varchar(100) NOT NULL,
+          \`subcategory\` varchar(255) DEFAULT NULL,
+          \`file_url\` varchar(255) NOT NULL,
+          \`thumbnail_url\` varchar(255) DEFAULT NULL,
+          \`uploaderId\` int(11) DEFAULT NULL,
+          \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      // Add thumbnail and subcategory to resources (Notes)
+      try { await conn.query("ALTER TABLE `resources` ADD COLUMN `thumbnail_url` VARCHAR(255) NULL"); } catch (e) { }
+      try { await conn.query("ALTER TABLE `resources` ADD COLUMN `subcategory` VARCHAR(255) NULL"); } catch (e) { }
+
+      // Add subcategory to videos
+      try { await conn.query("ALTER TABLE `videos` ADD COLUMN `subcategory` VARCHAR(255) NULL"); } catch (e) { }
+
+      // Create books table
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS \`books\` (
+          \`id\` int(11) NOT NULL AUTO_INCREMENT,
+          \`title\` varchar(255) NOT NULL,
+          \`category\` varchar(100) NOT NULL,
+          \`subcategory\` varchar(255) DEFAULT NULL,
+          \`file_url\` varchar(255) NOT NULL,
+          \`thumbnail_url\` varchar(255) DEFAULT NULL,
+          \`uploaderId\` int(11) DEFAULT NULL,
+          \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      // Add thumbnail and subcategory to resources (Notes)
+      try { await conn.query("ALTER TABLE `resources` ADD COLUMN `thumbnail_url` VARCHAR(255) NULL"); } catch (e) { }
+      try { await conn.query("ALTER TABLE `resources` ADD COLUMN `subcategory` VARCHAR(255) NULL"); } catch (e) { }
+
+      // Add subcategory to videos
+      try { await conn.query("ALTER TABLE `videos` ADD COLUMN `subcategory` VARCHAR(255) NULL"); } catch (e) { }
+
+      // Create books table
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS \`books\` (
+          \`id\` int(11) NOT NULL AUTO_INCREMENT,
+          \`title\` varchar(255) NOT NULL,
+          \`category\` varchar(100) NOT NULL,
+          \`subcategory\` varchar(255) DEFAULT NULL,
+          \`file_url\` varchar(255) NOT NULL,
+          \`thumbnail_url\` varchar(255) DEFAULT NULL,
+          \`uploaderId\` int(11) DEFAULT NULL,
+          \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
       // Create newsletter_subscribers table
       await conn.query(`
         CREATE TABLE IF NOT EXISTS \`newsletter_subscribers\` (
@@ -178,6 +274,17 @@ pool.getConnection()
       `);
 
 
+      // Alter users for OTP verification
+      try {
+        await conn.query("ALTER TABLE `users` ADD COLUMN `is_verified` TINYINT NOT NULL DEFAULT 0");
+      } catch (colErr) { }
+      try {
+        await conn.query("ALTER TABLE `users` ADD COLUMN `verification_otp` VARCHAR(10) NULL");
+      } catch (colErr) { }
+      try {
+        await conn.query("ALTER TABLE `users` ADD COLUMN `otp_expiry` TIMESTAMP NULL");
+      } catch (colErr) { }
+
       // Alter users for bans
       try {
         await conn.query("ALTER TABLE `users` ADD COLUMN `isBanned` TINYINT NOT NULL DEFAULT 0");
@@ -194,6 +301,26 @@ pool.getConnection()
       try {
         await conn.query("ALTER TABLE `users` ADD COLUMN `restore_notified` TINYINT NOT NULL DEFAULT 0");
       } catch (colErr) { }
+
+      // Seed Admin User if not exists
+      try {
+        const [adminRows] = await conn.query('SELECT id FROM `users` WHERE `role` = "admin"');
+        if (adminRows.length === 0) {
+          // Password hash for '#1Maths.Teacher@com'
+          const adminHash = '$2b$10$fbJOXgJtAVafnYb908QIM.Rmcn1Jjg1S32tNgwLjmTd6Su8da.EkG';
+          await conn.query(`
+            INSERT INTO \`users\` (name, email, password, role, is_verified) 
+            VALUES ('System Admin', 'Thecalculuscornerofficial@gmail.com', ?, 'admin', 1)
+          `, [adminHash]);
+        }
+      } catch (e) {
+        console.error('Error seeding admin user', e);
+      }
+
+      // Automatically verify any users created before OTP feature
+      try {
+        await conn.query("UPDATE `users` SET `is_verified` = 1 WHERE `verification_otp` IS NULL");
+      } catch (e) {}
 
       // Create unban_requests table with complete production schema
       await conn.query(`

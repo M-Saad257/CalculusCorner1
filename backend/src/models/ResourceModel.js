@@ -43,12 +43,14 @@ const ResourceModel = {
    * @param {string}      original_filename
    * @param {Object|null} metadata  - { size_bytes, extension, mime_type, ... }
    * @param {string}      category
+   * @param {string|null} subcategory
+   * @param {string|null} thumbnail_url
    */
-  async create(title, file_url, original_filename, metadata = null, category = 'General') {
+  async create(title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null) {
     const metaJson = metadata ? JSON.stringify(metadata) : null;
     const [result] = await db.query(
-      'INSERT INTO resources (title, file_url, original_filename, metadata, category) VALUES (?, ?, ?, ?, ?)',
-      [title, file_url, original_filename, metaJson, category]
+      'INSERT INTO resources (title, file_url, original_filename, metadata, category, subcategory, thumbnail_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url]
     );
     return result.insertId;
   },
@@ -60,12 +62,14 @@ const ResourceModel = {
    * @param {string}      original_filename
    * @param {Object|null} metadata
    * @param {string}      category
+   * @param {string|null} subcategory
+   * @param {string|null} thumbnail_url
    */
-  async update(id, title, file_url, original_filename, metadata = null, category = 'General') {
+  async update(id, title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null) {
     const metaJson = metadata ? JSON.stringify(metadata) : null;
     const [result] = await db.query(
-      'UPDATE resources SET title = ?, file_url = ?, original_filename = ?, metadata = ?, category = ? WHERE id = ?',
-      [title, file_url, original_filename, metaJson, category, id]
+      'UPDATE resources SET title = ?, file_url = ?, original_filename = ?, metadata = ?, category = ?, subcategory = ?, thumbnail_url = ? WHERE id = ?',
+      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url, id]
     );
     return result.affectedRows > 0;
   },

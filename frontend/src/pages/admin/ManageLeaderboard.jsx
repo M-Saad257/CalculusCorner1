@@ -77,7 +77,7 @@ const ManageLeaderboard = () => {
       </div>
 
       {courses.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-border-color shadow-sm p-12 text-center text-text-secondary">
+        <div className="bg-bg-color rounded-2xl border border-border-color shadow-sm p-12 text-center text-text-secondary">
           <p>No courses with quizzes found.</p>
         </div>
       ) : (
@@ -90,7 +90,7 @@ const ManageLeaderboard = () => {
                 className={`px-4 py-2 rounded-xl font-semibold text-sm border-0 cursor-pointer whitespace-nowrap transition-all ${
                   selectedCourse === course.id 
                     ? 'bg-primary text-white shadow-md' 
-                    : 'bg-white border border-border-color text-text-secondary hover:bg-slate-50'
+                    : 'bg-bg-color border border-border-color text-text-secondary hover:bg-slate-50'
                 }`}
               >
                 {course.title}
@@ -98,7 +98,7 @@ const ManageLeaderboard = () => {
             ))}
           </div>
 
-          <div className="bg-white rounded-2xl border border-border-color shadow-sm overflow-hidden">
+          <div className="bg-bg-color rounded-2xl border border-border-color shadow-sm overflow-hidden">
             {leaderboard.length === 0 && !loading ? (
               <div className="p-12 text-center text-text-secondary">
                 <Trophy size={48} className="text-slate-300 mx-auto mb-3" />

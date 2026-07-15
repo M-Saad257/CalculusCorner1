@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { LayoutGroup } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
+import { useContent } from '../context/ContentContext';
 import Navbar from '../components/layout/Navbar';
 import Hero from '../components/sections/Hero';
 import SocialProof from '../components/sections/SocialProof';
-import Subjects from '../components/sections/Subjects';
+import Books from '../components/sections/Books';
 import PremiumCourses from '../components/sections/PremiumCourses';
 import PlatformFeatures from '../components/sections/PlatformFeatures';
 import VideoLibrary from '../components/sections/VideoLibrary';
@@ -16,6 +17,8 @@ import Footer from '../components/layout/Footer';
 
 const LandingPage = () => {
   const location = useLocation();
+  const { content } = useContent();
+  const visibility = content?.visibility || {};
 
   useEffect(() => {
     // 1. Handle state-based scrolling (navigated from another page)
@@ -29,7 +32,7 @@ const LandingPage = () => {
       }, 150);
       // Clear navigation state to avoid re-triggering on manual refresh
       window.history.replaceState({}, document.title);
-    } 
+    }
     // 2. Handle direct URL hash loading
     else if (location.hash) {
       const targetId = location.hash.replace('#', '');
@@ -47,16 +50,16 @@ const LandingPage = () => {
       <Navbar />
       <LayoutGroup>
         <main>
-          <Hero />
+          {visibility.hero !== false && <Hero />}
           <SocialProof />
-	  <Resources />
-	  <VideoLibrary />
-          <Subjects />
-          <PremiumCourses />
+          {visibility.books !== false && <Books homeOnly={true} />}
+          {visibility.notes !== false && <Resources />}
+          {visibility.lectures !== false && <VideoLibrary />}
+          {visibility.courses !== false && <PremiumCourses />}
           <PlatformFeatures />
-          <Practice />
-          <SuccessStories />
-          <Contact />
+          {visibility.practice !== false && <Practice />}
+          {visibility.success_stories !== false && <SuccessStories />}
+          {visibility.contact !== false && <Contact />}
         </main>
       </LayoutGroup>
       <Footer />

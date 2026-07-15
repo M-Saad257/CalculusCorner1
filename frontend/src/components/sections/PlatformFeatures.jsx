@@ -39,7 +39,7 @@ const PlatformFeatures = () => {
   };
 
   return (
-    <section id="features" ref={sectionRef} className=" bg-bg-secondary relative">
+    <section id="features" ref={sectionRef} className=" bg-bg-secondary/70 backdrop-blur-[2px] relative">
         <div className="flex flex-col items-center w-full">
           <div className="w-full">
             <AnimatePresence mode="wait">

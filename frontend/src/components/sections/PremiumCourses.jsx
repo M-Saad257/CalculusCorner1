@@ -154,7 +154,7 @@ const PremiumCourses = () => {
   };
 
   return (
-    <section id="courses" className="py-16 md:py-24 bg-bg-tertiary relative" ref={containerRef}>
+    <section id="courses" className="py-10 md:py-16 bg-bg-tertiary/70 backdrop-blur-[2px] relative" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8">
         
         <div className="text-center max-w-2xl mx-auto mb-16">
@@ -200,8 +200,8 @@ const PremiumCourses = () => {
                     isHighlight 
                       ? 'bg-gradient-to-br from-primary to-primary-dark text-white border-0 shadow-lg' 
                       : isPopular
-                        ? 'bg-white border-2 border-primary shadow-lg scale-102 hover:scale-102 hover:-translate-y-2'
-                        : 'bg-white border-primary/10 shadow-md hover:-translate-y-2'
+                        ? 'bg-bg-color border-2 border-primary shadow-lg scale-102 hover:scale-102 hover:-translate-y-2'
+                        : 'bg-bg-color border-primary/10 shadow-md hover:-translate-y-2'
                   }`}
                 >
                   {isPopular && (
@@ -218,6 +218,8 @@ const PremiumCourses = () => {
                         alt={course.title}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         onError={(e) => { e.target.style.display = 'none'; }}
+                        loading="lazy"
+                        decoding="async"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
                     </div>
@@ -226,7 +228,7 @@ const PremiumCourses = () => {
                   {/* Header */}
                   <div className={`mb-6 pb-6 border-b text-left ${isHighlight ? 'border-white/20' : 'border-border-color'}`}>
                     <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full mb-4 ${
-                      isHighlight ? 'bg-white/20 text-white' : 'bg-bg-secondary text-primary'
+                      isHighlight ? 'bg-bg-color/ text-white' : 'bg-bg-secondary text-primary'
                     }`}>
                       {course.grade}
                     </span>
@@ -263,7 +265,7 @@ const PremiumCourses = () => {
                     <Button 
                       variant={isPopular || isHighlight ? 'primary' : 'outline'} 
                       fullWidth
-                      className={isHighlight ? 'bg-white text-primary border-0 hover:bg-bg-secondary hover:text-primary-dark shadow-md' : ''}
+                      className={isHighlight ? 'bg-bg-color text-primary border-0 hover:bg-bg-secondary hover:text-primary-dark shadow-md' : ''}
                       onClick={() => {
                         const token = localStorage.getItem('token');
                         navigate(token ? '/dashboard' : '/auth');

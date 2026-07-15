@@ -10,7 +10,7 @@ const VideoModel = {
 
   async getById(id) {
     const [rows] = await db.query(
-      'SELECT id, title, url, video_id AS videoId, thumbnail, category, created_at AS createdAt FROM videos WHERE id = ?',
+      'SELECT id, title, url, video_id AS videoId, thumbnail, category, subcategory, created_at AS createdAt FROM videos WHERE id = ?',
       [id]
     );
     return rows[0] || null;
@@ -18,24 +18,24 @@ const VideoModel = {
 
   async getByVideoId(videoId) {
     const [rows] = await db.query(
-      'SELECT id, title, url, video_id AS videoId, thumbnail, category, created_at AS createdAt FROM videos WHERE video_id = ?',
+      'SELECT id, title, url, video_id AS videoId, thumbnail, category, subcategory, created_at AS createdAt FROM videos WHERE video_id = ?',
       [videoId]
     );
     return rows[0] || null;
   },
 
-  async create(title, url, videoId, thumbnail, category) {
+  async create(title, url, videoId, thumbnail, category, subcategory = null) {
     const [result] = await db.query(
-      'INSERT INTO videos (title, url, video_id, thumbnail, category) VALUES (?, ?, ?, ?, ?)',
-      [title, url, videoId, thumbnail, category || 'Calculus']
+      'INSERT INTO videos (title, url, video_id, thumbnail, category, subcategory) VALUES (?, ?, ?, ?, ?, ?)',
+      [title, url, videoId, thumbnail, category || 'Calculus', subcategory]
     );
     return result.insertId;
   },
 
-  async update(id, title, url, videoId, thumbnail, category) {
+  async update(id, title, url, videoId, thumbnail, category, subcategory = null) {
     const [result] = await db.query(
-      'UPDATE videos SET title = ?, url = ?, video_id = ?, thumbnail = ?, category = ? WHERE id = ?',
-      [title, url, videoId, thumbnail, category || 'Calculus', id]
+      'UPDATE videos SET title = ?, url = ?, video_id = ?, thumbnail = ?, category = ?, subcategory = ? WHERE id = ?',
+      [title, url, videoId, thumbnail, category || 'Calculus', subcategory, id]
     );
     return result.affectedRows > 0;
   },

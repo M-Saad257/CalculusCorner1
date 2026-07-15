@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, User, FileText, Play, LogOut, Lock, Settings, Menu, X, CheckCircle, Library, Star } from 'lucide-react';
+import { LayoutDashboard, BookOpen, User, FileText, Play, LogOut, Lock, Settings, Menu, X, CheckCircle, Library, Star, Save, Loader2 } from 'lucide-react';
 import { useSocket } from '../../hooks/useSocket';
+import api from '../../services/api';
 import NotificationBell from '../../components/ui/NotificationBell';
 
 const ConnectionIndicator = ({ status }) => {
@@ -34,14 +35,36 @@ import ManageResources from './ManageResources';
 import ManageVideos from './ManageVideos';
 import ManageSiteContent from './ManageSiteContent';
 import AnalyticsDashboard from './AnalyticsDashboard';
-import ManageSubjects from './ManageSubjects';
+import ManageBooks from './ManageBooks';
 import ManageTestimonials from './ManageTestimonials';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
+  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [passwordStatus, setPasswordStatus] = useState({ loading: false, error: '', success: '' });
   const containerRef = useRef(null);
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordStatus({ loading: false, error: 'New passwords do not match', success: '' });
+      return;
+    }
+    setPasswordStatus({ loading: true, error: '', success: '' });
+    try {
+      const res = await api.put('/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+      setPasswordStatus({ loading: false, error: '', success: res.data.message || 'Password changed successfully' });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setPasswordStatus({ loading: false, error: err.response?.data?.message || 'Failed to change password', success: '' });
+    }
+  };
 
   const { status, emitActivity, disconnectSocket } = useSocket();
 
@@ -78,7 +101,7 @@ const AdminDashboard = () => {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-border-color flex flex-col shadow-lg z-10 transition-transform duration-300 lg:static lg:translate-x-0 lg:shadow-sm shrink-0 text-left ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-bg-color border-r border-border-color flex flex-col shadow-lg z-10 transition-transform duration-300 lg:static lg:translate-x-0 lg:shadow-sm shrink-0 text-left ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 flex items-center justify-between border-b border-border-color">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-primary-dark flex items-center justify-center shadow-md">
@@ -118,15 +141,15 @@ const AdminDashboard = () => {
             <span>Manage Courses</span>
           </Link>
           <Link
-            to="/admin/subjects"
+            to="/admin/books"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/subjects')
+            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/books')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
           >
             <Library size={18} />
-            <span>Manage Subjects</span>
+            <span>Manage Books</span>
           </Link>
           <Link
             to="/admin/students"
@@ -209,7 +232,7 @@ const AdminDashboard = () => {
 
       {/* Main Content Area */}
       <main className="grow flex flex-col overflow-hidden text-left">
-        <header className="relative h-20 bg-white border-b border-border-color flex items-center justify-between px-8 py-8 shadow-sm z-40">
+        <header className="relative h-20 bg-bg-color border-b border-border-color flex items-center justify-between px-8 py-8 shadow-sm z-40">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(true)}
@@ -222,10 +245,64 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-4">
             <ConnectionIndicator status={status} />
             <NotificationBell />
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-primary-dark text-white flex items-center justify-center font-bold shadow-sm">
+            <div className="flex items-center gap-3 relative">
+              <div 
+                className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-primary-dark text-white flex items-center justify-center font-bold shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setShowAdminMenu(!showAdminMenu)}
+              >
                 A
               </div>
+
+              {showAdminMenu && (
+                <div className="absolute top-12 right-0 w-80 bg-bg-color rounded-2xl shadow-2xl border border-border-color p-5 z-50">
+                  <h3 className="font-display font-bold text-base text-text-primary mb-4 flex items-center gap-2">
+                    <Lock size={16} className="text-primary" /> Change Password
+                  </h3>
+                  <form onSubmit={handlePasswordChange} className="flex flex-col gap-3">
+                    <div>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Current Password"
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                        className="w-full p-2 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="password"
+                        required
+                        placeholder="New Password"
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                        className="w-full p-2 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Confirm New Password"
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                        className="w-full p-2 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+                      />
+                    </div>
+
+                    {passwordStatus.error && <p className="text-xs text-red-500 font-semibold">{passwordStatus.error}</p>}
+                    {passwordStatus.success && <p className="text-xs text-emerald-500 font-semibold">{passwordStatus.success}</p>}
+
+                    <button 
+                      type="submit" 
+                      disabled={passwordStatus.loading} 
+                      className="w-full mt-2 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm border-0 cursor-pointer flex justify-center items-center gap-1.5 transition-colors"
+                    >
+                      {passwordStatus.loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Change Password
+                    </button>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -263,7 +340,7 @@ const AdminDashboard = () => {
               <Route path="/analytics" element={<AnalyticsDashboard />} />
               <Route path="/courses" element={<ManageCourses />} />
               <Route path="/courses/:id/quiz" element={<CourseQuizBuilder />} />
-              <Route path="/subjects" element={<ManageSubjects />} />
+              <Route path="/books" element={<ManageBooks />} />
               <Route path="/students" element={<ManageStudents />} />
               <Route path="/enrollments" element={<ManageEnrollments />} />
               <Route path="/resources" element={<ManageResources />} />

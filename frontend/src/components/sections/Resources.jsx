@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { FileText, Download, FileSpreadsheet, Book, Archive, File, Search } from 'lucide-react';
+import { FileText, Download, FileSpreadsheet, Book, Archive, File, Search, Image as ImageIcon } from 'lucide-react';
 import Button from '../ui/Button';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
@@ -14,49 +14,25 @@ const styleOptions = [
   { icon: Book, bgColor: 'bg-red-50 text-red-600' },
 ];
 
-const DEFAULT_CATEGORIES = ['All', 'Calculus', 'Trigonometry', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12', 'General'];
-
-const Resources = ({ isTab = false }) => {
+const Resources = ({ isTab = false, hideHeader = false }) => {
   const containerRef = useRef(null);
   const isInView = useInView(containerRef, { once: true, margin: "-50px" });
   const [resources, setResources] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [activeSubcategory, setActiveSubcategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    const deriveSizeLabel = (url = '') => {
-      const lower = url.toLowerCase();
-      if (lower.endsWith('.pdf')) return 'PDF';
-      if (lower.endsWith('.docx')) return 'DOCX';
-      if (lower.endsWith('.pptx') || lower.endsWith('.ppt')) return 'PPT';
-      if (lower.endsWith('.xlsx')) return 'XLSX';
-      if (lower.endsWith('.zip')) return 'ZIP';
-      return 'Resource';
-    };
-
-    const loadResources = async () => {
-      try {
-        const res = await api.get('/resources');
-        if (res.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-          const mapped = res.data.data.map((item, index) => {
-            const option = styleOptions[index % styleOptions.length];
-            const fileSource = item.original_filename || item.file_url || '';
-            return {
-              id: item.id,
-              title: item.title || 'Study Resource',
-              category: item.category || 'General',
-              icon: option.icon,
-              size: deriveSizeLabel(fileSource),
-              bgColor: option.bgColor,
-              file_url: item.file_url || '',
-            };
-          });
-          setResources(mapped);
-        }
-      } catch (err) {
+  const loadResources = async () => {
+    try {
+      const res = await api.get('/resources');
+      if (res.data && Array.isArray(res.data.data)) {
+        setResources(res.data.data);
       }
-    };
+    } catch (err) {
+    }
+  };
 
+  useEffect(() => {
     loadResources();
   }, []);
 
@@ -65,38 +41,6 @@ const Resources = ({ isTab = false }) => {
   useEffect(() => {
     if (!socket) return;
     
-    const loadResources = async () => {
-      try {
-        const res = await api.get('/resources');
-        if (res.data && Array.isArray(res.data.data)) {
-          const mapped = res.data.data.map((item, index) => {
-            const option = styleOptions[index % styleOptions.length];
-            const fileSource = item.original_filename || item.file_url || '';
-            const deriveSizeLabel = (url = '') => {
-              const lower = url.toLowerCase();
-              if (lower.endsWith('.pdf')) return 'PDF';
-              if (lower.endsWith('.docx')) return 'DOCX';
-              if (lower.endsWith('.pptx') || lower.endsWith('.ppt')) return 'PPT';
-              if (lower.endsWith('.xlsx')) return 'XLSX';
-              if (lower.endsWith('.zip')) return 'ZIP';
-              return 'Resource';
-            };
-            return {
-              id: item.id,
-              title: item.title || 'Study Resource',
-              category: item.category || 'General',
-              icon: option.icon,
-              size: deriveSizeLabel(fileSource),
-              bgColor: option.bgColor,
-              file_url: item.file_url || '',
-            };
-          });
-          setResources(mapped);
-        }
-      } catch (err) {
-      }
-    };
-
     socket.on('resource:create', loadResources);
     socket.on('resource:update', loadResources);
     socket.on('resource:delete', loadResources);
@@ -121,133 +65,161 @@ const Resources = ({ isTab = false }) => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   };
 
+  // Dynamically extract categories that actually have notes
   const categoriesList = Array.from(
-    new Set([
-      'All',
-      ...DEFAULT_CATEGORIES.filter(c => c !== 'All'),
-      ...resources.map(v => v.category).filter(Boolean)
-    ])
+    new Set(['All', ...resources.map(v => v.category).filter(Boolean)])
   );
 
-  const filteredResources = resources.filter(resource => 
-    (activeCategory === 'All' || resource.category === activeCategory) &&
-    resource.title.toLowerCase().includes(searchQuery.toLowerCase())
+  // Dynamically extract subcategories based on the active category
+  const subcategoriesList = Array.from(
+    new Set(['All', ...resources.filter(r => r.category === activeCategory && r.subcategory).map(r => r.subcategory)])
   );
+
+  useEffect(() => {
+    setActiveSubcategory('All');
+  }, [activeCategory]);
+
+  const filteredResources = resources.filter(resource => {
+    const matchesCat = activeCategory === 'All' || resource.category === activeCategory;
+    const matchesSub = activeSubcategory === 'All' || resource.subcategory === activeSubcategory;
+    const matchesSearch = resource.title.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCat && matchesSub && matchesSearch;
+  });
 
   return (
-    <section id={!isTab ? "resources" : undefined} className={isTab ? "relative" : "py-16 md:py-24 bg-bg-secondary relative"} ref={containerRef}>
+    <section id={!isTab ? "resources" : undefined} className={isTab ? "relative" : "py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] relative"} ref={containerRef}>
       <div className={isTab ? "" : "container mx-auto px-4 md:px-8"}>
         
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8 text-left">
-            <div className="max-w-2xl">
-              <span className="inline-block text-xs uppercase font-extrabold tracking-widest text-primary mb-3">
-               Notes Library
-              </span>
-              <h2 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-text-primary leading-tight mb-4">
-                Downloadable <span className="text-gradient">Study Materials</span>
-              </h2>
-              <p className="text-base md:text-lg text-text-secondary leading-relaxed">
-                Get instant access to a growing library of high-quality PDF notes and formula sheets — built to work alongside your video lessons and quizzes.
-              </p>
-            </div>
-            <div className="flex flex-col gap-4 w-full md:w-auto items-end">
-              <Button
-                variant="outline"
-                className="self-start md:self-auto px-5 py-2.5 text-sm shrink-0"
-                onClick={() => window.location.href = '/df-library'}
-              >
-                Browse PDF Library
-              </Button>
-              <div className="relative w-full max-w-sm mt-2 md:mt-0">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+            {!hideHeader && (
+              <div className="max-w-2xl">
+                <span className="inline-block text-xs uppercase font-extrabold tracking-widest text-primary mb-3">
+                 Notes Library
+                </span>
+                <h2 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-text-primary leading-tight mb-4">
+                  Handwritten <span className="text-gradient">Notes</span>
+                </h2>
+                <p className="text-base md:text-lg text-text-secondary leading-relaxed">
+                  Get instant access to a growing library of high-quality PDF notes and formula sheets — built to work alongside your video lessons and quizzes.
+                </p>
+              </div>
+            )}
+            {(!isTab || hideHeader) && (
+              <div className="relative w-full md:w-auto mt-4 md:mt-0">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   type="text" 
-                  placeholder="Search resources..." 
-                  className="w-full pl-11 pr-4 py-2.5 border border-border-color rounded-full font-sans text-sm bg-white shadow-inner focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all duration-200"
+                  placeholder="Search notes..." 
+                  className="w-full md:w-64 pl-11 pr-4 py-3 rounded-full border border-border-color bg-bg-color text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-text-primary"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-4 mb-8">
+            <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
+              {categoriesList.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${
+                    activeCategory === category 
+                      ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20' 
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
             </div>
+
+            {activeCategory !== 'All' && subcategoriesList.length > 1 && (
+              <div className="flex flex-wrap gap-2 md:gap-3 justify-start mt-2">
+                {subcategoriesList.map((subcat) => (
+                  <button
+                    key={subcat}
+                    onClick={() => setActiveSubcategory(subcat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                      activeSubcategory === subcat 
+                        ? 'bg-slate-800 text-white border-slate-800' 
+                        : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 hover:text-slate-800'
+                    }`}
+                  >
+                    {subcat}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-        {isTab && (
-          <div className="relative w-full max-w-sm mb-6">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search resources..." 
-              className="w-full pl-11 pr-4 py-2.5 border border-border-color rounded-full font-sans text-sm bg-white shadow-inner focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all duration-200"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-        )}
-
-        {/* Categories Bar */}
-        <div className="overflow-x-auto pb-4 mb-8 scrollbar-none">
-          <div className="flex gap-3 min-w-max">
-            {categoriesList.map(cat => (
-              <button 
-                key={cat} 
-                className={`px-5 py-2 rounded-full border text-xs md:text-sm font-semibold transition-all duration-200 cursor-pointer whitespace-nowrap ${
-                  activeCategory === cat 
-                    ? 'bg-text-primary text-white border-text-primary shadow-md' 
-                    : 'bg-white border-border-color text-text-secondary hover:border-primary-light hover:text-primary'
-                }`}
-                onClick={() => setActiveCategory(cat)}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <motion.div 
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-          variants={containerVariants}
-          initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
-        >
-          {filteredResources.map((resource) => {
-            const Icon = resource.icon;
-            return (
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate={isInView ? "visible" : "hidden"}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+          >
+            {filteredResources.map((resource, index) => {
+              const option = styleOptions[index % styleOptions.length];
+              const Icon = option.icon;
+              return (
               <motion.div 
                 key={resource.id} 
-                variants={itemVariants} 
-                className="group flex flex-col p-6 rounded-2xl bg-white border border-border-color shadow-sm hover:shadow-lg hover:border-primary-light/50 hover:-translate-y-1 transition-all duration-300 glass text-left"
+                variants={itemVariants}
+                className="group relative p-4 rounded-2xl bg-bg-color border border-border-color shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col justify-between text-left h-full"
               >
-                <div className="flex items-center justify-between mb-6">
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-xl shadow-inner ${resource.bgColor}`}>
-                    <Icon size={24} />
-                  </div>
-                  <span className="text-xxs font-extrabold tracking-wide uppercase text-text-secondary bg-bg-secondary px-3 py-1 rounded-full border border-border-color/50">
-                    {resource.category}
+                <div className="absolute top-4 right-4 z-10">
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${option.bgColor}`}>
+                    {resource.subcategory ? resource.subcategory : resource.category}
                   </span>
                 </div>
                 
-                <h3 className="font-display font-bold text-lg text-text-primary mb-8 grow">
-                  {resource.title}
-                </h3>
-                
-                <div className="flex items-center justify-between border-t border-border-color pt-4">
-                  <span className="text-xs text-text-tertiary font-semibold">
-                    {resource.size}
-                  </span>
+                <div className="flex flex-col flex-grow">
+                  <div className="relative w-full h-40 mb-4 rounded-xl overflow-hidden bg-slate-100/50 group-hover:bg-primary/5 transition-colors">
+                    {resource.thumbnail_url ? (
+                      <img src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${resource.thumbnail_url}`} alt={resource.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Icon className={`w-12 h-12 opacity-50 ${option.bgColor.split(' ')[1]}`} />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <h3 className="font-display font-bold text-lg text-text-primary mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                    {resource.title}
+                  </h3>
+                </div>
 
-                  <a
-                    href={`http://localhost:5173/api/resources/${resource.id}/download`}
+                <div className="mt-4 pt-4 border-t border-border-color flex justify-between items-center w-full">
+                  <span className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
+                    <FileText size={14} className="opacity-70" />
+                    Note
+                  </span>
+                  <a 
+                    href={`http://localhost:5173/api/admin/resources/${resource.id}/download`}
                     download
-                    className="flex items-center gap-2 bg-transparent text-primary font-bold text-sm group-hover:scale-105 group-hover:text-primary-dark transition-all duration-200"
+                    className="flex items-center gap-1.5 text-primary hover:text-primary-dark font-semibold text-sm transition-colors p-2 -mr-2 rounded-lg hover:bg-primary/5"
                   >
+                    <span className="sr-only sm:not-sr-only sm:block">Download</span>
                     <Download size={16} />
-                    <span>Download</span>
                   </a>
-                </div> 
+                </div>
               </motion.div>
-            );
-          })}
-        </motion.div>
+            )})}
+          </motion.div>
+          
+          {filteredResources.length === 0 && (
+            <div className="py-16 px-4 text-center border-2 border-dashed border-border-color rounded-3xl bg-bg-color">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText size={24} className="text-slate-400" />
+              </div>
+              <h3 className="text-xl font-bold text-text-primary mb-2">New Notes Coming Soon!</h3>
+              <p className="text-text-secondary mx-auto">
+               Sir Mehtab is actively compiling and publishing new reference notes, stay tuned, they will be avalible here soon!
+              </p>
+            </div>
+          )}
 
       </div>
     </section>

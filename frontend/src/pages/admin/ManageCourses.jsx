@@ -197,7 +197,7 @@ const ManageCourses = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {courses.map(course => (
-          <div key={course.id} className="p-6 rounded-2xl bg-white border border-border-color shadow-sm flex flex-col gap-3 relative hover:shadow-md transition-shadow text-left overflow-hidden">
+          <div key={course.id} className="p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-3 relative hover:shadow-md transition-shadow text-left overflow-hidden">
             {/* Thumbnail */}
             {course.thumbnail && (
               <div className="-mx-6 -mt-6 mb-3 h-36 overflow-hidden">
@@ -243,7 +243,7 @@ const ManageCourses = () => {
       {/* Modal Dialog for Add/Edit Form */}
       {editingId !== null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-bg-color rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
             
             {/* Header: Sticky */}
             <div className="p-6 md:p-8 pb-4 border-b border-border-color flex justify-between items-center shrink-0">
@@ -461,7 +461,7 @@ const ManageCourses = () => {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setThumbnailFile(null); setThumbnailPreview(null); setFormData(prev => ({ ...prev, thumbnail: null })); }}
-                        className="absolute top-2 right-2 p-1 bg-white rounded-full shadow border border-border-color text-red-500 hover:text-red-700 transition-colors"
+                        className="absolute top-2 right-2 p-1 bg-bg-color rounded-full shadow border border-border-color text-red-500 hover:text-red-700 transition-colors"
                       >
                         <X size={12} />
                       </button>
@@ -503,7 +503,7 @@ const ManageCourses = () => {
       {/* Custom Delete Confirmation Modal */}
       {deleteConfirmId !== null && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
+          <div className="relative w-full max-w-md bg-bg-color rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-2">
               <AlertCircle size={24} />
             </div>

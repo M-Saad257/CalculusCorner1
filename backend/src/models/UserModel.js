@@ -40,6 +40,22 @@ const UserModel = {
     }
   },
 
+  async setVerificationOTP(email, otp, expiry) {
+    const [result] = await db.query(
+      'UPDATE users SET verification_otp = ?, otp_expiry = ? WHERE email = ?',
+      [otp, expiry, email]
+    );
+    return result.affectedRows > 0;
+  },
+
+  async verifyStudent(email) {
+    const [result] = await db.query(
+      'UPDATE users SET is_verified = 1, verification_otp = NULL, otp_expiry = NULL WHERE email = ?',
+      [email]
+    );
+    return result.affectedRows > 0;
+  },
+
   async getStudentsCount() {
     const [rows] = await db.query('SELECT COUNT(*) as count FROM users WHERE role = "student"');
     return rows[0].count;
@@ -128,6 +144,14 @@ const UserModel = {
     const [result] = await db.query(
       'UPDATE students_profile SET progress = ? WHERE user_id = ?',
       [JSON.stringify(progress), userId]
+    );
+    return result.affectedRows > 0;
+  },
+
+  async updatePassword(userId, hashedPassword) {
+    const [result] = await db.query(
+      'UPDATE users SET password = ? WHERE id = ?',
+      [hashedPassword, userId]
     );
     return result.affectedRows > 0;
   }

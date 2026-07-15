@@ -51,7 +51,7 @@ const Blog = () => {
   };
 
   return (
-    <section id="blog" className="py-16 md:py-24 bg-bg-secondary relative" ref={containerRef}>
+    <section id="blog" className="py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] relative" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8">
         
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 text-left">

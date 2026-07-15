@@ -19,7 +19,7 @@ const ResourceTab = ({ resources, getFileUrl }) => {
           </div>
         </div>
         {resources.length > 0 && (
-          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-border-color rounded-full text-xs font-bold text-text-secondary shadow-sm">
+          <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 bg-white dark:bg-slate-900 border border-border-color rounded-full text-xs font-bold text-text-secondary shadow-sm">
             <FileText size={13} className="text-primary" />
             {resources.length} {resources.length === 1 ? 'Resource' : 'Resources'} Available
           </span>
@@ -29,7 +29,7 @@ const ResourceTab = ({ resources, getFileUrl }) => {
       {/* Cards Grid or Empty State */}
       {
         resources.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white border border-dashed border-border-color rounded-3xl">
+          <div className="flex flex-col items-center justify-center py-20 gap-4 bg-white dark:bg-slate-900 border border-dashed border-border-color rounded-3xl">
             <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
               <FileText size={28} className="text-primary/50" />
             </div>
@@ -53,7 +53,7 @@ const ResourceTab = ({ resources, getFileUrl }) => {
               return (
                 <div
                   key={res.id}
-                  className="group relative bg-white border border-border-color rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col overflow-hidden"
+                  className="group relative bg-white dark:bg-slate-900 border border-border-color rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col overflow-hidden"
                 >
                   {/* Card Top Accent */}
                   <div className={`h-1.5 w-full ${palette.bg.replace('50', '400')}`} />
@@ -82,7 +82,7 @@ const ResourceTab = ({ resources, getFileUrl }) => {
                     {/* Download Button */}
                     <a
                       href={`/api/student/resources/${res.id}/download?token=${localStorage.getItem('token')}`}
-                      className={`flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-bold border transition-all ${palette.bg} ${palette.text} ${palette.border} border hover:opacity-80`}
+                      className={`flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-bold border transition-all dark:bg-bg-secondary dark:text-text-primary dark:border-border-color ${palette.bg} ${palette.text} ${palette.border} hover:opacity-80`}
                       download
                     >
                       <Download size={14} />

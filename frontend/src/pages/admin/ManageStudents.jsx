@@ -338,7 +338,7 @@ const ManageStudents = () => {
             <button
               onClick={() => setAdminTab('list')}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg border-0 cursor-pointer transition-all ${adminTab === 'list'
-                ? 'bg-white text-text-primary shadow-sm'
+                ? 'bg-bg-color text-text-primary shadow-sm'
                 : 'text-text-secondary hover:text-text-primary bg-transparent'
                 }`}
             >
@@ -347,7 +347,7 @@ const ManageStudents = () => {
             <button
               onClick={() => setAdminTab('chat')}
               className={`px-4 py-1.5 text-xs font-bold rounded-lg border-0 cursor-pointer transition-all ${adminTab === 'chat'
-                ? 'bg-white text-text-primary shadow-sm'
+                ? 'bg-bg-color text-text-primary shadow-sm'
                 : 'text-text-secondary hover:text-text-primary bg-transparent'
                 }`}
             >
@@ -362,7 +362,7 @@ const ManageStudents = () => {
                 placeholder="Search students..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-border-color rounded-xl font-sans text-xs md:text-sm bg-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
+                className="w-full pl-10 pr-4 py-2 border border-border-color rounded-xl font-sans text-xs md:text-sm bg-bg-color focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
               />
             </div>
           )}
@@ -370,10 +370,10 @@ const ManageStudents = () => {
       </div>
 
       {adminTab === 'chat' ? (
-        <div className="flex flex-col md:flex-row gap-0 md:gap-6 bg-white rounded-3xl border border-border-color shadow-sm overflow-x-hidden overflow-y-auto cc-scroll animate-fadeIn" style={{ height: 'calc(100vh - 305px)' }}>
+        <div className="flex flex-col md:flex-row gap-0 md:gap-6 bg-bg-color rounded-3xl border border-border-color shadow-sm overflow-x-hidden overflow-y-auto cc-scroll animate-fadeIn" style={{ height: 'calc(100vh - 305px)' }}>
           {/* Conversations list */}
-          <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-border-color flex flex-col md:h-full max-h-[35vh] md:max-h-none bg-slate-50/50 text-left shrink-0">
-            <div className="p-4 border-b border-border-color/80 bg-white shrink-0">
+          <div className="w-full md:w-80 border-b md:border-b-0 md:border-r border-border-color flex flex-col md:h-full max-h-[35vh] md:max-h-none dark:bg-bg-color bg-slate-50/50 text-left shrink-0">
+            <div className="p-4 border-b border-border-color/80 bg-bg-color shrink-0">
               <h4 className="font-display font-bold text-sm text-text-primary m-0">Conversations</h4>
               <p className="text-[10px] text-text-secondary m-0 mt-0.5">Students awaiting assistance</p>
             </div>
@@ -389,12 +389,12 @@ const ManageStudents = () => {
                     onClick={() => setSelectedStudent(st)}
                     className={`w-full flex items-center gap-3 p-3 rounded-2xl border-0 text-left cursor-pointer transition-all ${selectedStudent && selectedStudent.id === st.id
                       ? 'bg-primary text-white'
-                      : 'bg-transparent text-text-secondary hover:bg-slate-100'
+                      : 'bg-transparent text-text-secondary dark:hover:bg-bg-secondary hover:bg-slate-100'
                       }`}
                   >
                     <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${selectedStudent && selectedStudent.id === st.id
                       ? 'bg-white/20 text-white'
-                      : 'bg-indigo-50 text-primary'
+                      : 'dark:bg-indigo-900/40 dark:text-indigo-300 bg-indigo-50 text-primary'
                       }`}>
                       {st.name ? st.name.charAt(0).toUpperCase() : 'S'}
                     </div>
@@ -421,7 +421,7 @@ const ManageStudents = () => {
             ) : (
               <div className="flex flex-col h-full grow">
                 {/* Header */}
-                <div className="p-4 border-b border-border-color bg-white flex justify-between items-center text-left">
+                <div className="p-4 border-b border-border-color bg-bg-color flex justify-between items-center text-left">
                   <div>
                     <h4 className="font-display font-bold text-sm text-text-primary m-0">{selectedStudent.name}</h4>
                     <p className="text-[10px] text-text-secondary m-0 mt-0.5">{selectedStudent.email}</p>
@@ -456,7 +456,7 @@ const ManageStudents = () => {
                           <div
                             className={`p-3 px-4 rounded-2xl text-xs leading-relaxed ${!isStudentSender
                               ? 'bg-primary text-white rounded-br-sm shadow-sm'
-                              : 'bg-white text-text-primary rounded-bl-sm border border-border-color shadow-sm'
+                              : 'bg-bg-color text-text-primary rounded-bl-sm border border-border-color shadow-sm'
                               }`}
                           >
                             {msg.message}
@@ -472,14 +472,14 @@ const ManageStudents = () => {
                 </div>
 
                 {/* Input Form */}
-                <div className="p-4 bg-white border-t border-border-color">
+                <div className="p-4 bg-bg-color border-t border-border-color">
                   <form onSubmit={handleSendReply} className="flex gap-2">
                     <input
                       type="text"
                       value={adminChatInput}
                       onChange={(e) => setAdminChatInput(e.target.value)}
                       placeholder="Type reply to student..."
-                      className="grow px-4 py-2.5 border border-border-color rounded-full font-sans text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 shadow-inner transition-all bg-white text-text-primary"
+                      className="grow px-4 py-2.5 border border-border-color rounded-full font-sans text-xs focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 shadow-inner transition-all bg-bg-color text-text-primary"
                       disabled={chatSending}
                     />
                     <button
@@ -498,7 +498,7 @@ const ManageStudents = () => {
       ) : (
         <>
           {unbanRequests.length > 0 && (
-            <div className="bg-white rounded-3xl border border-border-color shadow-sm p-6 animate-fadeIn">
+            <div className="bg-bg-color rounded-3xl border border-border-color shadow-sm p-6 animate-fadeIn">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                 <div>
                   <h3 className="font-display font-bold text-lg text-text-primary">Pending Unban Requests</h3>
@@ -550,11 +550,11 @@ const ManageStudents = () => {
               Loading student registers...
             </div>
           ) : filteredStudents.length === 0 ? (
-            <div className="p-8 text-center bg-white border border-border-color rounded-2xl text-text-secondary text-sm">
+            <div className="p-8 text-center bg-bg-color border border-border-color rounded-2xl text-text-secondary text-sm">
               No students found matching your search.
             </div>
           ) : (
-            <div className="bg-white border border-border-color rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-bg-color border border-border-color rounded-2xl overflow-hidden shadow-sm">
               <div className="overflow-x-auto min-h-[350px] pb-32">
                 <table className="w-full border-collapse">
                   <thead>
@@ -610,7 +610,7 @@ const ManageStudents = () => {
                           </button>
 
                           {actionMenuOpenId === student.id && (
-                            <div className="absolute right-6 top-10 w-48 bg-white border border-border-color shadow-lg rounded-xl overflow-hidden z-[999] py-1">
+                            <div className="absolute right-6 top-10 w-48 bg-bg-color border border-border-color shadow-lg rounded-xl overflow-hidden z-[999] py-1">
                               {student.status === 'banned' ? (
                                 <button
                                   onClick={() => { setActionMenuOpenId(null); handleUnban(student); }}
@@ -655,7 +655,7 @@ const ManageStudents = () => {
       {/* Custom Delete Confirmation Modal */}
       {deleteConfirmId !== null && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
+          <div className="relative w-full max-w-md bg-bg-color rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-2">
               <AlertCircle size={24} />
             </div>

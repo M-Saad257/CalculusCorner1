@@ -457,11 +457,106 @@ const sendAnnouncementEmailToSubscribers = async (announcement) => {
   }
 };
 
+/**
+ * Sends an OTP Verification email for registration.
+ * @param {string} email
+ * @param {string} name
+ * @param {string} otp
+ * @returns {{ sent: boolean, error: string|null }}
+ */
+const sendOTPVerificationEmail = async (email, name, otp) => {
+  const EMAIL_TYPE = 'otp_verification';
+
+  if (!isConfigured()) {
+    await logEmail(email, EMAIL_TYPE, 'skipped', 'SMTP not configured');
+    return { sent: false, error: 'SMTP not configured' };
+  }
+
+  const siteName = 'Calculus Corner';
+  const siteUrl = process.env.SITE_URL || 'http://localhost:5173';
+  const supportEmail = process.env.SMTP_FROM || 'support@calculuscorner.com';
+
+  const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verify Your Email — ${siteName}</title>
+  <style>
+    body { margin: 0; padding: 0; background: #F8FAFC; font-family: 'Inter', Arial, sans-serif; }
+    .wrapper { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #E2E8F0; }
+    .header { background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%); padding: 40px 32px; text-align: center; }
+    .header h1 { color: #ffffff; font-size: 22px; font-weight: 800; margin: 0; letter-spacing: -0.5px; }
+    .header p { color: rgba(255,255,255,0.85); font-size: 14px; margin: 8px 0 0; }
+    .body { padding: 40px 32px; text-align: center; }
+    .greeting { font-size: 18px; font-weight: 700; color: #0F172A; margin-bottom: 16px; }
+    .message { font-size: 15px; color: #475569; line-height: 1.7; margin-bottom: 32px; }
+    .otp-box { background: #F1F5F9; border: 2px dashed #CBD5E1; border-radius: 12px; padding: 24px; margin-bottom: 32px; }
+    .otp-code { font-size: 32px; font-weight: 800; color: #2563EB; letter-spacing: 4px; margin: 0; }
+    .otp-warning { font-size: 13px; color: #64748B; margin-top: 12px; }
+    .divider { border: none; border-top: 1px solid #E2E8F0; margin: 28px 0; }
+    .support { font-size: 13px; color: #64748B; text-align: center; line-height: 1.6; }
+    .footer { background: #F8FAFC; padding: 24px 32px; text-align: center; border-top: 1px solid #E2E8F0; }
+    .footer p { font-size: 12px; color: #94A3B8; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>${siteName}</h1>
+      <p>Where Mathematics Meets Infinity</p>
+    </div>
+
+    <div class="body">
+      <p class="greeting">Welcome, ${name}!</p>
+      <p class="message">
+        Thank you for registering with <strong>${siteName}</strong>. 
+        To complete your registration and secure your account, please use the verification code below.
+      </p>
+
+      <div class="otp-box">
+        <h2 class="otp-code">${otp}</h2>
+        <p class="otp-warning">This code will expire in 10 minutes. Do not share it with anyone.</p>
+      </div>
+
+      <hr class="divider" />
+      <p class="support">
+        If you didn't create this account, please ignore this email or contact us at ${supportEmail}.
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>&copy; ${new Date().getFullYear()} ${siteName}. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    const transporter = createTransporter();
+    await transporter.sendMail({
+      from: `"${siteName}" <${process.env.SMTP_FROM}>`,
+      to: email,
+      subject: `Your Verification Code: ${otp}`,
+      html,
+    });
+
+    await logEmail(email, EMAIL_TYPE, 'sent');
+    return { sent: true, error: null };
+  } catch (error) {
+    await logEmail(email, EMAIL_TYPE, 'failed', error.message);
+    return { sent: false, error: error.message };
+  }
+};
+
 module.exports = { 
   sendUnbanEmail, 
   isConfigured, 
   logEmail, 
   wasEmailAlreadySent,
   sendSubscriptionConfirmation,
-  sendAnnouncementEmailToSubscribers
+  sendAnnouncementEmailToSubscribers,
+  sendOTPVerificationEmail
 };

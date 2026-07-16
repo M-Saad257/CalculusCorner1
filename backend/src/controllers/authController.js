@@ -59,6 +59,9 @@ const login = async (req, res, next) => {
       { expiresIn: '30d' }
     );
 
+    // Stamp last_login timestamp
+    try { await UserModel.updateLastLogin(user.id); } catch (_) {}
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
@@ -89,7 +92,7 @@ const login = async (req, res, next) => {
 const register = async (req, res, next) => {
   const startTime = performance.now();
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, courseId } = req.body;
 
     if (!name || !email || !password) {
       res.status(400);
@@ -109,6 +112,18 @@ const register = async (req, res, next) => {
 
     // Create student user and blank profile
     const userId = await UserModel.createStudent(name, email, hashedPassword);
+
+    // Auto-enroll student if course is selected
+    if (courseId) {
+      try {
+        const EnrollmentModel = require('../models/EnrollmentModel');
+        const ProgressModel = require('../models/ProgressModel');
+        await EnrollmentModel.enrollWithCheck(userId, courseId);
+        await ProgressModel.upsertCourseProgress(userId, courseId, 0);
+      } catch (enrollErr) {
+        console.error('Failed to auto-enroll student on registration:', enrollErr.message);
+      }
+    }
 
     // Create admin notification
     try {

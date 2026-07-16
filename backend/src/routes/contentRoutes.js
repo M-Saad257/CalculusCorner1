@@ -188,7 +188,7 @@ router.get('/newsletter/unsubscribe', async (req, res, next) => {
         <div style="font-family: sans-serif; max-width: 500px; margin: 50px auto; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; text-align: center;">
           <h2 style="color: #4f46e5;">Unsubscribed Successfully</h2>
           <p style="color: #4b5563; font-size: 14px;">You have been successfully removed from our subscriber lists. You will no longer receive any updates.</p>
-          <a href="https://localhost:5173" style="display: inline-block; margin-top: 15px; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Go to Calculus Corner</a>
+          <a href={process.env.BACKEND_URL} style="display: inline-block; margin-top: 15px; padding: 10px 20px; background-color: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Go to Calculus Corner</a>
         </div>
       `);
     } else {

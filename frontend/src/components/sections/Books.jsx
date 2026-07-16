@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { motion, useInView } from 'framer-motion';
-import { FileText, Download, FileSpreadsheet, Book, Archive, File, Search, Image as ImageIcon } from 'lucide-react';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { FileText, Download, FileSpreadsheet, Book, Archive, File, Search, Image as ImageIcon, Eye, X } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import Button from '../ui/Button';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
@@ -21,6 +22,7 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeSubcategory, setActiveSubcategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedBook, setSelectedBook] = useState(null);
 
   const loadBooks = async () => {
     try {
@@ -65,7 +67,7 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   };
 
-  // Dynamically extract categories that actually have notes
+  // Dynamically extract categories that actually have books
   const categoriesList = Array.from(
     new Set(['All', ...Books.map(v => v.category).filter(Boolean)])
   );
@@ -104,7 +106,7 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
                   Premium <span className="text-gradient">Books</span>
                 </h2>
                 <p className="text-base md:text-lg text-text-secondary leading-relaxed">
-                  Get instant access to a growing library of high-quality PDF notes and formula sheets — built to work alongside your video lessons and quizzes.
+                  Get instant access to a growing library of high-quality PDF books and formula sheets, built to work alongside your video lessons and quizzes.
                 </p>
               </div>
             )}
@@ -113,7 +115,7 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <input 
                   type="text" 
-                  placeholder="Search notes..." 
+                  placeholder="Search books..." 
                   className="w-full md:w-64 pl-11 pr-4 py-3 rounded-full border border-border-color bg-bg-color text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-text-primary"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -182,7 +184,7 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
                 <div className="flex flex-col flex-grow">
                   <div className="relative w-full h-40 mb-4 rounded-xl overflow-hidden bg-slate-100/50 group-hover:bg-primary/5 transition-colors">
                     {Book.thumbnail_url ? (
-                      <img src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${Book.thumbnail_url}`} alt={Book.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <img src={`${import.meta.env.VITE_BACKEND_URL || ''}${Book.thumbnail_url}`} alt={Book.title} className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Icon className={`w-12 h-12 opacity-50 ${option.bgColor.split(' ')[1]}`} />
@@ -195,18 +197,21 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
                   </h3>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-border-color flex justify-between items-center w-full">
-                  <span className="text-xs font-semibold text-text-secondary flex items-center gap-1.5">
-                    <FileText size={14} className="opacity-70" />
-                    Note
-                  </span>
-                  <a 
-                    href={`http://localhost:5173/api/admin/Books/${Book.id}/download`}
-                    download
-                    className="flex items-center gap-1.5 text-primary hover:text-primary-dark font-semibold text-sm transition-colors p-2 -mr-2 rounded-lg hover:bg-primary/5"
+                <div className="mt-4 pt-4 border-t border-border-color flex justify-between items-center w-full gap-2">
+                  <button
+                    onClick={() => setSelectedBook(Book)}
+                    className="flex items-center gap-1.5 text-primary hover:text-primary-dark font-bold text-xs transition-colors py-2 px-3 rounded-lg hover:bg-primary/5 cursor-pointer border border-primary/20 bg-transparent"
                   >
-                    <span className="sr-only sm:not-sr-only sm:block">Download</span>
-                    <Download size={16} />
+                    <Eye size={14} />
+                    <span>View Book</span>
+                  </button>
+                  <a 
+                    href={`${import.meta.env.VITE_BACKEND_URL || ''}/api/books/${Book.id}/download`}
+                    download
+                    className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 font-bold text-xs transition-colors py-2 px-3 rounded-lg hover:bg-emerald-50 border border-emerald-600/20"
+                  >
+                    <span>Download</span>
+                    <Download size={14} />
                   </a>
                 </div>
               </motion.div>
@@ -224,6 +229,49 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
               </p>
             </div>
           )}
+
+      {createPortal(
+        <AnimatePresence>
+          {selectedBook && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+              onClick={() => setSelectedBook(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 15 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 15 }}
+                transition={{ type: "spring", duration: 0.5 }}
+                className="bg-bg-color rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-border-color relative text-left"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-4 md:p-6 border-b border-border-color flex justify-between items-center bg-bg-secondary">
+                  <h3 className="font-display font-bold text-lg md:text-xl text-text-primary line-clamp-1 pr-6">
+                    {selectedBook.title}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedBook(null)}
+                    className="p-2 text-text-secondary hover:text-red-500 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="flex-grow bg-slate-100 flex items-center justify-center relative">
+                  <iframe
+                    src={`/api/books/${selectedBook.id}/view`}
+                    title={selectedBook.title}
+                    className="w-full h-full border-0"
+                  ></iframe>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       </div>
     </section>

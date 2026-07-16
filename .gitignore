@@ -5,3 +5,5 @@ dist-ssr
 *.local
 .env
 .vite
+backend/uploads/
+backend/src/scratch/

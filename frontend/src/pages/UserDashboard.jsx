@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, BookOpen, GraduationCap, User, Play, FileText, BrainCircuit, Loader2, X, Menu, MessageSquare, LayoutDashboard, Star, TrendingUp, Award, Headset } from 'lucide-react';
+import { LogOut, BookOpen, GraduationCap, User, Play, FileText, BrainCircuit, Loader2, X, Menu, MessageSquare, LayoutDashboard, Star, TrendingUp, Award, Headset, Globe } from 'lucide-react';
 import api from '../services/api';
 import Button from '../components/ui/Button';
 import Loader from '../components/ui/Loader';
@@ -9,6 +9,7 @@ import { useSocket } from '../hooks/useSocket';
 import NotificationBell from '../components/ui/NotificationBell';
 import { useDialog } from '../context/DialogContext';
 import { useContent } from '../context/ContentContext';
+import ThemeToggle from '../components/ui/ThemeToggle';
 
 const defaultCourses = [
   {
@@ -103,6 +104,7 @@ import DashboardHome from './UserDashboard/DashboardHome';
 import CoursesTab from './UserDashboard/CoursesTab';
 import ResourceTab from './UserDashboard/ResourceTab';
 import PracticeTab from './UserDashboard/PracticeTab';
+import BooksTab from './UserDashboard/BooksTab';
 import ProfileTab from './UserDashboard/ProfileTab';
 import SupportChatTab from './UserDashboard/SupportChatTab';
 import AchievementTab from './UserDashboard/AchievementTab';
@@ -823,6 +825,9 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
               <Play size={18} /> <span>Video Lectures</span>
             </button>
           )}
+          <button onClick={() => { setActiveTab('books'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'books' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+            <BookOpen size={18} /> <span>Books Library</span>
+          </button>
           <button onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'profile' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
             <User size={18} /> <span>My Profile</span>
           </button>
@@ -837,8 +842,11 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
           </button>
         </nav>
 
-        <div className="p-3 px-6 border-t border-border-color">
-          <button onClick={handleLogout} className="flex items-center gap-2 w-full p-1 bg-transparent border-0 text-red-500 font-bold cursor-pointer hover:opacity-80 transition-opacity">
+        <div className="p-3 px-6 border-t border-border-color flex flex-col gap-2">
+          <a href="/" className="flex items-center gap-3 px-1 py-1 text-sm font-semibold text-text-secondary hover:text-primary transition-all">
+            <Globe size={18} /> <span>View Website</span>
+          </a>
+          <button onClick={handleLogout} className="flex items-center gap-2 w-full p-1 bg-transparent border-0 text-red-500 font-bold cursor-pointer hover:opacity-80 transition-opacity text-left">
             <LogOut size={18} /> <span>Sign Out</span>
           </button>
         </div>
@@ -853,10 +861,13 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
             >
               <Menu size={20} />
             </button>
-            <span className="text-text-secondary text-sm font-medium">My Workspace</span>
+            <span className="text-text-secondary text-sm font-medium">
+              {student?.name ? `${student.name}'s Workspace` : 'My Workspace'}
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <ConnectionIndicator status={status} />
+            <ThemeToggle />
             <NotificationBell />
             <div className="w-9 h-9 rounded-full bg-indigo-100 text-primary flex items-center justify-center font-bold shadow-sm overflow-hidden">
               {student?.avatar ? <img src={getFileUrl(student.avatar)} alt="Avatar" className="w-full h-full rounded-full object-cover" /> : (student?.name ? student.name.charAt(0).toUpperCase() : 'S')}
@@ -905,6 +916,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
                   videos={videos}
                   recentVideos={recentVideos}
                   enrolledCourses={enrolledCourses}
+                  courseProgress={courseProgress}
                   setActiveTab={setActiveTab}
                   setSelectedCourseForDetail={setSelectedCourseForDetail}
                 />
@@ -940,6 +952,10 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
                 <PracticeTab
                   videos={videos}
                 />
+              )}
+
+              {activeTab === 'books' && (
+                <BooksTab />
               )}
 
               {activeTab === 'profile' && (

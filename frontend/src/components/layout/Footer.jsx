@@ -57,9 +57,9 @@ const Footer = () => {
       if (!url.startsWith('/')) {
         url = `/uploads/logo/${url}`;
       }
-      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
+      return `${import.meta.env.VITE_BACKEND_URL || ''}${url}`;
     }
-    return "/CClogo.png";
+    return "/official.webp";
   };
 
   return (
@@ -74,8 +74,8 @@ const Footer = () => {
               alt="Calculus Corner Logo"
               className="h-10 w-auto object-contain"
               onError={(e) => {
-                if (e.target.src !== window.location.origin + "/CClogo.png") {
-                  e.target.src = "/CClogo.png";
+                if (e.target.src !== window.location.origin + "/official.webp") {
+                  e.target.src = "/official.webp";
                 }
               }}
             />
@@ -110,6 +110,8 @@ const Footer = () => {
             {visibility.courses !== false && <li><Link to="/courses" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Courses</Link></li>}
             {visibility.success_stories !== false && <li><a href="/#success" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Success Stories</a></li>}
             {visibility.contact !== false && <li><a href="/#contact" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Contact</a></li>}
+            {visibility.updates !== false && <li><Link to="/updates" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">News & Updates</Link></li>}
+            {visibility.past_papers !== false && <li><Link to="/past-papers" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Past Papers</Link></li>}
           </ul>
         </div>
 

@@ -109,6 +109,8 @@ const Navbar = () => {
     ...(visibility.lectures !== false ? [{ name: 'Lectures', href: '/lectures' }] : []),
     ...(visibility.books !== false ? [{ name: 'Books', href: '/books' }] : []),
     ...(visibility.courses !== false ? [{ name: 'Courses', href: '/courses' }] : []),
+    ...(visibility.updates !== false ? [{ name: 'Updates', href: '/updates' }] : []),
+    ...(visibility.past_papers !== false ? [{ name: 'Past Papers', href: '/past-papers' }] : []),
   ];
 
   const getLogoSrc = () => {
@@ -121,9 +123,9 @@ const Navbar = () => {
       if (!url.startsWith('/')) {
         url = `/uploads/logo/${url}`;
       }
-      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
+      return `${import.meta.env.VITE_BACKEND_URL || ''}${url}`;
     }
-    return "/CClogo.png";
+    return "/official.webp";
   };
 
   return (
@@ -139,10 +141,10 @@ const Navbar = () => {
           <img
             src={getLogoSrc()}
             alt="Calculus Corner Logo"
-            className="h-12 w-auto object-contain mix-blend-multiply"
+            className="h-12 w-auto object-contain"
             onError={(e) => {
-              if (e.target.src !== window.location.origin + "/CClogo.png") {
-                e.target.src = "/CClogo.png";
+              if (e.target.src !== window.location.origin + "/official.webp") {
+                e.target.src = "/official.webp";
               }
             }}
           />
@@ -172,10 +174,6 @@ const Navbar = () => {
           <ThemeToggle />
           {token ? (
             <>
-              {/* Connection status */}
-              <div className="flex items-center gap-2">
-                <ConnectionIndicator status={status} />
-              </div>
               <NotificationBell />
 
               <Button
@@ -185,13 +183,12 @@ const Navbar = () => {
               >
                 {isAdmin ? 'Admin Panel' : 'Dashboard'}
               </Button>
-              <Button
-                variant="primary"
-                className="hidden sm:inline-flex px-5 py-2 text-sm"
+              <button
                 onClick={handleLogout}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-text-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl border border-border-color transition-all duration-200 cursor-pointer bg-transparent"
               >
                 Log Out
-              </Button>
+              </button>
             </>
           ) : (
             <>

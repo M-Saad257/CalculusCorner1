@@ -394,6 +394,20 @@ const studentController = {
         });
       }
 
+      // Last Login event (only add if last_login differs from created_at)
+      if (profile && profile.last_login) {
+        const loginTime = new Date(profile.last_login).getTime();
+        const createTime = new Date(profile.created_at).getTime();
+        if (Math.abs(loginTime - createTime) > 5000) { // more than 5 sec apart
+          timeline.push({
+            type: 'login',
+            title: 'Logged In',
+            description: 'Session started',
+            timestamp: profile.last_login
+          });
+        }
+      }
+
       // Enrollments
       enrolled.forEach(c => {
         if (c.enrolledAt) {

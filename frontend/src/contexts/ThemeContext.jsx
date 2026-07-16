@@ -8,16 +8,10 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Check local storage first
     const savedTheme = localStorage.getItem('calculus-corner-theme');
-    if (savedTheme) {
-      return savedTheme;
-    }
-    // Fall back to system preference
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    return 'light'; // Default to light
+    // Only honour a saved preference if the user explicitly chose dark
+    if (savedTheme === 'dark') return 'dark';
+    return 'light'; // Always default to light
   });
 
   useEffect(() => {

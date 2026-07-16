@@ -98,7 +98,7 @@ const sendUnbanEmail = async (student) => {
   }
 
   const siteName = 'Calculus Corner';
-  const siteUrl = process.env.SITE_URL || 'http://localhost:5173';
+  const siteUrl = process.env.SITE_URL;
   const supportEmail = process.env.SMTP_FROM || 'support@calculuscorner.com';
 
   const html = `
@@ -203,8 +203,8 @@ const sendSubscriptionConfirmation = async (email, token) => {
   }
 
   const siteName = 'Calculus Corner';
-  const siteUrl = process.env.SITE_URL || 'http://localhost:5173';
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+  const siteUrl = process.env.SITE_URL;
+  const backendUrl = process.env.BACKEND_URL;
   const supportEmail = process.env.SMTP_FROM || 'support@calculuscorner.com';
 
   let logoUrl = `${siteUrl}/logo-og.png`; // Use cache-busted OG logo link
@@ -332,8 +332,8 @@ const sendAnnouncementEmailToSubscribers = async (announcement) => {
     }
 
     const siteName = 'Calculus Corner';
-    const siteUrl = process.env.SITE_URL || 'http://localhost:5173';
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const siteUrl = process.env.SITE_URL;
+    const backendUrl = process.env.BACKEND_URL;
 
     const path = require('path');
     const fs = require('fs');
@@ -473,7 +473,7 @@ const sendOTPVerificationEmail = async (email, name, otp) => {
   }
 
   const siteName = 'Calculus Corner';
-  const siteUrl = process.env.SITE_URL || 'http://localhost:5173';
+  const siteUrl = process.env.SITE_URL;
   const supportEmail = process.env.SMTP_FROM || 'support@calculuscorner.com';
 
   const html = `

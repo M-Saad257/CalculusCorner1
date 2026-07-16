@@ -54,7 +54,7 @@ const LandingPage = () => {
           <SocialProof />
           {visibility.books !== false && <Books homeOnly={true} />}
           {visibility.notes !== false && <Resources />}
-          {visibility.lectures !== false && <VideoLibrary />}
+          {visibility.lectures !== false && <VideoLibrary isHomePage={true} />}
           {visibility.courses !== false && <PremiumCourses />}
           <PlatformFeatures />
           {visibility.practice !== false && <Practice />}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, Mail, User, Eye, EyeOff, Loader2, ArrowLeft, AlertCircle, Sparkles, CheckCircle2, KeyRound } from 'lucide-react';
+import { Lock, Mail, User, Eye, EyeOff, Loader2, ArrowLeft, AlertCircle, Sparkles, CheckCircle2, KeyRound, GraduationCap } from 'lucide-react';
 import api from '../services/api';
 import { useSocket } from '../hooks/useSocket';
 import { useContent } from '../context/ContentContext';
@@ -56,13 +56,13 @@ const MathNodesBackground = () => {
           }}
         >
           <div className="relative flex items-center justify-center">
-             <span className="absolute inset-0 bg-[var(--color-primary)] rounded-full blur-[40px] opacity-30"></span>
-             <span className="absolute bg-[var(--color-primary)] w-3 h-3 rounded-full shadow-[0_0_10px_var(--color-primary)] z-10" style={{ right: '-15px', top: '-5px' }}></span>
-             {node.symbol}
+            <span className="absolute inset-0 bg-[var(--color-primary)] rounded-full blur-[40px] opacity-30"></span>
+            <span className="absolute bg-[var(--color-primary)] w-3 h-3 rounded-full shadow-[0_0_10px_var(--color-primary)] z-10" style={{ right: '-15px', top: '-5px' }}></span>
+            {node.symbol}
           </div>
         </motion.div>
       ))}
-      
+
       {/* Decorative Mountains/Polygons at bottom */}
       <svg className="absolute bottom-0 left-0 w-full h-auto text-primary/5" viewBox="0 0 1440 320" fill="currentColor" preserveAspectRatio="none">
         <path d="M0,288L48,272C96,256,192,224,288,197.3C384,171,480,149,576,165.3C672,181,768,235,864,250.7C960,267,1056,245,1152,213.3C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
@@ -86,7 +86,8 @@ const AuthPage = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    otp: ''
+    otp: '',
+    courseId: ''
   });
 
   // UI states
@@ -97,6 +98,21 @@ const AuthPage = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [bannedInfo, setBannedInfo] = useState(null); // { token, email }
   const [resendTimer, setResendTimer] = useState(0);
+  const [courses, setCourses] = useState([]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const res = await api.get('/courses');
+        if (res.data && Array.isArray(res.data.data)) {
+          setCourses(res.data.data);
+        }
+      } catch (err) {
+        console.error('Failed to load courses on auth page:', err);
+      }
+    };
+    fetchCourses();
+  }, []);
 
   useEffect(() => {
     // If already logged in, send to correct dashboard directly
@@ -205,10 +221,17 @@ const AuthPage = () => {
           throw new Error('Authentication payload missing token or user data');
         }
       } else if (authMode === 'register') {
+        const visibility = content?.visibility || {};
+        if (visibility.courses !== false && !formData.courseId) {
+          setError('Please select a course to continue registration.');
+          setIsLoading(false);
+          return;
+        }
         const res = await api.post('/auth/register', {
           name: formData.name,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          courseId: formData.courseId
         });
 
         if (res.data.requireOTP) {
@@ -249,7 +272,7 @@ const AuthPage = () => {
       // Handle the 403 requireOTP response from login
       if (err.response?.status === 403 && err.response?.data?.requireOTP) {
         setAuthMode('otp');
-        setResendTimer(60); 
+        setResendTimer(60);
         setError('');
         setSuccessMessage(err.response.data.message || 'Please verify your email to continue.');
         return;
@@ -318,9 +341,9 @@ const AuthPage = () => {
       if (!url.startsWith('/')) {
         url = `/uploads/logo/${url}`;
       }
-      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
+      return `${import.meta.env.VITE_BACKEND_URL || ''}${url}`;
     }
-    return "/CClogo.png";
+    return "/official.webp";
   };
 
   const getHeaderSubtext = () => {
@@ -340,7 +363,7 @@ const AuthPage = () => {
 
   return (
     <div className="relative min-h-screen w-screen flex items-center justify-center bg-bg-color overflow-hidden font-sans text-text-primary">
-      
+
       <MathNodesBackground />
 
       {/* Back to Home Link */}
@@ -372,8 +395,8 @@ const AuthPage = () => {
                 alt="Calculus Corner Logo"
                 className="h-20 w-auto object-contain dark:invert"
                 onError={(e) => {
-                  if (e.target.src !== window.location.origin + "/CClogo.png") {
-                    e.target.src = "/CClogo.png";
+                  if (e.target.src !== window.location.origin + "/official.webp") {
+                    e.target.src = "/official.webp";
                   }
                 }}
               />
@@ -452,6 +475,42 @@ const AuthPage = () => {
                           required={authMode === 'register'}
                           className="w-full pl-12 pr-4 py-3 bg-transparent border border-border-color rounded-full font-sans text-sm text-text-primary placeholder-text-tertiary/60 focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300"
                         />
+                      </div>
+                    </motion.div>
+                  )}
+                  {authMode === 'register' && (content?.visibility?.courses !== false) && (
+                    <motion.div
+                      key="course-field"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="flex flex-col gap-1.5 overflow-hidden mt-3"
+                    >
+                      <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest pl-4">Target Course</label>
+                      <div className="relative mb-0.5">
+                        <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-text-tertiary z-10">
+                          <GraduationCap size={18} />
+                        </span>
+                        <select
+                          name="courseId"
+                          value={formData.courseId}
+                          onChange={handleInputChange}
+                          required={authMode === 'register'}
+                          className="w-full pl-12 pr-10 py-3 bg-transparent border border-border-color rounded-full font-sans text-sm text-text-primary focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 appearance-none cursor-pointer"
+                        >
+                          <option value="" className="text-text-primary dark:bg-slate-900 bg-white">-- Select Your Course --</option>
+                          {courses.map(course => (
+                            <option key={course.id} value={course.id} className="text-text-primary dark:bg-slate-900 bg-white">
+                              {course.grade} - {course.title}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text-tertiary">
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                          </svg>
+                        </div>
                       </div>
                     </motion.div>
                   )}
@@ -660,7 +719,7 @@ const AuthPage = () => {
                 <span className="flex items-center gap-2">
                   {getSubmitButtonText()}
                   {(authMode === 'login' || authMode === 'register') && (
-                    <motion.span 
+                    <motion.span
                       className="inline-block transition-transform duration-300 group-hover:translate-x-1"
                     >
                       →

@@ -1,7 +1,6 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { MessageCircle, Target } from 'lucide-react';
-import { FaInstagram, FaYoutube, FaTwitter } from 'react-icons/fa';
+import { FaInstagram, FaYoutube, FaTwitter, FaWhatsapp } from 'react-icons/fa';
 
 const communityPlatforms = [
   {
@@ -17,7 +16,7 @@ const communityPlatforms = [
   },
   {
     name: 'WhatsApp',
-    icon: MessageCircle,
+    icon: FaWhatsapp,
     stats: '2.3K',
     label: 'Active Members',
     actionText: 'Join Community',
@@ -98,12 +97,12 @@ const Community = () => {
                 target="_blank"
                 rel="noopener noreferrer" 
                 variants={itemVariants} 
-                className={`group flex flex-col p-8 rounded-2xl bg-bg-color/ border border-border-color transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative overflow-hidden glass ${platform.themeColor}`}
+                className={`group flex flex-col text-center p-8 rounded-2xl bg-bg-color border border-border-color transition-all duration-300 hover:-translate-y-2 hover:shadow-xl relative overflow-hidden glass ${platform.themeColor}`}
               >
                 {/* Hover top bar indicator */}
                 <div className={`absolute top-0 left-0 w-full h-[4px] scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300 ${platform.barColor}`} />
 
-                <div className="flex items-center gap-4 mb-8">
+                <div className="flex flex-col items-center gap-3 mb-6">
                   <div className={`flex items-center justify-center w-14 h-14 rounded-full text-white shadow-sm ${platform.iconBg} group-hover:scale-105 transition-transform duration-300`}>
                     <Icon size={26} />
                   </div>
@@ -112,7 +111,7 @@ const Community = () => {
                   </span>
                 </div>
 
-                <div className="flex flex-col text-left">
+                <div className="flex flex-col items-center text-center">
                   <h3 className="font-display font-black text-4xl text-text-primary mb-1 group-hover:text-inherit transition-colors duration-200">
                     {platform.stats}
                   </h3>

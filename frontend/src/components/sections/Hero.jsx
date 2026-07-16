@@ -117,13 +117,13 @@ const Hero = () => {
   };
 
   const getImageUrl = (url) => {
-    if (!url) return "/SirMehtabPhoto.png";
+    if (!url) return "/SirMehtabPhoto.webp";
 
     url = url.replace('localost', 'localhost');
 
     if (url.startsWith("/uploads")) {
       // Serve uploads from the backend running on port 5000
-      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
+      return `${import.meta.env.VITE_BACKEND_URL || ''}${url}`;
     }
 
     // Fallback map checks for old relative routes mappings
@@ -134,9 +134,9 @@ const Hero = () => {
     return url;
   };
   return (
-    <section id="about" className="relative min-h-screen flex px-10 items-center justify-center pt-20 pb-8 overflow-hidden bg-bg-color/70 dark:bg-[#0B1221]/90 backdrop-blur-[2px] text-text-primary" ref={containerRef}>
+    <section id="about" className="relative min-h-screen flex px-10 items-center justify-center pt-20 pb-8 overflow-hidden bg-bg-color/70 dark:bg-[#0B1221]/75 backdrop-blur-[2px] text-text-primary" ref={containerRef}>
       {/* Notice Banner */}
-      {announcements.length === 1 && ( 
+      {announcements.length === 1 && (
         <div className="absolute top-20 left-0 w-full bg-gradient-to-r from-primary to-primary-dark text-white text-center py-3 px-4 font-semibold text-xs md:text-sm z-30 flex justify-center items-center gap-2 shadow-sm animate-fadeIn">
           <Star size={16} fill="currentColor" className="text-accent shrink-0" />
           <span className="font-extrabold uppercase text-[10px] bg-bg-color/ px-2 py-0.5 rounded border border-white/20 mr-1 select-none">
@@ -217,14 +217,14 @@ const Hero = () => {
 
           {/* Subheadline */}
           <motion.p variants={itemVariants} className="text-base sm:text-lg md:text-xl text-gray-500 dark:text-text-secondary leading-relaxed max-w-2xl xl:max-w-xl mb-8">
-            {heroData.subheadline || 'From Algebra to Calculus, learn every concept step by step — clear video lessons and real expert guidance.'}
+            {heroData.subheadline || 'From Algebra to Calculus, learn every concept step by step, clear video lessons and real expert guidance.'}
           </motion.p>
 
           {/* Call to Actions */}
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-center xl:justify-start gap-4 w-full sm:w-auto px-4 xl:px-0">
             <button
-              onClick={() => navigate('/courses')}
-              className="group relative flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-full overflow-hidden shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:shadow-primary/40 active:translate-y-0"
+              onClick={() => navigate('/notes')}
+              className="group relative flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-full overflow-hidden shadow-lg shadow-primary/30 transition-all hover:-translate-y-0.5 hover:shadow-primary/40 active:translate-y-0 cursor-pointer"
             >
               <span className="relative z-10">{heroData.button_primary || 'Start Learning'}</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="relative z-10 group-hover:translate-x-1 transition-transform">
@@ -238,7 +238,7 @@ const Hero = () => {
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
                 else navigate('/#videos');
               }}
-              className="flex items-center justify-center gap-2 px-8 py-3.5 bg-bg-color dark:bg-bg-secondary text-primary font-bold rounded-full border border-gray-200 dark:border-border-color shadow-sm hover:border-primary/50 transition-all hover:-translate-y-0.5 active:translate-y-0"
+              className="flex items-center justify-center gap-2 px-8 py-3.5 bg-bg-color dark:bg-bg-secondary text-primary font-bold rounded-full border border-gray-200 dark:border-border-color shadow-sm hover:border-primary/50 transition-all hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
             >
               <Play size={18} className="fill-primary text-primary" />
               <span>{heroData.button_secondary || 'Watch Free Lessons'}</span>
@@ -257,12 +257,28 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
         >
           {/* Main Image Container */}
-          <div className="relative w-full max-w-[320px] rounded-[40px] bg-gray-50 dark:bg-bg-tertiary pt-8 px-6 pb-0 mb-20 flex justify-center items-end h-[380px]">
+          <div className="relative w-full max-w-[360px] rounded-[40px] bg-gray-50 dark:bg-bg-tertiary pt-8 px-6 pb-0 mb-20 flex justify-center items-end h-[380px]">
             {/* Top Left Float */}
-            <div className="absolute top-6 -left-12 p-3 lg:p-4 rounded-2xl bg-glass  shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 dark:border-border-color flex flex-col items-center text-center max-w-[140px] z-20">
+            <motion.div
+              className="absolute top-6 -left-12 p-3 lg:p-4 rounded-2xl bg-glass shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 dark:border-border-color flex flex-col items-center text-center max-w-[140px] z-20 cursor-default transition-all duration-300 hover:shadow-[0_20px_40px_rgba(37,99,235,0.12)] hover:border-primary/30"
+              animate={{
+                y: [0, -10, 0],
+                rotate: [0, 1.5, -1.5, 0]
+              }}
+              transition={{
+                repeat: Infinity,
+                duration: 6,
+                ease: "easeInOut"
+              }}
+              whileHover={{
+                scale: 1.1,
+                rotate: 0,
+                y: -5
+              }}
+            >
               <User className="text-primary mb-1" size={24} />
               <p className="text-[11px] font-bold text-gray-800 dark:text-text-secondary leading-tight">Muhammad Mehtab</p>
-            </div>
+            </motion.div>
 
             <AnimatePresence>
               <motion.img

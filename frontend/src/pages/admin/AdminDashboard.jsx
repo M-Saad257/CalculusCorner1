@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, User, FileText, Play, LogOut, Lock, Settings, Menu, X, CheckCircle, Library, Star, Save, Loader2 } from 'lucide-react';
+import { LayoutDashboard, BookOpen, User, FileText, Play, LogOut, Lock, Settings, Menu, X, CheckCircle, Library, Star, Save, Loader2, Globe, Bell } from 'lucide-react';
 import { useSocket } from '../../hooks/useSocket';
 import api from '../../services/api';
 import NotificationBell from '../../components/ui/NotificationBell';
+import ThemeToggle from '../../components/ui/ThemeToggle';
 
 const ConnectionIndicator = ({ status }) => {
   const statusConfig = {
@@ -37,6 +38,7 @@ import ManageSiteContent from './ManageSiteContent';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import ManageBooks from './ManageBooks';
 import ManageTestimonials from './ManageTestimonials';
+import ManageUpdates from './ManageUpdates';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -102,7 +104,7 @@ const AdminDashboard = () => {
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 w-64 bg-bg-color border-r border-border-color flex flex-col shadow-lg z-10 transition-transform duration-300 lg:static lg:translate-x-0 lg:shadow-sm shrink-0 text-left ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-6 flex items-center justify-between border-b border-border-color">
+        <div className="py-[23.5px] px-6 flex items-center justify-between border-b border-border-color">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-primary to-primary-dark flex items-center justify-center shadow-md">
               <Lock className="text-white animate-pulse" size={16} />
@@ -121,7 +123,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${location.pathname === '/admin' || location.pathname === '/admin/analytics'
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${location.pathname === '/admin' || location.pathname === '/admin/analytics'
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -132,7 +134,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin/courses"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/courses')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/courses')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -143,7 +145,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin/books"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/books')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/books')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -154,7 +156,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin/students"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/students')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/students')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -165,7 +167,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin/enrollments"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/enrollments')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/enrollments')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -176,7 +178,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin/resources"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/resources')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/resources')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -187,7 +189,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin/videos"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/videos')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/videos')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -196,9 +198,20 @@ const AdminDashboard = () => {
             <span>Manage Videos</span>
           </Link>
           <Link
+            to="/admin/updates"
+            onClick={() => setIsSidebarOpen(false)}
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/updates')
+              ? 'bg-primary !text-white border-r-4 border-primary-dark'
+              : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
+              }`}
+          >
+            <Bell size={18} />
+            <span>Manage Updates</span>
+          </Link>
+          <Link
             to="/admin/testimonials"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/testimonials')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/testimonials')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -209,7 +222,7 @@ const AdminDashboard = () => {
           <Link
             to="/admin/site-content"
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-3 px-6 py-2.5 font-semibold transition-all duration-150 ${isLinkActive('/admin/site-content')
+            className={`flex items-center gap-3 px-6 py-[7px] font-semibold transition-all duration-150 ${isLinkActive('/admin/site-content')
               ? 'bg-primary !text-white border-r-4 border-primary-dark'
               : 'text-text-secondary hover:bg-bg-tertiary hover:text-primary'
               }`}
@@ -219,13 +232,20 @@ const AdminDashboard = () => {
           </Link>
         </nav>
 
-        <div className="p-4 px-6 border-t border-border-color">
+        <div className=" px-6 border-t border-border-color flex flex-col">
+          <a
+            href="/"
+            className="flex items-center gap-3 px-2 pb-3 pt-3 font-semibold text-text-secondary hover:text-primary transition-all duration-150"
+          >
+            <Globe size={18} />
+            <span>View Website</span>
+          </a>
           <button
-            className="flex items-center gap-2 w-full p-2 bg-transparent border-0 text-red-500 font-bold cursor-pointer hover:opacity-85 transition-opacity"
+            className="flex items-center gap-2 w-full px-2 pb-3 pt-2 bg-transparent border-0 text-red-500 font-bold cursor-pointer hover:opacity-85 transition-opacity text-left"
             onClick={handleLogout}
           >
             <LogOut size={18} />
-            <span>Exit to Site</span>
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
@@ -244,6 +264,7 @@ const AdminDashboard = () => {
           </div>
           <div className="flex items-center gap-4">
             <ConnectionIndicator status={status} />
+            <ThemeToggle />
             <NotificationBell />
             <div className="flex items-center gap-3 relative">
               <div 
@@ -296,7 +317,7 @@ const AdminDashboard = () => {
                     <button 
                       type="submit" 
                       disabled={passwordStatus.loading} 
-                      className="w-full mt-2 py-2.5 text-xs font-bold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm border-0 cursor-pointer flex justify-center items-center gap-1.5 transition-colors"
+                      className="w-full mt-2 py-2 text-xs font-bold text-white bg-primary hover:bg-primary-dark rounded-xl shadow-sm border-0 cursor-pointer flex justify-center items-center gap-1.5 transition-colors"
                     >
                       {passwordStatus.loading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Change Password
                     </button>
@@ -344,7 +365,8 @@ const AdminDashboard = () => {
               <Route path="/students" element={<ManageStudents />} />
               <Route path="/enrollments" element={<ManageEnrollments />} />
               <Route path="/resources" element={<ManageResources />} />
-              <Route path="/videos" element={<ManageVideos />} />
+               <Route path="/videos" element={<ManageVideos />} />
+              <Route path="/updates" element={<ManageUpdates />} />
               <Route path="/site-content" element={<ManageSiteContent />} />
               <Route path="/testimonials" element={<ManageTestimonials />} />
             </Routes>

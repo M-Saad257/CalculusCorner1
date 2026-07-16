@@ -13,6 +13,8 @@ import AboutPage from './pages/AboutPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import Unauthorized from './pages/Unauthorized';
+import UpdatesPage from './pages/UpdatesPage';
+import PastPapersPage from './pages/PastPapersPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import VisibilityRoute from './components/VisibilityRoute';
 import ScrollToTop from './components/ScrollToTop';
@@ -44,6 +46,8 @@ function App() {
                 <Route path="/lectures" element={<VisibilityRoute feature="lectures"><LecturesPage /></VisibilityRoute>} />
                 <Route path="/books" element={<VisibilityRoute feature="books"><BooksPage /></VisibilityRoute>} />
                 <Route path="/about" element={<VisibilityRoute feature="about"><AboutPage /></VisibilityRoute>} />
+                <Route path="/updates" element={<VisibilityRoute feature="updates"><UpdatesPage /></VisibilityRoute>} />
+                <Route path="/past-papers" element={<VisibilityRoute feature="past_papers"><PastPapersPage /></VisibilityRoute>} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/unauthorized" element={<Unauthorized />} />

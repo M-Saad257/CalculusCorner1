@@ -123,7 +123,7 @@ const UserModel = {
 
   async getProfile(userId) {
     const [rows] = await db.query(`
-      SELECT u.id, u.name, u.email, u.role, u.created_at, sp.bio, sp.avatar, sp.progress,
+      SELECT u.id, u.name, u.email, u.role, u.created_at, u.last_login, sp.bio, sp.avatar, sp.progress,
              u.isBanned, u.banReason, u.bannedAt, u.bannedBy, u.restore_notified
       FROM users u
       LEFT JOIN students_profile sp ON u.id = sp.user_id
@@ -154,6 +154,17 @@ const UserModel = {
       [hashedPassword, userId]
     );
     return result.affectedRows > 0;
+  },
+
+  async updateLastLogin(userId) {
+    try {
+      await db.query(
+        'UPDATE users SET last_login = NOW() WHERE id = ?',
+        [userId]
+      );
+    } catch (err) {
+      // Column may not exist yet; ignore silently
+    }
   }
 };
 

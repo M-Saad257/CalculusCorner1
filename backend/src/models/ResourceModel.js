@@ -45,12 +45,13 @@ const ResourceModel = {
    * @param {string}      category
    * @param {string|null} subcategory
    * @param {string|null} thumbnail_url
+   * @param {number}      is_past_paper
    */
-  async create(title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null) {
+  async create(title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null, is_past_paper = 0) {
     const metaJson = metadata ? JSON.stringify(metadata) : null;
     const [result] = await db.query(
-      'INSERT INTO resources (title, file_url, original_filename, metadata, category, subcategory, thumbnail_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url]
+      'INSERT INTO resources (title, file_url, original_filename, metadata, category, subcategory, thumbnail_url, is_past_paper) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url, is_past_paper ? 1 : 0]
     );
     return result.insertId;
   },
@@ -64,12 +65,13 @@ const ResourceModel = {
    * @param {string}      category
    * @param {string|null} subcategory
    * @param {string|null} thumbnail_url
+   * @param {number}      is_past_paper
    */
-  async update(id, title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null) {
+  async update(id, title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null, is_past_paper = 0) {
     const metaJson = metadata ? JSON.stringify(metadata) : null;
     const [result] = await db.query(
-      'UPDATE resources SET title = ?, file_url = ?, original_filename = ?, metadata = ?, category = ?, subcategory = ?, thumbnail_url = ? WHERE id = ?',
-      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url, id]
+      'UPDATE resources SET title = ?, file_url = ?, original_filename = ?, metadata = ?, category = ?, subcategory = ?, thumbnail_url = ?, is_past_paper = ? WHERE id = ?',
+      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url, is_past_paper ? 1 : 0, id]
     );
     return result.affectedRows > 0;
   },

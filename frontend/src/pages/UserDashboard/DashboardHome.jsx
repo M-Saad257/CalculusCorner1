@@ -3,7 +3,7 @@ import { Play, Download, Edit3, PlayCircle, Flame, GraduationCap, BookOpen, Cloc
 import Button from '../../components/ui/Button';
 import { useContent } from '../../context/ContentContext';
 
-const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVideos = [], setActiveTab, setSelectedCourseForDetail }) => {
+const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVideos = [], courseProgress = [], setActiveTab, setSelectedCourseForDetail }) => {
   const { content } = useContent();
   const visibility = content?.visibility || {};
   const showCourses = visibility.courses !== false;
@@ -218,6 +218,24 @@ const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVid
                       {course.description && (
                         <p className="text-text-secondary text-xs mt-1 line-clamp-2 leading-relaxed">{course.description}</p>
                       )}
+                      {course.status !== 'pending_payment' && (() => {
+                        const progressInfo = courseProgress.find(cp => cp.courseId === course.id);
+                        const progressPercent = progressInfo ? progressInfo.progressPercent : 0;
+                        return (
+                          <div className="mt-3 w-full">
+                            <div className="flex justify-between items-center text-[10px] font-bold text-text-tertiary mb-1">
+                              <span>COURSE PROGRESS</span>
+                              <span>{progressPercent}%</span>
+                            </div>
+                            <div className="w-full bg-border-color rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="bg-primary h-full rounded-full transition-all duration-500"
+                                style={{ width: `${progressPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-border-color/60">

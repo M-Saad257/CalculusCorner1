@@ -483,6 +483,7 @@ const adminController = {
   async createResource(req, res, next) {
     try {
       const { title, category, subcategory } = req.body;
+      const is_past_paper = req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0;
       if (!title) {
         res.status(400);
         throw new Error('Resource title is required');
@@ -517,7 +518,7 @@ const adminController = {
       const { broadcastToAll, broadcastToStudents, getIO } = require('../socket');
       const { sendUpdatedDashboardStats } = require('../socket/handlers/users');
 
-      const resourceId = await ResourceModel.create(title, file_url, original_filename, metadata, category || 'General', subcategory || null, thumbnail_url);
+      const resourceId = await ResourceModel.create(title, file_url, original_filename, metadata, category || 'General', subcategory || null, thumbnail_url, is_past_paper);
       const newResource = await ResourceModel.getById(resourceId);
 
       // Real-time broadcasts & notifications
@@ -537,6 +538,9 @@ const adminController = {
     try {
       const { id } = req.params;
       const { title, category, subcategory } = req.body;
+      const is_past_paper = req.body.is_past_paper !== undefined
+        ? (req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0)
+        : undefined;
       const ResourceModel = require('../models/ResourceModel');
       const path = require('path');
       const fs = require('fs');
@@ -586,7 +590,17 @@ const adminController = {
         }
       }
 
-      await ResourceModel.update(id, title || resource.title, file_url, original_filename, metadata, category || resource.category, subcategory !== undefined ? subcategory : resource.subcategory, thumbnail_url);
+      await ResourceModel.update(
+        id,
+        title || resource.title,
+        file_url,
+        original_filename,
+        metadata,
+        category || resource.category,
+        subcategory !== undefined ? subcategory : resource.subcategory,
+        thumbnail_url,
+        is_past_paper !== undefined ? is_past_paper : resource.is_past_paper
+      );
       const updatedResource = await ResourceModel.getById(id);
 
       const { broadcastToAll, getIO } = require('../socket');
@@ -658,7 +672,8 @@ const adminController = {
 
   async createVideo(req, res, next) {
     try {
-      const { title, url, videoId, thumbnail, category } = req.body;
+      const { title, url, videoId, thumbnail, category, subcategory } = req.body;
+      const is_past_paper = req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0;
       if (!title || !url || !videoId) {
         res.status(400);
         throw new Error('Title, video URL, and videoId are required');
@@ -671,7 +686,7 @@ const adminController = {
         throw new Error('This video has already been added to the library.');
       }
 
-      const insertedId = await VideoModel.create(title, url, videoId, thumbnail, category);
+      const insertedId = await VideoModel.create(title, url, videoId, thumbnail, category, subcategory || null, is_past_paper);
       const newVideo = await VideoModel.getById(insertedId);
 
       // Real-time broadcasts & notifications
@@ -690,7 +705,10 @@ const adminController = {
   async updateVideo(req, res, next) {
     try {
       const { id } = req.params;
-      const { title, url, videoId, thumbnail, category } = req.body;
+      const { title, url, videoId, thumbnail, category, subcategory } = req.body;
+      const is_past_paper = req.body.is_past_paper !== undefined
+        ? (req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0)
+        : undefined;
 
       const video = await VideoModel.getById(id);
       if (!video) {
@@ -713,7 +731,9 @@ const adminController = {
         url || video.url,
         videoId || video.videoId,
         thumbnail || video.thumbnail,
-        category || video.category
+        category || video.category,
+        subcategory !== undefined ? subcategory : video.subcategory,
+        is_past_paper !== undefined ? is_past_paper : video.is_past_paper
       );
       const updatedVideo = await VideoModel.getById(id);
 

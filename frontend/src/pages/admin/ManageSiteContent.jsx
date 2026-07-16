@@ -499,19 +499,6 @@ const ManageSiteContent = () => {
     }
   };
 
-  const fetchAnnouncements = async () => {
-    try {
-      setAnnouncementsLoading(true);
-      const res = await api.get('/admin/announcements');
-      if (res.data && Array.isArray(res.data.data)) {
-        setAnnouncements(res.data.data);
-      }
-    } catch (err) {
-    } finally {
-      setAnnouncementsLoading(false);
-    }
-  };
-
   const defaultSchemas = {
     hero: {
       badge: '#1 Premium Math Learning Platform',
@@ -555,18 +542,18 @@ const ManageSiteContent = () => {
       books: true,
       about: true,
       contact: true,
-      success_stories: true
+      success_stories: true,
+      updates: true,
+      past_papers: true
     }
   };
 
   // Load draft configuration and subscribers dependencies
   useEffect(() => {
-    if (activeTab !== 'announcements' && activeTab !== 'question_pool' && activeTab !== 'logo' && activeTab !== 'newsletter' && activeTab !== 'pdf_import' && activeTab !== 'bank_details') {
+    if (activeTab !== 'question_pool' && activeTab !== 'logo' && activeTab !== 'newsletter' && activeTab !== 'pdf_import' && activeTab !== 'bank_details') {
       const dbData = content && content[activeTab] ? content[activeTab] : {};
       const defaultData = defaultSchemas[activeTab] || {};
       setFormData({ ...defaultData, ...dbData });
-    } else if (activeTab === 'announcements') {
-      fetchAnnouncements();
     } else if (activeTab === 'question_pool') {
       fetchQuestionStats();
       fetchQuestions();
@@ -1016,9 +1003,9 @@ const ManageSiteContent = () => {
       if (!url.startsWith('/')) {
         url = `/uploads/logo/${url}`;
       }
-      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
+      return `${import.meta.env.VITE_BACKEND_URL || ''}${url}`;
     }
-    return "/CClogo.png";
+    return "/official.webp";
   };
 
   if (contentLoading) return <div className="flex justify-center items-center h-48 text-primary font-semibold">Loading site configuration...</div>;
@@ -1028,22 +1015,14 @@ const ManageSiteContent = () => {
     <div className="flex flex-col gap-6 text-left">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
-          <h2 className="font-display font-bold text-xl text-text-primary">Site Settings & Announcements</h2>
-          <p className="text-text-secondary text-xs md:text-sm">Manage website copy layout configurations or publish ticker notices.</p>
+          <h2 className="font-display font-bold text-xl text-text-primary">Site Settings</h2>
+          <p className="text-text-secondary text-xs md:text-sm">Manage website copy layout configurations.</p>
         </div>
-        {activeTab === 'announcements' && (
-          <button
-            onClick={addNewAnnouncement}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white border-0 font-semibold text-sm rounded-lg hover:bg-primary-dark cursor-pointer shadow-sm transition-all shrink-0 self-start sm:self-auto"
-          >
-            <Plus size={18} /> Add Announcement
-          </button>
-        )}
       </div>
 
       {/* Tabs list */}
       <div className="flex flex-wrap gap-2.5 border-b border-border-color pb-3">
-        {['hero', 'about', 'contact', 'logo', 'announcements', 'question_pool', 'newsletter', 'bank_details', 'visibility'].map(tab => (
+        {['hero', 'about', 'contact', 'logo', 'question_pool', 'newsletter', 'bank_details', 'visibility'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1052,7 +1031,7 @@ const ManageSiteContent = () => {
               : 'bg-transparent text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
               }`}
           >
-            {tab === 'hero' ? 'Hero Section' : tab === 'about' ? 'About Section' : tab === 'contact' ? 'Contact Details' : tab === 'logo' ? 'Site Logo' : tab === 'announcements' ? 'Announcements Banner' : tab === 'newsletter' ? 'Newsletter' : tab === 'bank_details' ? 'Global Bank Details' : tab === 'visibility' ? 'Page Visibility' : 'Question Pool'}
+            {tab === 'hero' ? 'Hero Section' : tab === 'about' ? 'About Section' : tab === 'contact' ? 'Contact Details' : tab === 'logo' ? 'Site Logo' : tab === 'newsletter' ? 'Newsletter' : tab === 'bank_details' ? 'Global Bank Details' : tab === 'visibility' ? 'Page Visibility' : 'Question Pool'}
           </button>
         ))}
       </div>
@@ -1735,103 +1714,6 @@ const ManageSiteContent = () => {
             </>
           )}
         </div>
-      ) : activeTab === 'announcements' ? (
-        announcementsLoading ? (
-          <div className="flex justify-center items-center h-48 text-primary font-semibold text-sm">
-            Loading announcements list...
-          </div>
-        ) : announcements.length === 0 ? (
-          <div className="p-8 text-center bg-bg-color border border-border-color rounded-2xl text-text-secondary text-sm">
-            No announcements set yet. Click "Add Announcement" to publish a live notice banner!
-          </div>
-        ) : (
-          <div className="bg-bg-color border border-border-color rounded-2xl overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-bg-secondary border-b border-border-color text-left">
-                    <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Title</th>
-                    <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-wider">Announcement Message</th>
-                    <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-24">Priority</th>
-                    <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-24">Order</th>
-                    <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-28">Active Bounds</th>
-                    <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-wider w-28">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold text-text-secondary uppercase tracking-wider text-right w-44">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-color/60">
-                  {announcements.map(ann => (
-                    <tr key={ann.id} className="hover:bg-bg-secondary/40 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-bold text-text-primary">
-                          {ann.title || 'Notice'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-sm font-semibold text-text-secondary line-clamp-2 max-w-sm leading-relaxed">
-                          {ann.text}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xxs font-extrabold bg-blue-50 text-primary border border-blue-100">
-                          <Star size={10} className="fill-current text-primary" /> {ann.priority}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-text-secondary">
-                        {ann.display_order || 0}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col text-xxs font-semibold text-text-secondary gap-0.5">
-                          {ann.start_date || ann.end_date ? (
-                            <>
-                              <div className="flex items-center gap-1">
-                                <span className="text-text-tertiary font-bold">START:</span>
-                                <span>{ann.start_date ? new Date(ann.start_date).toLocaleDateString() : 'Immediate'}</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-text-tertiary font-bold">END:</span>
-                                <span>{ann.end_date ? new Date(ann.end_date).toLocaleDateString() : 'Never'}</span>
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-text-tertiary">Always Visible</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => handleAnnouncementToggleActive(ann)}
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xxs font-extrabold border cursor-pointer select-none ${ann.active === 1
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                            : 'bg-slate-50 text-text-tertiary border-slate-200'
-                            }`}
-                        >
-                          {ann.active === 1 ? 'Active' : 'Inactive'}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleAnnouncementEdit(ann)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-transparent border border-border-color hover:border-primary text-text-secondary hover:text-primary font-semibold text-xs rounded-lg cursor-pointer transition-colors"
-                          >
-                            <Edit2 size={12} /> Edit
-                          </button>
-                          <button
-                            onClick={() => handleAnnouncementDelete(ann)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-transparent border border-red-100 hover:border-red-500 text-text-tertiary hover:text-red-500 font-semibold text-xs rounded-lg cursor-pointer transition-colors"
-                          >
-                            <Trash2 size={12} /> Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )
       ) : activeTab === 'logo' ? (
         <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-xl max-w-2xl glass flex flex-col gap-6 text-left animate-fadeIn">
           <div>
@@ -1951,7 +1833,9 @@ const ManageSiteContent = () => {
                                 formData[key]
                                   ? (formData[key].startsWith('http')
                                     ? formData[key]
-                                    : `https://localhost:5173${formData[key]}`)
+                                    : formData[key].startsWith('/uploads')
+                                      ? `${import.meta.env.VITE_BACKEND_URL || ''}${formData[key]}`
+                                      : `${import.meta.env.VITE_SITE_URL || window.location.origin}${formData[key]}`)
                                   : '/SirMehtabPhoto.png'
                               }
                               alt="Section Preview"
@@ -2001,6 +1885,17 @@ const ManageSiteContent = () => {
                       rows={4}
                       className="w-full p-3 border border-border-color rounded-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-y"
                     />
+                  ) : typeof formData[key] === 'boolean' ? (
+                    <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        name={key}
+                        checked={!!formData[key]}
+                        onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.checked }))}
+                        className="rounded border-border-color text-primary focus:ring-primary h-5 w-5 cursor-pointer"
+                      />
+                      <span className="text-sm font-semibold text-text-primary">Enable / Show {key.replace(/_/g, ' ')}</span>
+                    </label>
                   ) : (
                     <input
                       type="text"
@@ -2026,179 +1921,7 @@ const ManageSiteContent = () => {
         </div>
       )}
 
-      {/* Add/Edit Announcement Form Modal */}
-      {editingId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-lg bg-bg-color rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
 
-            {/* Header */}
-            <div className="p-6 md:p-8 pb-4 border-b border-border-color flex justify-between items-center shrink-0">
-              <h3 className="font-display font-bold text-xl text-text-primary m-0">
-                {editingId === 'new' ? 'Add Notice Announcement' : 'Edit Announcement'}
-              </h3>
-              <button
-                onClick={() => setEditingId(null)}
-                className="p-2 bg-bg-secondary hover:bg-slate-200 text-text-secondary rounded-full transition-colors border-0 cursor-pointer"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Form Body */}
-            <form onSubmit={handleAnnouncementSubmit} className="grow flex flex-col overflow-hidden">
-              <div className="grow p-6 md:p-8 overflow-y-auto flex flex-col gap-4">
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-text-secondary uppercase">Notice Title</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Board Exams 2026"
-                    value={announcementForm.title}
-                    onChange={e => setAnnouncementForm({ ...announcementForm, title: e.target.value })}
-                    required
-                    className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-text-secondary uppercase">Notice Link (Optional)</label>
-                  <input
-                    type="url"
-                    placeholder="https://example.com"
-                    value={announcementForm.link || ''}
-                    onChange={e => setAnnouncementForm({ ...announcementForm, link: e.target.value })}
-                    className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-text-secondary uppercase">Notice Message</label>
-                  <textarea
-                    placeholder="Notice details..."
-                    value={announcementForm.text}
-                    onChange={e => setAnnouncementForm({ ...announcementForm, text: e.target.value })}
-                    required
-                    rows={3}
-                    className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 resize-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-text-secondary uppercase">Priority Index</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 5 (Higher comes first)"
-                      value={announcementForm.priority}
-                      onChange={e => setAnnouncementForm({ ...announcementForm, priority: e.target.value })}
-                      required
-                      className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-bold text-text-secondary uppercase">Display Order</label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 1 (Lower comes first)"
-                      value={announcementForm.display_order}
-                      onChange={e => setAnnouncementForm({ ...announcementForm, display_order: e.target.value })}
-                      required
-                      className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex flex-col justify-center py-1">
-                  <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={announcementForm.active}
-                      onChange={e => setAnnouncementForm({ ...announcementForm, active: e.target.checked })}
-                      className="rounded border-border-color text-primary focus:ring-primary"
-                    />
-                    <span>Active immediately</span>
-                  </label>
-                </div>
-
-                <div className="border-t border-border-color my-2 pt-3 flex flex-col gap-3">
-                  <span className="text-xs font-extrabold text-primary flex items-center gap-1.5">
-                    <Calendar size={13} /> OPTIONAL SCHEDULING (GMT/UTC)
-                  </span>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xxs font-bold text-text-secondary uppercase">Start Date/Time</label>
-                      <input
-                        type="datetime-local"
-                        value={announcementForm.start_date}
-                        onChange={e => setAnnouncementForm({ ...announcementForm, start_date: e.target.value })}
-                        className="w-full p-2.5 border border-border-color rounded-lg text-xs font-sans focus:outline-none focus:border-primary"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xxs font-bold text-text-secondary uppercase">End Date/Time</label>
-                      <input
-                        type="datetime-local"
-                        value={announcementForm.end_date}
-                        onChange={e => setAnnouncementForm({ ...announcementForm, end_date: e.target.value })}
-                        className="w-full p-2.5 border border-border-color rounded-lg text-xs font-sans focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Footer */}
-              <div className="p-6 md:p-8 pt-4 border-t border-border-color flex gap-3 shrink-0 bg-bg-secondary/40">
-                <button type="submit" className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-lg border-0 shadow-sm grow cursor-pointer transition-all">
-                  <Save size={16} /> Save Notice
-                </button>
-                <button type="button" className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary text-text-secondary font-bold text-sm rounded-lg hover:bg-slate-200 border-0 grow cursor-pointer" onClick={() => setEditingId(null)}>
-                  <X size={16} /> Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmId !== null && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
-          <div className="relative w-full max-w-md bg-bg-color rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
-            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-2">
-              <AlertCircle size={24} />
-            </div>
-
-            <h3 className="font-display font-bold text-lg text-text-primary">
-              Delete Notice
-            </h3>
-
-            <p className="text-text-secondary text-sm leading-relaxed">
-              Are you sure you want to permanently delete the notice: <br />
-              <span className="font-semibold text-text-primary mt-1 block italic">"{deleteConfirmName}"</span>?
-            </p>
-
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={handleAnnouncementConfirmDelete}
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-bold text-sm rounded-lg border-0 shadow-sm grow cursor-pointer transition-all"
-              >
-                Delete Notice
-              </button>
-              <button
-                onClick={() => { setDeleteConfirmId(null); setDeleteConfirmName(''); }}
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary hover:bg-slate-200 text-text-secondary font-bold text-sm rounded-lg border-0 grow cursor-pointer transition-all"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Edit Question Modal */}
       {editingQuestion !== null && (

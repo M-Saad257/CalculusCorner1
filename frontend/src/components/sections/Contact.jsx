@@ -73,10 +73,17 @@ const Contact = () => {
     }
   };
 
-  const targetEmail = contactData.email || 'calculuscorner.official@gmail.com';
-  const emailSubject = encodeURIComponent('Inquiry from Calculus Corner');
-  const emailBody = encodeURIComponent('Hi Calculus Corner Team,\n\nI am reaching out to learn more about your courses. Please provide me with more information.\n\nThank you!');
-  const mailtoLink = `mailto:${targetEmail}?subject=${emailSubject}&body=${emailBody}`;
+const targetEmail = contactData.email || "calculuscorner.official@gmail.com";
+
+const emailSubject = "Inquiry from Calculus Corner";
+const emailBody = `Hi Calculus Corner Team,
+
+I am reaching out to learn more about your courses. Please provide me with more information.
+
+Thank you!`;
+
+const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(targetEmail)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+
 
   const rawPhone = contactData.phone || '+92 302 8983263';
   const whatsappNumber = rawPhone.replace(/[^0-9]/g, '');
@@ -120,7 +127,8 @@ const Contact = () => {
               <h3 className="font-display font-bold text-xl text-text-primary mb-2">Email Support</h3>
               <p className="text-sm text-text-secondary mb-6 max-w-[250px] mx-auto">Drop us an email anytime and we'll get back to you within 24 hours.</p>
               <a 
-                href={mailtoLink}
+                href={gmailLink}
+                target='_blank'
                 className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 font-bold text-sm hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 dark:hover:text-white transition-colors"
               >
                 Email Us

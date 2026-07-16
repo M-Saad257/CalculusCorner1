@@ -19,6 +19,14 @@ pool.getConnection()
   .then(async conn => {
     try {
       console.log('MySQL Database connected successfully!');
+      // Ensure last_login column exists on users table
+      await conn.query(`
+        ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`last_login\` TIMESTAMP NULL DEFAULT NULL
+      `).catch(() => {}); // Silently skip if DB engine doesn't support IF NOT EXISTS
+      // Fallback for older MySQL that doesn't support IF NOT EXISTS on ALTER
+      try {
+        await conn.query('ALTER TABLE `users` ADD COLUMN `last_login` TIMESTAMP NULL DEFAULT NULL');
+      } catch (e) { /* column already exists */ }
       // Auto-create assessment tables if not exist
       await conn.query(`
         CREATE TABLE IF NOT EXISTS \`question_pool\` (
@@ -220,6 +228,22 @@ pool.getConnection()
           \`file_url\` varchar(255) NOT NULL,
           \`thumbnail_url\` varchar(255) DEFAULT NULL,
           \`uploaderId\` int(11) DEFAULT NULL,
+          \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      // Add missing columns to books table
+      try { await conn.query("ALTER TABLE `books` ADD COLUMN `original_filename` VARCHAR(255) NULL"); } catch (e) { }
+      try { await conn.query("ALTER TABLE `books` ADD COLUMN `metadata` JSON NULL"); } catch (e) { }
+
+      // Create updates table
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS \`updates\` (
+          \`id\` int(11) NOT NULL AUTO_INCREMENT,
+          \`title\` varchar(255) NOT NULL,
+          \`content\` text NOT NULL,
+          \`category\` varchar(50) DEFAULT 'General',
           \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
           PRIMARY KEY (\`id\`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -453,9 +477,12 @@ pool.getConnection()
         await conn.query(`
           INSERT INTO \`site_content\` (\`section_name\`, \`content_data\`)
           VALUES ('bank_details', '{"account_name": "Calculus Corner Admin", "account_number": "1234-5678-9012", "bank_name": "Standard Chartered"}')
-          ON DUPLICATE KEY UPDATE \`section_name\` = \`section_name\`
         `);
       } catch (e) {}
+
+      // Add is_past_paper to resources and videos
+      try { await conn.query("ALTER TABLE `resources` ADD COLUMN `is_past_paper` TINYINT(1) NOT NULL DEFAULT 0"); } catch (e) { }
+      try { await conn.query("ALTER TABLE `videos` ADD COLUMN `is_past_paper` TINYINT(1) NOT NULL DEFAULT 0"); } catch (e) { }
 
       // Bootstrap Performance Indexes
       const indexSqls = [

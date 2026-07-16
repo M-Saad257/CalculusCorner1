@@ -141,6 +141,61 @@ const bookController = {
     } catch (error) {
       next(error);
     }
+  },
+
+  async viewBook(req, res, next) {
+    try {
+      const { id } = req.params;
+      const book = await BookModel.getById(id);
+
+      if (!book) {
+        return res.status(404).json({ message: 'Book not found' });
+      }
+
+      const path = require('path');
+      const fs = require('fs');
+
+      const filePath = path.join(__dirname, '../..', book.file_url);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: 'File not found' });
+      }
+
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${book.original_filename || path.basename(book.file_url)}"`
+      );
+
+      res.sendFile(filePath);
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async downloadBook(req, res, next) {
+    try {
+      const { id } = req.params;
+      const book = await BookModel.getById(id);
+
+      if (!book) {
+        res.status(404);
+        throw new Error('Book not found');
+      }
+
+      const path = require('path');
+      const filePath = path.join(__dirname, '../..', book.file_url);
+      const fs = require('fs');
+
+      if (!fs.existsSync(filePath)) {
+        res.status(404);
+        throw new Error('Book file does not exist on server');
+      }
+
+      const originalFilename = book.original_filename || path.basename(book.file_url);
+      res.download(filePath, originalFilename);
+    } catch (err) {
+      next(err);
+    }
   }
 };
 

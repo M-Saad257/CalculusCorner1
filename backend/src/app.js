@@ -14,6 +14,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const resourceRoutes = require('./routes/resourcesRoute');
 const bookRoutes = require('./routes/bookRoutes');
+const updateRoutes = require('./routes/updateRoutes');
 const app = express();
 
 // Serve uploaded resources statically with security options
@@ -31,7 +32,7 @@ app.use(helmet());
 
 // CORS settings
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : 'http://localhost:5173',
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [],
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -68,6 +69,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/books', bookRoutes);
+app.use('/api/updates', updateRoutes);
 // Base route test
 app.get('/', (req, res) => {
   res.status(200).json({

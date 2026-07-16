@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Edit3, Save, Medal, Sparkles, Clock, CheckCircle, GraduationCap, X, Loader2, Camera, Upload, Flame, Lock } from 'lucide-react';
+import { Edit3, Save, Medal, Sparkles, Clock, CheckCircle, GraduationCap, X, Loader2, Camera, Upload, Flame, Lock, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
 import { useContent } from '../../context/ContentContext';
@@ -177,6 +177,8 @@ const ProfileTab = ({
     confirmPassword: ''
   });
   const [passwordStatus, setPasswordStatus] = useState({ loading: false, error: '', success: '' });
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+  const togglePass = (field) => setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
@@ -406,35 +408,70 @@ const ProfileTab = ({
             <Lock size={18} className="text-primary" /> Security
           </h3>
           <form onSubmit={handlePasswordChange} className="flex flex-col gap-3">
+            {/* Current Password */}
             <div>
               <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Current Password</label>
-              <input
-                type="password"
-                required
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
-                className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
-              />
+              <div className="relative">
+                <input
+                  type={showPasswords.current ? 'text' : 'password'}
+                  required
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                  className="w-full p-2.5 pr-10 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => togglePass('current')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary transition-colors cursor-pointer border-0 bg-transparent p-0"
+                  tabIndex={-1}
+                >
+                  {showPasswords.current ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
+
+            {/* New Password */}
             <div>
               <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">New Password</label>
-              <input
-                type="password"
-                required
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-                className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
-              />
+              <div className="relative">
+                <input
+                  type={showPasswords.new ? 'text' : 'password'}
+                  required
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                  className="w-full p-2.5 pr-10 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => togglePass('new')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary transition-colors cursor-pointer border-0 bg-transparent p-0"
+                  tabIndex={-1}
+                >
+                  {showPasswords.new ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
+
+            {/* Confirm New Password */}
             <div>
               <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Confirm New Password</label>
-              <input
-                type="password"
-                required
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-                className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
-              />
+              <div className="relative">
+                <input
+                  type={showPasswords.confirm ? 'text' : 'password'}
+                  required
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                  className="w-full p-2.5 pr-10 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
+                />
+                <button
+                  type="button"
+                  onClick={() => togglePass('confirm')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary transition-colors cursor-pointer border-0 bg-transparent p-0"
+                  tabIndex={-1}
+                >
+                  {showPasswords.confirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
             </div>
 
             {passwordStatus.error && <p className="text-xs text-red-500 font-semibold">{passwordStatus.error}</p>}
@@ -454,28 +491,37 @@ const ProfileTab = ({
         <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border-color p-6 shadow-sm">
           <h3 className="font-display font-bold text-lg text-text-primary mb-5">Learning Progress & Overview</h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {showCourses && (
-              <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100/55 text-left">
-                <span className="text-xxs font-extrabold uppercase text-indigo-500">Enrolled Courses</span>
-                <p className="font-display font-black text-2xl text-primary mt-1">{enrolledCourses?.length || 0}</p>
-              </div>
-            )}
+          {(() => {
+            const visibleCount = [showCourses, showLectures, showNotes].filter(Boolean).length;
+            const gridClass =
+              visibleCount === 1 ? 'grid-cols-1' :
+              visibleCount === 2 ? 'grid-cols-2' :
+              'grid-cols-3';
+            return (
+              <div className={`grid grid-cols-1 sm:${gridClass} gap-4`}>
+                {showCourses && (
+                  <div className="p-4 bg-primary/5 rounded-2xl border border-primary/20 text-left">
+                    <span className="text-xxs font-extrabold uppercase text-primary">Enrolled Courses</span>
+                    <p className="font-display font-black text-2xl text-text-primary mt-1">{enrolledCourses?.length || 0}</p>
+                  </div>
+                )}
 
-            {showLectures && (
-              <div className="p-4 bg-purple-50/40 rounded-2xl border border-purple-100/55 text-left">
-                <span className="text-xxs font-extrabold uppercase text-purple-600">Videos Available</span>
-                <p className="font-display font-black text-2xl text-purple-600 mt-1">{videos.length}</p>
-              </div>
-            )}
+                {showLectures && (
+                  <div className="p-4 bg-violet-500/10 rounded-2xl border border-violet-500/20 text-left">
+                    <span className="text-xxs font-extrabold uppercase text-violet-400">Videos Available</span>
+                    <p className="font-display font-black text-2xl text-text-primary mt-1">{videos.length}</p>
+                  </div>
+                )}
 
-            {showNotes && (
-              <div className="p-4 bg-emerald-50/40 rounded-2xl border border-emerald-100/55 text-left">
-                <span className="text-xxs font-extrabold uppercase text-emerald-600">Formula Sheets</span>
-                <p className="font-display font-black text-2xl text-emerald-600 mt-1">{resources.length}</p>
+                {showNotes && (
+                  <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-left">
+                    <span className="text-xxs font-extrabold uppercase text-emerald-400">Formula Sheets</span>
+                    <p className="font-display font-black text-2xl text-text-primary mt-1">{resources.length}</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
 
           {showCourses && (
             <div className="flex flex-col sm:flex-row items-center gap-6 mt-6 p-4 bg-bg-secondary/40 rounded-2xl border border-border-color/60">
@@ -539,7 +585,7 @@ const ProfileTab = ({
 
                 <div className="mt-4 pt-4 border-t border-border-color/60 flex items-center justify-between text-xs font-bold text-text-secondary">
                   <div className="flex items-center gap-1.5">
-                    <span>Last Login: {timeline[0] ? new Date(timeline[0].timestamp).toLocaleString() : 'Today'}</span>
+                    <span>Last Login: {student?.last_login ? new Date(student.last_login).toLocaleString() : 'Now'}</span>
                   </div>
                 </div>
               </div>

@@ -532,7 +532,7 @@ const ManageStudents = () => {
                           <button
                             disabled={reviewingRequestId === request.id}
                             onClick={() => handleReviewUnbanRequest(request.id, 'Rejected', '')}
-                            className="px-4 py-2 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 border border-red-200 cursor-pointer"
+                            className="px-4 py-2 bg-red-50 dark:bg-red-950/20 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50 border border-red-200 dark:border-red-900/50 cursor-pointer"
                           >
                             Reject
                           </button>
@@ -614,28 +614,28 @@ const ManageStudents = () => {
                               {student.status === 'banned' ? (
                                 <button
                                   onClick={() => { setActionMenuOpenId(null); handleUnban(student); }}
-                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-primary hover:bg-blue-50 transition-colors flex items-center gap-2"
+                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-primary hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
                                 >
                                   <CheckCircle size={14} /> Unban Student
                                 </button>
                               ) : (
                                 <button
                                   onClick={() => { setActionMenuOpenId(null); handleBan(student); }}
-                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition-colors flex items-center gap-2"
+                                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-amber-600 hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
                                 >
                                   <ShieldAlert size={14} /> Ban Student
                                 </button>
                               )}
                               <button
                                 onClick={() => handleRequestReview(student.id)}
-                                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center gap-2"
+                                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
                               >
                                 <Star size={14} /> Request Review
                               </button>
                               <div className="h-px bg-border-color my-1"></div>
                               <button
                                 onClick={() => { setActionMenuOpenId(null); handleDelete(student); }}
-                                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
                               >
                                 <UserMinus size={14} /> Delete Student
                               </button>

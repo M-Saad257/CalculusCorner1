@@ -25,6 +25,7 @@ router.get('/books', bookController.getBooks);
 router.post('/books', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), bookController.createBook);
 router.put('/books/:id', upload.fields([{ name: 'file', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]), bookController.updateBook);
 router.delete('/books/:id', bookController.deleteBook);
+router.get('/books/:id/download', bookController.downloadBook);
 
 
 // Students CRUD

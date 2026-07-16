@@ -19,7 +19,7 @@ const AboutPage = () => {
 
     if (url.startsWith("/uploads")) {
       // Serve uploads from the backend running on port 5000
-      return `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'}${url}`;
+      return `${import.meta.env.VITE_BACKEND_URL || ''}${url}`;
     }
 
     // Fallback map checks for old relative routes mappings

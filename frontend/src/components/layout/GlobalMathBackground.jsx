@@ -27,7 +27,7 @@ const GlobalMathBackground = () => {
           <ellipse cx="100" cy="100" rx="90" ry="30" stroke="var(--color-accent)" strokeWidth="1.5" strokeOpacity="0.4" />
         </svg>
       </motion.div>
-      
+
       {/* Top Right (New) */}
       <motion.div
         className="absolute top-[15%] right-[10%] w-[150px] md:w-[250px] h-[150px] md:h-[250px] opacity-50 md:opacity-80"
@@ -38,7 +38,7 @@ const GlobalMathBackground = () => {
           <polygon points="100,20 180,180 20,180" stroke="var(--color-primary)" strokeWidth="1.5" strokeOpacity="0.4" strokeDasharray="5 5" />
         </svg>
       </motion.div>
-      
+
       {/* Bottom Left (New) */}
       <motion.div
         className="absolute bottom-[20%] left-[10%] w-[120px] md:w-[200px] h-[120px] md:h-[200px] opacity-50 md:opacity-80"
@@ -53,7 +53,7 @@ const GlobalMathBackground = () => {
 
       {/* Math Symbols floating */}
       <motion.div
-        className="absolute top-[20%] left-[12%] text-5xl md:text-8xl text-primary-dark opacity-20 font-bold"
+        className="absolute top-[20%] left-[12%] text-5xl md:text-8xl text-primary-dark dark:text-primary-light opacity-20 font-bold"
         animate={{ y: [-15, 15, -15], rotate: [0, 10, 0] }}
         transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
       >
@@ -61,7 +61,7 @@ const GlobalMathBackground = () => {
       </motion.div>
 
       <motion.div
-        className="absolute bottom-[20%] right-[12%] text-6xl md:text-9xl text-primary-dark opacity-20 font-bold"
+        className="absolute bottom-[20%] right-[12%] text-6xl md:text-9xl text-primary-dark dark:text-primary-light opacity-20 font-bold"
         animate={{ y: [15, -15, 15], rotate: [0, -10, 0] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       >
@@ -69,22 +69,22 @@ const GlobalMathBackground = () => {
       </motion.div>
 
       <motion.div
-        className="absolute top-[35%] right-[20%] text-2xl md:text-4xl text-primary-dark opacity-25 font-bold"
+        className="absolute top-[35%] right-[20%] text-2xl md:text-4xl text-primary-dark dark:text-primary-light opacity-25 font-bold"
         animate={{ scale: [1, 1.08, 1], opacity: [0.15, 0.3, 0.15] }}
         transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
       >
         e<sup>iπ</sup> + 1 = 0
       </motion.div>
-      
+
       <motion.div
-        className="absolute bottom-[40%] left-[25%] text-3xl md:text-5xl text-primary-dark opacity-20 font-bold"
+        className="absolute bottom-[40%] left-[25%] text-3xl md:text-5xl text-primary-dark dark:text-primary-light opacity-20 font-bold"
         animate={{ scale: [1, 1.1, 1], opacity: [0.15, 0.25, 0.15] }}
         transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 2 }}
       >
         lim<sub>x→∞</sub> (1+1/x)<sup>x</sup>
       </motion.div>
       <motion.div
-        className="absolute bottom-[20%] left-[40%] text-5xl md:text-8xl text-primary-dark opacity-20 font-bold"
+        className="absolute bottom-[20%] left-[40%] text-5xl md:text-8xl text-primary-dark dark:text-primary-light opacity-20 font-bold"
         animate={{ y: [15, -15, 15], rotate: [0, -10, 0] }}
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       >

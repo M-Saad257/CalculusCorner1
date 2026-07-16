@@ -15,7 +15,8 @@ const ManageUpdates = () => {
   const [updateFormData, setUpdateFormData] = useState({
     title: '',
     content: '',
-    category: 'General'
+    category: 'General',
+    link: ''
   });
   const [updateDeleteId, setUpdateDeleteId] = useState(null);
   const [updateDeleteName, setUpdateDeleteName] = useState('');
@@ -105,7 +106,8 @@ const ManageUpdates = () => {
     setUpdateFormData({
       title: '',
       content: '',
-      category: 'General'
+      category: 'General',
+      link: ''
     });
   };
 
@@ -114,7 +116,8 @@ const ManageUpdates = () => {
     setUpdateFormData({
       title: item.title,
       content: item.content,
-      category: item.category
+      category: item.category,
+      link: item.link || ''
     });
   };
 
@@ -126,11 +129,15 @@ const ManageUpdates = () => {
     }
 
     try {
+      const payload = {
+        ...updateFormData,
+        link: updateFormData.link?.trim() || null
+      };
       if (updateEditingId === 'new') {
-        await api.post('/updates/admin', updateFormData);
+        await api.post('/updates/admin', payload);
         showToast('Update published successfully!', 'success');
       } else {
-        await api.put(`/updates/admin/${updateEditingId}`, updateFormData);
+        await api.put(`/updates/admin/${updateEditingId}`, payload);
         showToast('Update modified successfully.', 'success');
       }
       setUpdateEditingId(null);
@@ -342,6 +349,11 @@ const ManageUpdates = () => {
                   </div>
                   <h3 className="font-display font-bold text-lg text-text-primary m-0 line-clamp-2">{item.title}</h3>
                   <p className="text-text-secondary text-xs line-clamp-3 leading-relaxed whitespace-pre-line">{item.content}</p>
+                  {item.link && (
+                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-semibold flex items-center gap-1 mt-1">
+                       {item.link.length > 40 ? item.link.substring(0, 40) + '...' : item.link}
+                    </a>
+                  )}
                 </div>
                 <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-border-color/60">
                   <button 
@@ -509,12 +521,23 @@ const ManageUpdates = () => {
               </div>
 
               <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-text-secondary">Link <span className="text-text-tertiary font-normal">(Optional)</span></label>
+                <input
+                  type="url"
+                  value={updateFormData.link}
+                  onChange={(e) => setUpdateFormData({ ...updateFormData, link: e.target.value })}
+                  placeholder="https://example.com/related-page"
+                  className="px-4 py-2.5 rounded-xl border border-border-color bg-bg-color text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-text-primary"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-text-secondary">Notification Body Content</label>
                 <textarea
                   value={updateFormData.content}
                   onChange={(e) => setUpdateFormData({ ...updateFormData, content: e.target.value })}
                   placeholder="Write the updates description details here..."
-                  rows={6}
+                  rows={1}
                   className="px-4 py-3 rounded-xl border border-border-color bg-bg-color text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-text-primary resize-y"
                   required
                 />

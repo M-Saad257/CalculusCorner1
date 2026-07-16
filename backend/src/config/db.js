@@ -249,6 +249,9 @@ pool.getConnection()
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
 
+      // Add optional link column to updates
+      try { await conn.query("ALTER TABLE `updates` ADD COLUMN `link` VARCHAR(500) NULL"); } catch (e) { }
+
       // Create newsletter_subscribers table
       await conn.query(`
         CREATE TABLE IF NOT EXISTS \`newsletter_subscribers\` (

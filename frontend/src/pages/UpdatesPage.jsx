@@ -150,6 +150,16 @@ const UpdatesPage = () => {
                       <p className="text-text-secondary text-sm md:text-base leading-relaxed whitespace-pre-line">
                         {item.content}
                       </p>
+                      {item.link && (
+                        <a 
+                          href={item.link} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="inline-flex items-center gap-1.5 mt-2 text-sm text-primary hover:text-primary-dark font-semibold hover:underline transition-colors"
+                        >
+                           View Related Link ↗
+                        </a>
+                      )}
                     </div>
                   </motion.article>
                 ))}

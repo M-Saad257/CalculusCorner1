@@ -191,8 +191,7 @@ const Hero = () => {
       )}
 
       {/* Global Animated Math Background is rendered via LandingPage.jsx */}
-
-      <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10 w-full mt-6">
+      <div className={`container mx-auto px-4 md:px-8 grid grid-cols-1 xl:grid-cols-12 gap-8 lg:gap-12 items-center relative z-10 w-full ${announcements.length >= 1 ? 'mt-12' : 'mt-6'}`}>
 
         {/* LEFT SIDE: Hero Content */}
         <motion.div

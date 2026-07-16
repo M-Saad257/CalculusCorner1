@@ -20,13 +20,13 @@ const updateController = {
   // Admin route to create a new update
   async createUpdate(req, res, next) {
     try {
-      const { title, content, category } = req.body;
+      const { title, content, category, link } = req.body;
       if (!title || !content) {
         res.status(400);
         throw new Error('Title and content are required');
       }
 
-      const insertId = await UpdateModel.create(title, content, category || 'General');
+      const insertId = await UpdateModel.create(title, content, category || 'General', link || null);
       const newUpdate = await UpdateModel.getById(insertId);
 
       // --- REAL TIME NOTIFICATIONS BROADCAST ---
@@ -90,7 +90,7 @@ const updateController = {
   async updateUpdate(req, res, next) {
     try {
       const { id } = req.params;
-      const { title, content, category } = req.body;
+      const { title, content, category, link } = req.body;
       if (!title || !content) {
         res.status(400);
         throw new Error('Title and content are required');
@@ -102,7 +102,7 @@ const updateController = {
         throw new Error('Update not found');
       }
 
-      await UpdateModel.update(id, title, content, category || 'General');
+      await UpdateModel.update(id, title, content, category || 'General', link || null);
       const updated = await UpdateModel.getById(id);
 
       // Real-time broadcast

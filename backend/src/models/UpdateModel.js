@@ -11,18 +11,18 @@ const UpdateModel = {
     return rows[0] || null;
   },
 
-  async create(title, content, category = 'General') {
+  async create(title, content, category = 'General', link = null) {
     const [result] = await db.query(
-      'INSERT INTO updates (title, content, category) VALUES (?, ?, ?)',
-      [title, content, category]
+      'INSERT INTO updates (title, content, category, link) VALUES (?, ?, ?, ?)',
+      [title, content, category, link || null]
     );
     return result.insertId;
   },
 
-  async update(id, title, content, category = 'General') {
+  async update(id, title, content, category = 'General', link = null) {
     const [result] = await db.query(
-      'UPDATE updates SET title = ?, content = ?, category = ? WHERE id = ?',
-      [title, content, category, id]
+      'UPDATE updates SET title = ?, content = ?, category = ?, link = ? WHERE id = ?',
+      [title, content, category, link || null, id]
     );
     return result.affectedRows > 0;
   },

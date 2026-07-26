@@ -17,6 +17,25 @@ const getAllContent = async (req, res, next) => {
 
 const getPublicVideos = async (req, res, next) => {
   try {
+    const page = parseInt(req.query.page);
+    const limit = parseInt(req.query.limit);
+    const category = req.query.category;
+    const subcategory = req.query.subcategory;
+    const search = req.query.search;
+    const is_past_paper = req.query.is_past_paper;
+
+    if (page && limit) {
+      const { data, totalItems, totalPages } = await VideoModel.getPaginated(page, limit, category, subcategory, search, is_past_paper);
+      return res.status(200).json({
+        success: true,
+        data,
+        page,
+        limit,
+        totalPages,
+        totalItems
+      });
+    }
+
     const videos = await VideoModel.getAll();
     res.status(200).json({
       success: true,

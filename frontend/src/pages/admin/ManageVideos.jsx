@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Link as LinkIcon, AlertCircle, CheckCircle, Film, Play, ExternalLink } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Link as LinkIcon, AlertCircle, CheckCircle, Film, Play, ExternalLink, Search, ArrowUpDown } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import { RESOURCE_CATEGORIES } from '../../utils/categories';
+import Loader from '../../components/ui/Loader';
+import { sortLecturesNaturally } from '../../utils/sortUtils';
 
 const ManageVideos = () => {
   const [videos, setVideos] = useState([]);
   const { showToast } = useDialog();
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     title: '',
     url: '',
@@ -18,7 +20,8 @@ const ManageVideos = () => {
     thumbnail: '',
     category: '',
     subcategory: '',
-    is_past_paper: 0
+    is_past_paper: 0,
+    duration: ''
   });
 
   const [formError, setFormError] = useState('');
@@ -43,52 +46,84 @@ const ManageVideos = () => {
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeSubcategory, setActiveSubcategory] = useState('All');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'past_papers' | 'regular'
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('lecture_asc');
+
+  const [allVideosList, setAllVideosList] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   const categoriesList = Array.from(
-    new Set(['All', ...videos.map(v => v.category).filter(Boolean)])
+    new Set(['All', ...allVideosList.map(v => v.category).filter(Boolean)])
   );
 
   const subcategoriesList = Array.from(
-    new Set(['All', ...videos.filter(r => r.category === activeCategory && r.subcategory).map(r => r.subcategory)])
+    new Set(['All', ...allVideosList.filter(r => r.category === activeCategory && r.subcategory).map(r => r.subcategory)])
   );
 
   useEffect(() => {
     setActiveSubcategory('All');
+    setCurrentPage(1);
   }, [activeCategory]);
 
-  const filteredVideos = videos.filter(vid => {
-    const matchesCat = activeCategory === 'All' || vid.category === activeCategory;
-    const matchesSub = activeSubcategory === 'All' || vid.subcategory === activeSubcategory;
-    const matchesType = filterType === 'all' 
-      ? true 
-      : filterType === 'past_papers' 
-        ? vid.is_past_paper === 1 
-        : vid.is_past_paper !== 1;
-    return matchesCat && matchesSub && matchesType;
-  });
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterType, activeSubcategory, searchQuery, sortBy]);
 
   const fetchVideos = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/admin/videos');
+      const isPastPaperParam = filterType === 'past_papers' ? 1 : filterType === 'regular' ? 0 : 'all';
+      const res = await api.get('/admin/videos', {
+        params: {
+          page: currentPage,
+          limit: 6,
+          category: activeCategory,
+          subcategory: activeSubcategory,
+          is_past_paper: isPastPaperParam,
+          search: searchQuery.trim() || undefined,
+          sortBy: sortBy
+        }
+      });
       if (res.data && Array.isArray(res.data.data)) {
         setVideos(res.data.data);
+        setCurrentPage(res.data.page || 1);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalItems(res.data.totalItems || 0);
       }
     } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchMetadata = async () => {
+    try {
+      const res = await api.get('/admin/videos');
+      if (res.data && Array.isArray(res.data.data)) {
+        setAllVideosList(res.data.data);
+      }
+    } catch (err) { }
+  };
+
+  useEffect(() => {
+    fetchMetadata();
+  }, []);
+
   useEffect(() => {
     fetchVideos();
-  }, []);
+  }, [activeCategory, activeSubcategory, filterType, currentPage, searchQuery, sortBy]);
 
   const { socket } = useSocket();
 
   useEffect(() => {
     if (!socket) return;
-    const refreshData = () => fetchVideos();
+    const refreshData = () => {
+      fetchMetadata();
+      fetchVideos();
+    };
     socket.on('video:create', refreshData);
     socket.on('video:update', refreshData);
     socket.on('video:delete', refreshData);
@@ -108,7 +143,9 @@ const ManageVideos = () => {
       thumbnail: video.thumbnail || '',
       category: video.category || '',
       subcategory: video.subcategory || '',
-      is_past_paper: video.is_past_paper || 0
+      is_past_paper: video.is_past_paper || 0,
+      duration: video.duration || '',
+      show_on_homepage: video.show_on_homepage || 0
     });
     setFormError('');
     setIsValidUrl(true);
@@ -150,7 +187,7 @@ const ManageVideos = () => {
       setIsFetchingMetadata(true);
       const res = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(urlVal)}`);
       const data = await res.json();
-      
+
       if (data.error) {
         const fallbackThumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
         setFormData(prev => ({
@@ -208,7 +245,9 @@ const ManageVideos = () => {
       thumbnail: '',
       category: '',
       subcategory: '',
-      is_past_paper: isPastPaper ? 1 : 0
+      is_past_paper: isPastPaper ? 1 : 0,
+      duration: '',
+      show_on_homepage: 0
     });
     setFormError('');
     setIsValidUrl(false);
@@ -229,8 +268,11 @@ const ManageVideos = () => {
       showToast('Delete failed.', 'error');
     }
   };
-
   const availableSubcategories = formData.category ? (RESOURCE_CATEGORIES[formData.category] || []) : [];
+
+  const pinnedVideosCount = allVideosList.filter(v => v.show_on_homepage === 1 || v.showOnHomepage === 1).length;
+  const isPinnedLimitReached = false; // No limit — show all pinned items on landing page
+  const disablePinCheckbox = false;
 
   return (
     <div className="flex flex-col gap-6 text-left">
@@ -240,13 +282,13 @@ const ManageVideos = () => {
           <p className="text-text-secondary text-sm mt-1">Add and catalog video lessons and solved past paper video walkthroughs.</p>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={() => handleAddNew(false)}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-white border-0 font-semibold text-sm rounded-lg hover:bg-primary-dark cursor-pointer shadow-sm transition-all"
           >
             <Plus size={18} /> Add Video Lecture
           </button>
-          <button 
+          <button
             onClick={() => handleAddNew(true)}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white border-0 font-semibold text-sm rounded-lg hover:bg-emerald-700 cursor-pointer shadow-sm transition-all"
           >
@@ -255,17 +297,64 @@ const ManageVideos = () => {
         </div>
       </div>
 
-      {/* Dynamic Category Filters */}
-      {!loading && videos.length > 0 && (
-        <div className="flex flex-col gap-4 bg-bg-color p-6 rounded-2xl border border-border-color shadow-sm">
-          {/* Solved Past Papers vs Regular Lectures Filter */}
-          <div className="flex gap-2 pb-3 border-b border-border-color/60 flex-wrap">
+      {/* Search Bar, Sorting & Dynamic Category Filters */}
+      <div className="flex flex-col gap-4 bg-bg-color p-6 rounded-2xl border border-border-color shadow-sm">
+        {/* Search Bar & Sort Row */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-between items-stretch sm:items-center pb-4 border-b border-border-color/60">
+          {/* Search Input */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" size={18} />
+            <input
+              type="text"
+              placeholder="Search lectures by title or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 bg-bg-secondary border border-border-color rounded-xl text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-tertiary hover:text-text-primary rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
+                title="Clear search"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-2 min-w-[210px]">
+            <div className="relative w-full">
+              <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" size={16} />
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full pl-9 pr-8 py-2.5 bg-bg-secondary border border-border-color rounded-xl text-sm font-medium text-text-primary focus:outline-none focus:border-primary transition-colors appearance-none cursor-pointer"
+              >
+                <option value="lecture_asc">Sort: Lecture Order (1.1, 1.2, 1.3...)</option>
+                <option value="default">Sort: Default (Pinned first)</option>
+                <option value="newest">Sort: Newest First</option>
+                <option value="oldest">Sort: Oldest First</option>
+                <option value="title_asc">Sort: Title (A-Z)</option>
+                <option value="title_desc">Sort: Title (Z-A)</option>
+                <option value="category_asc">Sort: Category (A-Z)</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-tertiary text-xs">
+                ▼
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Solved Past Papers vs Regular Lectures Filter + Count */}
+        <div className="flex items-center justify-between gap-2 pb-1 flex-wrap">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setFilterType('all')}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${filterType === 'all'
                 ? 'bg-primary text-white border-primary shadow-sm'
                 : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-bg-tertiary hover:text-text-primary'
-              }`}
+                }`}
             >
               All Lectures
             </button>
@@ -274,7 +363,7 @@ const ManageVideos = () => {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${filterType === 'past_papers'
                 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
                 : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-bg-tertiary hover:text-text-primary'
-              }`}
+                }`}
             >
               Solved Past Papers Only
             </button>
@@ -283,116 +372,156 @@ const ManageVideos = () => {
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${filterType === 'regular'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                 : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-bg-tertiary hover:text-text-primary'
-              }`}
+                }`}
             >
               Regular Lectures Only
             </button>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {categoriesList.map((cat) => (
+          <div className="text-xs font-semibold text-text-tertiary">
+            {totalItems} {totalItems === 1 ? 'lecture' : 'lectures'} found
+          </div>
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-border-color/40">
+          {categoriesList.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-2 rounded-full text-xs font-semibold transition-all border cursor-pointer ${activeCategory === cat
+                ? 'bg-primary text-white border-primary shadow-md shadow-primary/25'
+                : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-bg-tertiary hover:text-text-primary'
+                }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {activeCategory !== 'All' && subcategoriesList.length > 1 && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-border-color/40">
+            {subcategoriesList.map((subcat) => (
               <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold transition-all border cursor-pointer ${activeCategory === cat
-                    ? 'bg-primary text-white border-primary shadow-md shadow-primary/25'
-                    : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-bg-tertiary hover:text-text-primary'
+                key={subcat}
+                onClick={() => setActiveSubcategory(subcat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${activeSubcategory === subcat
+                  ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                  : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
                   }`}
               >
-                {cat}
+                {subcat}
               </button>
             ))}
           </div>
+        )}
+      </div>
 
-          {activeCategory !== 'All' && subcategoriesList.length > 1 && (
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-border-color/40">
-              {subcategoriesList.map((subcat) => (
+      {loading ? (
+        <div className="col-span-full">
+          <Loader text="Loading Lectures..." />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+            {videos.map((video) => (
+              <div
+                key={video.id}
+                className="bg-bg-color border border-border-color rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+              >
+                <div>
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-100 mb-3 group border border-border-color/60">
+                    <img src={video.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400'} alt={video.title} className="w-full h-full object-cover" />
+
+                    {/* Solved Past Paper Badge */}
+                    <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
+                      {video.is_past_paper ? (
+                        <span className="text-[9px] font-extrabold uppercase bg-emerald-600 text-white px-2 py-0.5 rounded shadow-sm">
+                          Past Paper
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-extrabold uppercase bg-primary text-white px-2 py-0.5 rounded shadow-sm">
+                          Lecture
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <button
+                        onClick={() => setPreviewVideo(video)}
+                        className="p-3 bg-white text-primary rounded-full hover:scale-105 transition-transform border-0 cursor-pointer shadow-lg flex items-center justify-center"
+                      >
+                        <Play size={18} className="fill-current ml-0.5" />
+                      </button>
+                      <a
+                        href={video.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute bottom-2.5 right-2.5 text-[10px] text-white bg-black/60 hover:bg-black px-2.5 py-1 rounded-md font-bold flex items-center gap-1 hover:no-underline"
+                      >
+                        <ExternalLink size={10} /> YouTube
+                      </a>
+                    </div>
+                  </div>
+
+                  <h3 className="font-display font-bold text-base text-text-primary m-0 line-clamp-2" title={video.title}>{video.title}</h3>
+                </div>
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-border-color/60">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary bg-bg-secondary px-2 py-1 rounded-md">
+                    {video.category} {video.subcategory ? `> ${video.subcategory}` : ''}
+                  </span>
+                  <div className="flex gap-1">
+                    <button onClick={() => handleEdit(video)} className="p-1.5 text-text-tertiary hover:text-primary hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(video)} className="p-1.5 text-text-tertiary hover:text-red-500 hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {videos.length === 0 && (
+              <div className="col-span-full py-12 flex flex-col items-center justify-center text-text-secondary gap-3 border-2 border-dashed border-border-color rounded-2xl">
+                <Film size={48} className="text-text-tertiary opacity-60" />
+                <p className="font-semibold text-text-primary text-base m-0">No videos found matching your criteria</p>
+                {(searchQuery || activeCategory !== 'All' || activeSubcategory !== 'All' || filterType !== 'all' || sortBy !== 'default') && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setActiveCategory('All');
+                      setActiveSubcategory('All');
+                      setFilterType('all');
+                      setSortBy('default');
+                    }}
+                    className="mt-1 px-4 py-2 bg-bg-secondary hover:bg-bg-tertiary border border-border-color rounded-xl text-xs font-bold text-primary cursor-pointer transition-colors"
+                  >
+                    Reset Filters & Search
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8 bg-bg-color p-3 rounded-2xl border border-border-color shadow-sm w-fit mx-auto flex-wrap">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <button
-                  key={subcat}
-                  onClick={() => setActiveSubcategory(subcat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border cursor-pointer ${activeSubcategory === subcat
-                      ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
-                      : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-slate-200 hover:text-slate-800'
-                    }`}
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                    currentPage === pageNum
+                      ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
+                      : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
+                  }`}
                 >
-                  {subcat}
+                  {pageNum}
                 </button>
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredVideos.map((video) => (
-            <div 
-              key={video.id} 
-              className="bg-bg-color border border-border-color rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
-            >
-              <div>
-                <div className="relative aspect-video rounded-xl overflow-hidden bg-slate-100 mb-3 group border border-border-color/60">
-                  <img src={video.thumbnail || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400'} alt={video.title} className="w-full h-full object-cover" />
-                  
-                  {/* Solved Past Paper Badge */}
-                  <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5">
-                    {video.is_past_paper ? (
-                      <span className="text-[9px] font-extrabold uppercase bg-emerald-600 text-white px-2 py-0.5 rounded shadow-sm">
-                        Past Paper
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-extrabold uppercase bg-primary text-white px-2 py-0.5 rounded shadow-sm">
-                        Lecture
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <button 
-                      onClick={() => setPreviewVideo(video)}
-                      className="p-3 bg-white text-primary rounded-full hover:scale-105 transition-transform border-0 cursor-pointer shadow-lg flex items-center justify-center"
-                    >
-                      <Play size={18} className="fill-current ml-0.5" />
-                    </button>
-                    <a 
-                      href={video.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="absolute bottom-2.5 right-2.5 text-[10px] text-white bg-black/60 hover:bg-black px-2.5 py-1 rounded-md font-bold flex items-center gap-1 hover:no-underline"
-                    >
-                      <ExternalLink size={10} /> YouTube
-                    </a>
-                  </div>
-                </div>
-                
-                <h3 className="font-display font-bold text-base text-text-primary m-0 line-clamp-2" title={video.title}>{video.title}</h3>
-              </div>
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-border-color/60">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary bg-bg-secondary px-2 py-1 rounded-md">
-                  {video.category} {video.subcategory ? `> ${video.subcategory}` : ''}
-                </span>
-                <div className="flex gap-1">
-                  <button onClick={() => handleEdit(video)} className="p-1.5 text-text-tertiary hover:text-primary hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
-                    <Edit2 size={16} />
-                  </button>
-                  <button onClick={() => handleDelete(video)} className="p-1.5 text-text-tertiary hover:text-red-500 hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-          {filteredVideos.length === 0 && (
-            <div className="col-span-full py-12 flex flex-col items-center justify-center text-text-secondary gap-3 border-2 border-dashed border-border-color rounded-2xl">
-              <Film size={48} className="text-text-tertiary" />
-              <p>No videos found.</p>
-            </div>
-          )}
-        </div>
+        </>
       )}
 
       {/* Editor Modal */}
@@ -401,11 +530,11 @@ const ManageVideos = () => {
           <div className="bg-bg-color rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col my-auto border border-border-color text-left">
             <div className="px-6 py-5 border-b border-border-color flex justify-between items-center bg-bg-secondary">
               <h3 className="font-display font-bold text-lg text-text-primary m-0">
-                {editingId === 'new' 
-                  ? (formData.is_past_paper ? 'Add Past Paper Video' : 'Add New Video') 
+                {editingId === 'new'
+                  ? (formData.is_past_paper ? 'Add Past Paper Video' : 'Add New Video')
                   : 'Edit Video Details'}
               </h3>
-              <button 
+              <button
                 onClick={() => setEditingId(null)}
                 className="text-text-tertiary hover:text-text-primary p-1.5 rounded-full hover:bg-bg-tertiary transition-all cursor-pointer border-0 bg-transparent shadow-sm"
               >
@@ -459,7 +588,7 @@ const ManageVideos = () => {
                   required
                 />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-semibold text-text-secondary">Category</label>
@@ -475,7 +604,7 @@ const ManageVideos = () => {
                     ))}
                   </select>
                 </div>
-                
+
                 <div className="flex flex-col gap-1.5">
                   <label className="text-sm font-semibold text-text-secondary">Subcategory</label>
                   <select
@@ -506,16 +635,43 @@ const ManageVideos = () => {
                 </label>
               </div>
 
+              {/* Show on Landing Page Flag */}
+              <div className="flex items-center gap-3 p-3.5 bg-bg-secondary rounded-xl border border-border-color/60">
+                <input
+                  type="checkbox"
+                  id="video_show_on_homepage"
+                  checked={!!formData.show_on_homepage}
+                  disabled={disablePinCheckbox}
+                  onChange={(e) => setFormData({ ...formData, show_on_homepage: e.target.checked ? 1 : 0 })}
+                  className="w-4.5 h-4.5 text-primary border-gray-300 rounded focus:ring-primary cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <label htmlFor="video_show_on_homepage" className={`text-sm font-semibold select-none cursor-pointer ${disablePinCheckbox ? 'text-text-tertiary cursor-not-allowed' : 'text-text-primary'}`}>
+                  Show on Landing Page
+                </label>
+              </div>
+
+              {/* Duration Field */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-text-secondary">Duration (e.g. 15:40, 2:05:19)</label>
+                <input
+                  type="text"
+                  value={formData.duration || ''}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  placeholder="e.g. 12:45"
+                  className="px-4 py-2.5 rounded-xl border border-border-color bg-bg-color text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-text-primary"
+                />
+              </div>
+
               <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border-color">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setEditingId(null)}
                   className="px-5 py-2.5 rounded-xl border border-border-color text-text-secondary font-semibold text-sm hover:bg-bg-secondary transition-colors cursor-pointer bg-bg-color"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={!isValidUrl || !!formError || !formData.title || !formData.category}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white border-0 font-semibold text-sm hover:bg-primary-dark transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shadow-primary/20"
                 >
@@ -536,13 +692,13 @@ const ManageVideos = () => {
               Are you sure you want to remove <strong className="text-text-primary">"{deleteConfirmName}"</strong> from the library? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setDeleteConfirmId(null)}
                 className="px-4 py-2 rounded-xl border border-border-color text-text-secondary font-semibold text-sm hover:bg-bg-secondary transition-colors cursor-pointer bg-bg-color"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={confirmDelete}
                 className="px-4 py-2 rounded-xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 transition-colors cursor-pointer border-0 shadow-sm shadow-red-500/20"
               >
@@ -571,7 +727,7 @@ const ManageVideos = () => {
                 </div>
                 <h3 className="font-display font-bold text-base md:text-lg text-text-primary line-clamp-1 pr-6">{previewVideo.title}</h3>
               </div>
-              <button 
+              <button
                 onClick={() => setPreviewVideo(null)}
                 className="p-2 text-text-secondary hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"
               >

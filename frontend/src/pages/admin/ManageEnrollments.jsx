@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Search, AlertCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Search, AlertCircle, Clock, X, ZoomIn, FileImage, Eye } from 'lucide-react';
 import { useDialog } from '../../context/DialogContext';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
@@ -7,6 +7,7 @@ import { useSocket } from '../../hooks/useSocket';
 const ManageEnrollments = () => {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [zoomedReceipt, setZoomedReceipt] = useState(null);
   const { showToast, confirm } = useDialog();
 
   const fetchEnrollments = async () => {
@@ -94,13 +95,20 @@ const ManageEnrollments = () => {
     }
   };
 
+  const getReceiptUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+    return `${backendUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+  };
+
   if (loading) return <div className="flex justify-center items-center h-48 text-primary font-semibold text-sm">Loading pending enrollments...</div>;
 
   return (
     <div className="flex flex-col gap-6 text-left">
       <div>
         <h2 className="font-display font-bold text-xl text-text-primary">Pending Enrollments</h2>
-        <p className="text-text-secondary text-xs md:text-sm">Review and approve course enrollments after verifying bank payments.</p>
+        <p className="text-text-secondary text-xs md:text-sm">Review and approve course enrollments after verifying bank payments. Click on a receipt thumbnail to view it full-size.</p>
       </div>
 
       <div className="bg-bg-color rounded-2xl border border-border-color shadow-sm overflow-hidden">
@@ -118,67 +126,126 @@ const ManageEnrollments = () => {
                   <th className="p-4 pl-6">Student</th>
                   <th className="p-4">Type / Course</th>
                   <th className="p-4">Price</th>
+                  <th className="p-4">Receipt</th>
                   <th className="p-4">Requested At</th>
                   <th className="p-4 pr-6 text-right">Status / Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-color/50">
-                {enrollments.map((enrollment) => (
-                  <tr key={enrollment.enrollmentId} className="dark:hover:bg-bg-secondary hover:bg-slate-50 transition-colors">
-                    <td className="p-4 pl-6">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="font-semibold text-sm text-text-primary">{enrollment.studentName}</span>
-                        <span className="text-xs text-text-secondary">{enrollment.studentEmail}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] uppercase font-bold text-primary">{enrollment.type}</span>
-                        <span className="font-semibold text-sm text-text-primary">{enrollment.courseTitle}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="inline-block px-2 py-1 bg-amber-50 text-amber-600 font-bold text-xs rounded border border-amber-100">
-                        {enrollment.type === 'Certificate Request' ? enrollment.certificate_price : enrollment.coursePrice}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-1.5 text-text-secondary text-xs">
-                        <Clock size={12} />
-                        {new Date(enrollment.created_at).toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="p-4 pr-6">
-                      <div className="flex items-center justify-end gap-2">
-                        {(enrollment.status === 'pending_payment' || enrollment.certificate_status === 'pending_payment') ? (
-                          <>
-                            <button
-                              onClick={() => handleApprove(enrollment.enrollmentId)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs rounded-lg transition-colors border-0 cursor-pointer"
-                            >
-                              <CheckCircle size={14} /> Approve
-                            </button>
-                            <button
-                              onClick={() => handleReject(enrollment.enrollmentId)}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white font-bold text-xs rounded-lg transition-colors border-0 cursor-pointer"
-                            >
-                              <XCircle size={14} /> Reject
-                            </button>
-                          </>
+                {enrollments.map((enrollment) => {
+                  const receiptUrl = getReceiptUrl(enrollment.payment_screenshot);
+                  return (
+                    <tr key={enrollment.enrollmentId} className="dark:hover:bg-bg-secondary hover:bg-slate-50 transition-colors">
+                      <td className="p-4 pl-6">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold text-sm text-text-primary">{enrollment.studentName}</span>
+                          <span className="text-xs text-text-secondary">{enrollment.studentEmail}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-[10px] uppercase font-bold text-primary">{enrollment.type}</span>
+                          <span className="font-semibold text-sm text-text-primary">{enrollment.courseTitle}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="inline-block px-2 py-1 bg-amber-50 text-amber-600 font-bold text-xs rounded border border-amber-100">
+                          {enrollment.type === 'Certificate Request' ? enrollment.certificate_price : enrollment.coursePrice}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        {receiptUrl ? (
+                          <button
+                            onClick={() => setZoomedReceipt(receiptUrl)}
+                            className="group relative w-12 h-12 rounded-lg overflow-hidden border border-border-color hover:border-primary transition-all cursor-pointer bg-transparent p-0"
+                            title="View full-size receipt"
+                          >
+                            <img
+                              src={receiptUrl}
+                              alt="Payment receipt"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.classList.add('flex', 'items-center', 'justify-center', 'bg-slate-100');
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <ZoomIn size={16} className="text-white" />
+                            </div>
+                          </button>
                         ) : (
-                          <span className="flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-500 font-bold text-xs rounded-lg">
-                            <CheckCircle size={14} /> Approved
+                          <span className="inline-flex items-center gap-1 text-xs text-text-tertiary bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">
+                            <FileImage size={12} />
+                            No receipt
                           </span>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-1.5 text-text-secondary text-xs">
+                          <Clock size={12} />
+                          {new Date(enrollment.created_at).toLocaleString()}
+                        </div>
+                      </td>
+                      <td className="p-4 pr-6">
+                        <div className="flex items-center justify-end gap-2">
+                          {(enrollment.status === 'pending_payment' || enrollment.certificate_status === 'pending_payment') ? (
+                            <>
+                              <button
+                                onClick={() => handleApprove(enrollment.enrollmentId)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white font-bold text-xs rounded-lg transition-colors border-0 cursor-pointer"
+                              >
+                                <CheckCircle size={14} /> Approve
+                              </button>
+                              <button
+                                onClick={() => handleReject(enrollment.enrollmentId)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-500 hover:text-white font-bold text-xs rounded-lg transition-colors border-0 cursor-pointer"
+                              >
+                                <XCircle size={14} /> Reject
+                              </button>
+                            </>
+                          ) : (
+                            <span className="flex items-center gap-1 px-3 py-1 bg-slate-100 text-slate-500 font-bold text-xs rounded-lg">
+                              <CheckCircle size={14} /> Approved
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
+
+      {/* Full-size Receipt Zoom Modal */}
+      {zoomedReceipt && (
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setZoomedReceipt(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full max-h-[90vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setZoomedReceipt(null)}
+              className="absolute -top-12 right-0 w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors border-0 cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+            <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-2xl max-h-[85vh] flex items-center justify-center p-2">
+              <img
+                src={zoomedReceipt}
+                alt="Payment receipt full view"
+                className="max-h-[80vh] max-w-full object-contain rounded-xl"
+              />
+            </div>
+            <p className="mt-3 text-white/70 text-xs">Click outside to close</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

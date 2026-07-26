@@ -65,7 +65,7 @@ export const DialogProvider = ({ children }) => {
       {/* Dialog Modal */}
       <AnimatePresence>
         {dialog && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
+          <div className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -141,7 +141,7 @@ export const DialogProvider = ({ children }) => {
       </AnimatePresence>
 
       {/* Toast Notifications */}
-      <div className="fixed bottom-6 right-6 z-[10000] flex flex-col gap-3 pointer-events-none max-w-sm w-full px-4 sm:px-0">
+      <div className="fixed bottom-6 right-6 z-[1000000] flex flex-col gap-3 pointer-events-none max-w-sm w-full px-4 sm:px-0">
         <AnimatePresence>
           {toasts.map(toast => (
             <motion.div

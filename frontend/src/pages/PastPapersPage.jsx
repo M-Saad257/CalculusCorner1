@@ -6,6 +6,7 @@ import { useSocket } from '../hooks/useSocket';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Film, Play, Search, Download, FileText, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import Loader from '../components/ui/Loader';
 
 const PastPapersPage = () => {
   const [videos, setVideos] = useState([]);
@@ -177,9 +178,8 @@ const PastPapersPage = () => {
           </div>
 
           {loading ? (
-            <div className="flex justify-center items-center h-48 text-primary font-semibold text-sm">
-              <div className="w-6 h-6 border-2 border-slate-200 border-t-primary rounded-full animate-spin mr-2"></div>
-              Loading solved papers...
+            <div className="col-span-full">
+              <Loader text="Loading solved papers..." />
             </div>
           ) : (
             <div>
@@ -343,3 +343,4 @@ const PastPapersPage = () => {
 };
 
 export default PastPapersPage;
+

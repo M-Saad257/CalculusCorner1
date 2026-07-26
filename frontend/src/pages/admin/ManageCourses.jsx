@@ -242,7 +242,7 @@ const ManageCourses = () => {
 
       {/* Modal Dialog for Add/Edit Form */}
       {editingId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
           <div className="relative w-full max-w-lg bg-bg-color rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left animate-fadeIn">
             
             {/* Header: Sticky */}
@@ -355,44 +355,22 @@ const ManageCourses = () => {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-xs font-bold text-text-secondary uppercase">External Drive Links (Post-Enrollment)</label>
-                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
-                    {formData.external_drive_links.map((link, index) => (
-                      <div key={index} className="flex gap-2 items-center">
-                        <input
-                          type="url"
-                          value={link}
-                          onChange={e => {
-                            const newLinks = [...formData.external_drive_links];
-                            newLinks[index] = e.target.value;
-                            setFormData({ ...formData, external_drive_links: newLinks });
-                          }}
-                          placeholder="e.g. https://drive.google.com/..."
-                          className="grow p-2.5 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newLinks = formData.external_drive_links.filter((_, idx) => idx !== index);
-                            setFormData({ ...formData, external_drive_links: newLinks });
-                          }}
-                          className="p-2.5 bg-red-50 hover:bg-red-500 hover:text-white text-red-500 rounded-lg transition-all border-0 cursor-pointer"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData({ ...formData, external_drive_links: [...formData.external_drive_links, ''] });
+                  <label className="text-xs font-bold text-text-secondary uppercase">
+                    Google Drive Link <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={Array.isArray(formData.external_drive_links) ? (formData.external_drive_links[0] || '') : (formData.external_drive_links || '')}
+                    onChange={e => {
+                      setFormData({ ...formData, external_drive_links: [e.target.value] });
                     }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-2 bg-bg-secondary text-primary font-bold text-xs rounded-lg hover:bg-primary-light hover:text-white transition-all border-0 cursor-pointer mt-1 self-start"
-                  >
-                    <Plus size={14} /> Add Drive Link
-                  </button>
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    className="w-full p-2.5 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+                    required
+                  />
+                  <p className="text-[11px] text-text-tertiary">
+                    This link will open directly when enrolled students click "Go to Video Lectures".
+                  </p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mt-2">
@@ -502,7 +480,7 @@ const ManageCourses = () => {
 
       {/* Custom Delete Confirmation Modal */}
       {deleteConfirmId !== null && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
           <div className="relative w-full max-w-md bg-bg-color rounded-3xl p-6 md:p-8 shadow-2xl border border-border-color flex flex-col gap-4 text-left animate-fadeIn">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-2">
               <AlertCircle size={24} />

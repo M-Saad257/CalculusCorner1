@@ -5,7 +5,50 @@ const bookController = {
   // Public & Admin
   async getBooks(req, res, next) {
     try {
-      const books = await BookModel.getAll();
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit);
+      let category = req.query.category;
+      const subcategory = req.query.subcategory;
+      const search = req.query.search;
+      const sortBy = req.query.sortBy || req.query.sort || 'default';
+
+      // Optional check for logged-in user to personalize results
+      let studentClass = null;
+      if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+        try {
+          const token = req.headers.authorization.split(' ')[1];
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+          if (decoded && decoded.id) {
+            const db = require('../config/db');
+            const [profileRows] = await db.query('SELECT class FROM students_profile WHERE user_id = ?', [decoded.id]);
+            studentClass = profileRows[0]?.class || null;
+          }
+        } catch (e) {
+          // Token invalid or expired, ignore
+        }
+      }
+
+      if (studentClass && studentClass !== 'All') {
+        category = studentClass;
+      }
+
+      if (page && limit) {
+        const { data, totalItems, totalPages } = await BookModel.getPaginated(page, limit, category, subcategory, search, sortBy);
+        return res.status(200).json({
+          success: true,
+          data,
+          page,
+          limit,
+          totalPages,
+          totalItems
+        });
+      }
+
+      let books = await BookModel.getAll();
+      if (studentClass && studentClass !== 'All') {
+        books = books.filter(b => (b.category || '').toLowerCase() === studentClass.toLowerCase());
+      }
       res.status(200).json({
         success: true,
         data: books
@@ -19,7 +62,7 @@ const bookController = {
   async createBook(req, res, next) {
     try {
       const { title, category, subcategory } = req.body;
-      const show_on_home = req.body.show_on_home === 'true' || req.body.show_on_home === true;
+      const show_on_homepage = (req.body.show_on_homepage === 'true' || req.body.show_on_homepage === '1' || req.body.show_on_homepage === true || req.body.show_on_homepage === 1 || req.body.show_on_home === 'true' || req.body.show_on_home === true) ? 1 : 0;
 
       if (!title) {
         res.status(400);
@@ -42,7 +85,7 @@ const bookController = {
         thumbnail_url = '/uploads/resources/' + thumbObj.filename;
       }
 
-      const metadata = { show_on_home };
+      const metadata = { show_on_home: show_on_homepage === 1 };
 
       const insertId = await BookModel.create(
         title,
@@ -51,7 +94,8 @@ const bookController = {
         metadata,
         category || 'General',
         subcategory || null,
-        thumbnail_url
+        thumbnail_url,
+        show_on_homepage
       );
 
       const newBook = await BookModel.getById(insertId);
@@ -71,7 +115,9 @@ const bookController = {
     try {
       const bookId = req.params.id;
       const { title, category, subcategory } = req.body;
-      const show_on_home = req.body.show_on_home === 'true' || req.body.show_on_home === true;
+      const show_on_homepage = req.body.show_on_homepage !== undefined
+        ? (req.body.show_on_homepage === 'true' || req.body.show_on_homepage === '1' || req.body.show_on_homepage === true || req.body.show_on_homepage === 1 ? 1 : 0)
+        : (req.body.show_on_home !== undefined ? (req.body.show_on_home === 'true' || req.body.show_on_home === true ? 1 : 0) : undefined);
 
       const existing = await BookModel.getById(bookId);
       if (!existing) {
@@ -96,7 +142,7 @@ const bookController = {
       
       // Merge metadata
       const currentMeta = existing.metadata || {};
-      const newMetadata = { ...currentMeta, show_on_home };
+      const newMetadata = { ...currentMeta, show_on_home: show_on_homepage !== undefined ? show_on_homepage === 1 : currentMeta.show_on_home };
 
       await BookModel.update(
         bookId,
@@ -106,7 +152,8 @@ const bookController = {
         newMetadata,
         category !== undefined ? category : existing.category,
         subcategory !== undefined ? subcategory : existing.subcategory,
-        thumbnail_url
+        thumbnail_url,
+        show_on_homepage !== undefined ? show_on_homepage : existing.show_on_homepage
       );
 
       const updatedBook = await BookModel.getById(bookId);
@@ -161,6 +208,16 @@ const bookController = {
         return res.status(404).json({ message: 'File not found' });
       }
 
+      // Increment views count in database
+      const db = require('../config/db');
+      await db.query('UPDATE books SET views = views + 1 WHERE id = ?', [id]).catch(e => console.error('Failed to increment book views:', e));
+      try {
+        const { broadcastToAdmins } = require('../socket');
+        broadcastToAdmins('admin:analytics:update', { type: 'book_view', id });
+      } catch (socketErr) {}
+
+      res.removeHeader('X-Frame-Options');
+      res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
         `inline; filename="${book.original_filename || path.basename(book.file_url)}"`
@@ -190,6 +247,14 @@ const bookController = {
         res.status(404);
         throw new Error('Book file does not exist on server');
       }
+
+      // Increment downloads count in database
+      const db = require('../config/db');
+      await db.query('UPDATE books SET downloads = downloads + 1 WHERE id = ?', [id]).catch(e => console.error('Failed to increment book downloads:', e));
+      try {
+        const { broadcastToAdmins } = require('../socket');
+        broadcastToAdmins('admin:analytics:update', { type: 'book_download', id });
+      } catch (socketErr) {}
 
       const originalFilename = book.original_filename || path.basename(book.file_url);
       res.download(filePath, originalFilename);

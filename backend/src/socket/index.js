@@ -5,16 +5,27 @@ const UserModel = require('../models/UserModel');
 let io = null;
 
 const initSocket = (server) => {
-  io = new Server(server, {
-    cors: {
-      origin: process.env.CORS_ORIGIN || '*',
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
-      credentials: true
-    },
-    pingTimeout: 60000,
-    pingInterval: 25000
-  });
+io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "https://calculuscorner.com",
+        "https://www.calculuscorner.com",
+        "http://localhost:5173"
+      ];
 
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    credentials: true
+  },
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
   // JWT Authentication Connection Middleware
   io.use(async (socket, next) => {
     try {

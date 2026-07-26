@@ -15,6 +15,7 @@ const studentRoutes = require('./routes/studentRoutes');
 const resourceRoutes = require('./routes/resourcesRoute');
 const bookRoutes = require('./routes/bookRoutes');
 const updateRoutes = require('./routes/updateRoutes');
+const collaborationRoutes = require('./routes/collaborationRoutes');
 const app = express();
 
 // Serve uploaded resources statically with security options
@@ -27,8 +28,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
 
 // --- GLOBAL MIDDLEWARES ---
 
-// Security headers
-app.use(helmet());
+// Security headers (configured to allow inline document iframe viewer)
+app.use(helmet({
+  frameguard: false,
+  contentSecurityPolicy: false
+}));
 
 // CORS settings
 const corsOptions = {
@@ -53,8 +57,8 @@ app.use('/api', (req, res, next) => {
 });
 
 // JSON Body Parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1gb' }));
+app.use(express.urlencoded({ limit: '1gb', extended: true }));
 
 // --- REST API ENDPOINTS ---
 const practiceController = require('./controllers/practiceController');
@@ -70,6 +74,7 @@ app.use('/api/student', studentRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/books', bookRoutes);
 app.use('/api/updates', updateRoutes);
+app.use('/api/collaborations', collaborationRoutes);
 // Base route test
 app.get('/', (req, res) => {
   res.status(200).json({
@@ -123,6 +128,20 @@ const serveDynamicLogo = async (req, res, fallback) => {
 
 app.get('/favicon.ico', (req, res) => serveDynamicLogo(req, res, 'favicon.ico'));
 app.get('/logo-og.png',  (req, res) => serveDynamicLogo(req, res, 'logo-og.png'));
+
+// ─── Public Certificate Verification (no auth required) ─────────────────────
+app.get('/api/verify-certificate/:certId', async (req, res) => {
+  try {
+    const BadgeModel = require('./models/BadgeModel');
+    const result = await BadgeModel.verifyCertificate(req.params.certId);
+    if (!result) {
+      return res.status(404).json({ success: false, message: 'Certificate not found. Please check the Certificate ID and try again.' });
+    }
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Verification error.' });
+  }
+});
 
 // Catch-all 404 routes
 app.use((req, res, next) => {

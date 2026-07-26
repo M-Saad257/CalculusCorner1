@@ -1,15 +1,99 @@
-import React from 'react';
-import { Play, Download, Edit3, PlayCircle, Flame, GraduationCap, BookOpen, Clock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, Download, Edit3, PlayCircle, Flame, GraduationCap, BookOpen, Clock, Maximize, Trophy, Award, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useContent } from '../../context/ContentContext';
+import api from '../../services/api';
 
-const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVideos = [], courseProgress = [], setActiveTab, setSelectedCourseForDetail }) => {
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+
+const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVideos = [], courseProgress = [], setActiveTab, setSelectedCourseForDetail, onPlayVideo, earnedBadges = [] }) => {
   const { content } = useContent();
   const visibility = content?.visibility || {};
   const showCourses = visibility.courses !== false;
   const showLectures = visibility.lectures !== false;
   const showNotes = visibility.notes !== false;
   const showVideos = content?.site?.features?.videos !== false && showLectures;
+
+  const [downloadingBadge, setDownloadingBadge] = useState(null);
+
+  const handleDownloadCertificate = async (milestoneName) => {
+    try {
+      const shortName = milestoneName.split(' ')[0]; // 'Bronze', 'Silver', 'Gold', 'Master'
+      setDownloadingBadge(milestoneName);
+      
+      const response = await api.get(`/student/certificate/milestone/${shortName}`, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'image/png' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `CalculusCorner_${shortName}_Certificate.png`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (err) {
+      console.error('Failed to download certificate:', err);
+      alert('Could not download certificate. Please try again.');
+    } finally {
+      setDownloadingBadge(null);
+    }
+  };
+
+  // Calculate completed videos count
+  const completedCount = Array.isArray(videos) && videos.length > 0
+    ? videos.filter(v => v.isCompleted === 1 || v.is_completed === 1 || parseFloat(v.progressPercent || v.progress_percent) >= 90).length
+    : (stats?.lessonsFinished || 0);
+
+  // Compute Milestone Progression Info
+  let currentMilestoneInfo = {
+    statusText: '',
+    statusSubtext: '',
+    progressPct: 0
+  };
+
+  if (completedCount < 5) {
+    const remaining = 5 - completedCount;
+    currentMilestoneInfo = {
+      statusText: `${completedCount} completed, ${remaining} video${remaining > 1 ? 's' : ''} to go to unlock Bronze Certificate!`,
+      statusSubtext: 'Watch 5 Calculus video lessons to earn your first official Bronze Certificate.',
+      progressPct: (completedCount / 5) * 100
+    };
+  } else if (completedCount < 15) {
+    const remaining = 15 - completedCount;
+    currentMilestoneInfo = {
+      statusText: `Bronze Milestone Completed! 🎉 ${completedCount} completed, ${remaining} more to go to unlock Silver Certificate!`,
+      statusSubtext: 'Awesome work! Keep watching to reach the 15-video Silver Milestone.',
+      progressPct: ((completedCount - 5) / 10) * 100
+    };
+  } else if (completedCount < 30) {
+    const remaining = 30 - completedCount;
+    currentMilestoneInfo = {
+      statusText: `Silver Milestone Completed! 🎉 ${completedCount} completed, ${remaining} more to go to unlock Gold Certificate!`,
+      statusSubtext: 'You are on fire! Reach 30 completed videos to claim the Gold Certificate.',
+      progressPct: ((completedCount - 15) / 15) * 100
+    };
+  } else if (completedCount < 50) {
+    const remaining = 50 - completedCount;
+    currentMilestoneInfo = {
+      statusText: `Gold Milestone Completed! 🎉 ${completedCount} completed, ${remaining} more to go to unlock Master Certificate!`,
+      statusSubtext: 'Final stretch! Reach 50 completed videos for the ultimate Master Certificate.',
+      progressPct: ((completedCount - 30) / 20) * 100
+    };
+  } else {
+    currentMilestoneInfo = {
+      statusText: 'Master Milestone Achieved! 🏆 All 50 Video Milestones Completed!',
+      statusSubtext: 'Outstanding achievement! You have unlocked all official video certificates.',
+      progressPct: 100
+    };
+  }
+
+  const unlockedMilestonesList = [];
+  if (completedCount >= 5) unlockedMilestonesList.push('Bronze Milestone');
+  if (completedCount >= 15) unlockedMilestonesList.push('Silver Milestone');
+  if (completedCount >= 30) unlockedMilestonesList.push('Gold Milestone');
+  if (completedCount >= 50) unlockedMilestonesList.push('Master Milestone');
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-8 text-left animate-fadeIn">
       {/* Welcome Row with Streak */}
@@ -21,6 +105,16 @@ const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVid
           </h1>
           <p className="text-text-secondary text-sm mt-1">Ready to master Calculus and ace your exams today?</p>
         </div>
+        {/* Verify Certificate button — only shown if user has earned any badge */}
+        {earnedBadges.length > 0 && (
+          <a
+            href="/verify-certificate"
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold text-xs shadow-md shadow-emerald-500/20 transition-all cursor-pointer border-0 shrink-0 no-underline"
+          >
+            <ShieldCheck size={15} />
+            Verify Your Certificate
+          </a>
+        )}
       </div>
 
       {/* Overview Grid */}
@@ -30,7 +124,7 @@ const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVid
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-2xl text-primary shadow-sm overflow-hidden shrink-0">
               {student?.avatar ? (
-                <img src={student.avatar.startsWith('http') ? student.avatar : `${student.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={student.avatar.startsWith('http') || student.avatar.startsWith('data:') ? student.avatar : `${BACKEND_URL}${student.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 student?.name ? student.name.charAt(0).toUpperCase() : 'S'
               )}
@@ -91,15 +185,27 @@ const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVid
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-4">
           {showVideos && (
             <button
-              onClick={() => setActiveTab('videos')}
+              onClick={() => {
+                if (recentVideos && recentVideos.length > 0) {
+                  onPlayVideo(recentVideos[0]);
+                } else if (videos && videos.length > 0) {
+                  onPlayVideo(videos[0]);
+                } else {
+                  setActiveTab('videos');
+                }
+              }}
               className="p-4 rounded-2xl bg-white dark:bg-slate-900 hover:bg-primary-light/5 border border-border-color hover:border-primary-light flex items-center gap-3.5 text-left cursor-pointer transition-all group"
             >
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
+              <div className="w-10 h-10 px-3 rounded-xl bg-indigo-50 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
                 <Play size={18} />
               </div>
               <div>
                 <h4 className="font-bold text-sm text-text-primary">Resume Last Lesson</h4>
-                <p className="text-text-tertiary text-xxs font-medium mt-0.5">Jump back into video lectures</p>
+                <p className="text-text-tertiary text-xxs font-medium mt-0.5 line-clamp-1">
+                  {recentVideos && recentVideos.length > 0 
+                    ? `Resume: ${recentVideos[0].title}`
+                    : 'Jump back into video lectures'}
+                </p>
               </div>
             </button>
           )}
@@ -123,54 +229,76 @@ const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVid
       </div>
 
       {/* Continue Learning & Recently Watched */}
-      {showVideos && recentVideos.length > 0 && (
+      {showVideos && recentVideos && recentVideos.length > 0 && (
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <Clock size={18} className="text-primary" />
             <h3 className="font-display font-bold text-lg text-text-primary">Continue Learning</h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {recentVideos.map(vid => (
-              <div
-                key={vid.id}
-                onClick={() => {
-                  window.open(vid.url, '_blank');
-                }}
-                className="group cursor-pointer p-4 rounded-2xl bg-white dark:bg-slate-900 border border-border-color shadow-sm flex flex-col gap-3 hover:shadow-md hover:border-primary-light transition-all text-left"
-              >
-                <div className="relative aspect-video rounded-xl overflow-hidden bg-bg-secondary border border-border-color/40">
-                  <img
-                    src={vid.thumbnail || `https://img.youtube.com/vi/${vid.videoId}/hqdefault.jpg`}
-                    alt={vid.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&q=60';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <PlayCircle size={32} className="text-white drop-shadow-md" />
-                  </div>
-                </div>
-                <div>
-                  <h4 className="font-bold text-sm text-text-primary line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                    {vid.title}
-                  </h4>
-                  <div className="mt-2 w-full bg-border-color rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-primary h-full rounded-full transition-all duration-500"
-                      style={{ width: `${vid.progress_percent || 100}%` }}
+            {recentVideos.slice(0, 6).map(vid => {
+              const progressVal = parseFloat(vid.progress_percent !== undefined ? vid.progress_percent : vid.progressPercent) || 0;
+              const isCompleted = vid.is_completed === 1 || vid.isCompleted === 1 || progressVal >= 90;
+              return (
+                <div
+                  key={vid.id}
+                  onClick={() => onPlayVideo(vid)}
+                  className="group cursor-pointer p-4 rounded-2xl bg-white dark:bg-slate-900 border border-border-color shadow-sm flex flex-col gap-3 hover:shadow-md hover:border-primary-light transition-all text-left"
+                >
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-bg-secondary border border-border-color/40">
+                    <img
+                      src={vid.thumbnail || `https://img.youtube.com/vi/${vid.videoId}/hqdefault.jpg`}
+                      alt={vid.title}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&q=60';
+                      }}
                     />
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <PlayCircle size={32} className="text-white drop-shadow-md" />
+                    </div>
+                    {vid.duration && (
+                      <span className="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center justify-center backdrop-blur-sm z-20">
+                        {vid.duration}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider mt-1.5">
-                    {vid.is_completed ? 'Completed' : 'Resume'}
-                  </p>
+                  <div>
+                    <h4 className="font-bold text-sm text-text-primary line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                      {vid.title}
+                    </h4>
+                    <div className="mt-2 w-full bg-border-color rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-primary h-full rounded-full transition-all duration-500"
+                        style={{ width: `${progressVal}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <p className="text-[10px] font-bold text-text-tertiary uppercase tracking-wider">
+                        {isCompleted ? 'Completed' : `Resume (${progressVal}%)`}
+                      </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const pos = Math.round(vid.last_position || vid.lastPosition || 0);
+                          window.open(`/viewer/video/${vid.id}?t=${pos}`, '_blank');
+                        }}
+                        className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-md hover:bg-primary/20 transition-colors flex items-center gap-1 border-0 cursor-pointer"
+                        title="Open Cinematic Fullscreen"
+                      >
+                        <Maximize size={10} /> Fullscreen
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
+
+
 
       {/* Enrolled Courses */}
       {showCourses && (
@@ -275,47 +403,6 @@ const DashboardHome = ({ student, stats, videos, enrolledCourses = [], recentVid
         </div>
       )}
 
-      {/* Explore More Topics */}
-      {showVideos && videos.length > 0 && (
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-display font-bold text-lg text-text-primary text-left">Latest Study Lectures</h3>
-            <button onClick={() => setActiveTab('videos')} className="text-xs font-bold text-primary hover:underline border-0 bg-transparent cursor-pointer">
-              View All
-            </button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {videos.slice(0, 3).map(vid => (
-              <div
-                key={vid.id}
-                onClick={() => window.open(vid.url, '_blank')}
-                className="group cursor-pointer rounded-2xl bg-white dark:bg-slate-900 border border-border-color p-3 hover:shadow-md hover:border-primary-light transition-all flex flex-col gap-2.5 text-left"
-              >
-                <div className="relative aspect-video rounded-xl overflow-hidden bg-bg-secondary border border-border-color/40">
-                  <img
-                    src={vid.thumbnail || `https://img.youtube.com/vi/${vid.videoId}/hqdefault.jpg`}
-                    alt={vid.title}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400&q=60';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/25 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <PlayCircle size={32} className="text-white" />
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase text-primary">{vid.category || 'Calculus'}</span>
-                  <h4 className="font-bold text-xs text-text-primary line-clamp-1 mt-0.5 leading-snug group-hover:text-primary transition-colors" title={vid.title}>
-                    {vid.title}
-                  </h4>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

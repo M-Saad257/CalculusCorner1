@@ -4,6 +4,7 @@ import html2canvas from 'html2canvas';
 import Button from '../../components/ui/Button';
 import { useDialog } from '../../context/DialogContext';
 import { useContent } from '../../context/ContentContext';
+import { useSocket } from '../../hooks/useSocket';
 import api from '../../services/api';
 
 const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDetail }) => {
@@ -22,11 +23,40 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
   const [localCertStatus, setLocalCertStatus] = useState(course?.certificate_status || 'none');
   const certificateRef = useRef(null);
 
+  const { socket } = useSocket();
+
+  const fetchEnrollmentStatus = async () => {
+    if (!course) return;
+    try {
+      const res = await api.get('/student/enrollments');
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const matching = res.data.data.find(e => String(e.course_id || e.id) === String(course.course_id || course.id));
+        if (matching) {
+          setLocalCertStatus(matching.certificate_status || 'none');
+        }
+      }
+    } catch (e) { }
+  };
+
   useEffect(() => {
     if (course) {
       setLocalCertStatus(course.certificate_status || 'none');
+      fetchEnrollmentStatus();
     }
   }, [course]);
+
+  useEffect(() => {
+    if (!socket || !course) return;
+    const handleUpdate = () => {
+      fetchEnrollmentStatus();
+    };
+    socket.on('enrollment:updated', handleUpdate);
+    socket.on('certificate:issued', handleUpdate);
+    return () => {
+      socket.off('enrollment:updated', handleUpdate);
+      socket.off('certificate:issued', handleUpdate);
+    };
+  }, [socket, course]);
 
   const { content } = useContent();
   const bankDetails = content?.bank_details || {};
@@ -186,8 +216,20 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
 
             <Button
               variant="outline"
-              className="mt-2 w-max"
-              onClick={() => setActiveTab('videos')}
+              className="mt-2 w-max bg-primary text-white border-0 hover:bg-primary-dark shadow-sm"
+              onClick={() => {
+                const driveLink = Array.isArray(driveLinks) && driveLinks.length > 0
+                  ? driveLinks[0]
+                  : (typeof course?.external_drive_links === 'string' && course.external_drive_links.startsWith('http'))
+                    ? course.external_drive_links
+                    : null;
+
+                if (driveLink) {
+                  window.open(driveLink, '_blank', 'noopener,noreferrer');
+                } else {
+                  setActiveTab('videos');
+                }
+              }}
             >
               <Play size={16} className="mr-2" /> Go to Video Lectures
             </Button>
@@ -200,7 +242,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
 
             {course.quiz_required === 1 ? (
               <div className="p-5 bg-slate-50 border border-border-color rounded-2xl flex flex-col gap-4">
-                {certStatus === 'issued' ? (
+                {localCertStatus === 'issued' ? (
                   <div className="text-center flex flex-col items-center gap-3">
                     <Award size={48} className="text-amber-400 drop-shadow-md" />
                     <div>
@@ -211,7 +253,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
                       <Award size={16} className="mr-2" /> View Certificate
                     </Button>
                   </div>
-                ) : certStatus === 'pending_payment' ? (
+                ) : localCertStatus === 'pending_payment' ? (
                   <div className="text-center flex flex-col items-center gap-3">
                     <CreditCard size={48} className="text-blue-400" />
                     <div>
@@ -231,7 +273,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
                       </Button>
                     )}
 
-                    {quizResult && quizResult.passed && certStatus === 'none' && (
+                    {quizResult && quizResult.passed && localCertStatus === 'none' && (
                       <div className="flex flex-col gap-3 mt-2 border-t border-border-color/50 pt-4">
                         <div className="flex justify-between items-center bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border border-emerald-200 text-sm font-bold">
                           <span>Score: {quizResult.score}%</span>
@@ -324,8 +366,8 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
 
       {/* Certificate Payment Modal */}
       {paymentModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-md max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto cc-scroll text-left flex flex-col">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md mt-10 max-h-[75vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto cc-scroll text-left flex flex-col">
             <div className="px-6 py-5 border-b border-border-color flex items-center justify-between bg-bg-secondary/30 sticky top-0 z-10 backdrop-blur-md">
               <div className="flex items-center gap-2 text-primary">
                 <Award size={20} />
@@ -385,7 +427,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
 
       {/* Name Entry Modal */}
       {showNameEntryModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl p-8 max-w-sm w-full text-center">
             <h3 className="font-display font-bold text-xl mb-4">Enter Certificate Name</h3>
             <p className="text-sm text-text-secondary mb-6">Max 10 characters, no spaces.</p>
@@ -412,43 +454,42 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
 
       {/* Certificate Viewer Modal (Dynamic HTML) */}
       {showCertificateModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
-            <div className="px-6 py-4 border-b border-border-color flex items-center justify-between bg-bg-secondary/50">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="px-6 py-4 border-b border-border-color flex items-center justify-between bg-bg-secondary/50 shrink-0">
               <div className="flex items-center gap-2 text-primary-dark">
                 <Award size={20} />
                 <h3 className="font-display font-bold text-lg m-0">Your Verified Certificate</h3>
               </div>
               <button
                 onClick={() => setShowCertificateModal(false)}
-                className="p-1.5 text-text-tertiary hover:bg-slate-200 hover:text-text-primary rounded-full border-0 cursor-pointer transition-colors bg-transparent"
+                className="p-1.5 text-text-tertiary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-text-primary rounded-full border-0 cursor-pointer transition-colors bg-transparent"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-6 md:p-8 flex-1 overflow-auto bg-slate-50 flex items-center justify-center">
+            <div className="p-4 md:p-6 flex-1 overflow-hidden bg-slate-950 flex items-center justify-center">
               <div
                 ref={certificateRef}
-                className="relative w-full max-w-3xl shadow-md border border-border-color bg-white dark:bg-slate-900 overflow-hidden"
-                style={{ aspectRatio: '2000/1414', containerType: 'inline-size' }}
+                className="relative w-full max-w-3xl aspect-[2000/1414] shadow-2xl border border-slate-700 rounded-2xl overflow-hidden bg-slate-900 my-auto"
+                style={{ containerType: 'inline-size' }}
               >
                 <img
-                  src="/CalculusCorner-Certificate.png"
+                  src="/CalculusCorner-Course-Certificate.png"
+                  onError={(e) => { e.target.src = '/CalculusCorner-Certificate.png'; }}
                   alt="Certificate Template"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-contain"
                 />
 
                 {/* Dynamic Text Overlays (Full Right Panel) */}
                 <style>
                   {`@import url('https://fonts.googleapis.com/css2?family=Lavishly+Yours&display=swap');`}
                 </style>
-                <div
-                  className="absolute z-10 w-full h-full"
-                >
+                <div className="absolute z-10 w-full h-full inset-0">
                   {/* Student Name */}
                   <p
-                    className="absolute text-[#2761f0] font-bold leading-none"
+                    className="absolute text-[#2761f0] font-bold leading-none select-none"
                     style={{
                       top: "44.5%",
                       left: "37.45%",
@@ -461,7 +502,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
 
                   {/* Course Title */}
                   <p
-                    className="absolute text-[#2761f0] font-bold"
+                    className="absolute text-[#2761f0] font-bold select-none"
                     style={{
                       top: "61.5%",
                       left: "66.95%",
@@ -473,7 +514,7 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
 
                   {/* Date */}
                   <p
-                    className="absolute text-[#2761f0] font-bold"
+                    className="absolute text-[#2761f0] font-bold select-none"
                     style={{
                       top: "70.5%",
                       left: "42.45%",
@@ -490,11 +531,11 @@ const CourseDetailTab = ({ course, student, setActiveTab, setSelectedCourseForDe
               </div>
             </div>
 
-            <div className="p-4 border-t border-border-color bg-white dark:bg-slate-900 flex justify-end gap-3">
+            <div className="p-4 border-t border-border-color bg-white dark:bg-slate-900 flex justify-end gap-3 shrink-0">
               <Button variant="outline" onClick={() => setShowCertificateModal(false)}>
                 Close
               </Button>
-              <Button variant="primary" onClick={downloadFromModal} className="bg-emerald-500 hover:bg-emerald-600 border-0">
+              <Button variant="primary" onClick={downloadFromModal} className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 shadow-md">
                 <Download size={16} className="mr-2 inline" /> Download PNG
               </Button>
             </div>

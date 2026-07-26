@@ -384,6 +384,11 @@ const SubjectDetailPage = () => {
                             <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <PlayCircle className="text-white drop-shadow" size={16} />
                             </div>
+                            {video.duration && (
+                              <span className="absolute bottom-1 right-1 bg-slate-900/80 text-white text-[8px] font-bold px-1 py-0.5 rounded flex items-center justify-center backdrop-blur-sm z-20">
+                                {video.duration}
+                              </span>
+                            )}
                           </div>
                           <div className="flex flex-col gap-0.5">
                             <span className="font-sans font-bold text-xs text-text-primary line-clamp-2 leading-tight group-hover:text-primary transition-colors" title={video.title}>

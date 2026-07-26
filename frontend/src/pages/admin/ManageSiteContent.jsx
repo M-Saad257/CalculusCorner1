@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Save, Plus, Edit2, Trash2, X, AlertCircle, Star, Calendar, Upload, Search, FileJson, CheckCircle2, ChevronLeft, ChevronRight, Mail, Download, Clock } from 'lucide-react';
+import { Save, Plus, Edit2, Trash2, X, AlertCircle, Star, Calendar, Upload, Search, FileJson, CheckCircle2, ChevronLeft, ChevronRight, Mail, Download, Clock, Handshake, ImagePlus } from 'lucide-react';
 import { useContent } from '../../context/ContentContext';
 import Loader from '../../components/ui/Loader';
 import { useDialog } from '../../context/DialogContext';
@@ -14,6 +14,21 @@ const ManageSiteContent = () => {
   const [formData, setFormData] = useState({});
   const [saving, setSaving] = useState(false);
   const saveAiBtnRef = useRef(null);
+
+  const [collabSubmissions, setCollabSubmissions] = useState([]);
+  const [collabLoading, setCollabLoading] = useState(false);
+  const [collabSubTab, setCollabSubTab] = useState('settings'); // 'settings' | 'submissions'
+  const [editingCollab, setEditingCollab] = useState(null);
+  const [editCollabForm, setEditCollabForm] = useState({
+    businessName: '',
+    businessNiche: '',
+    description: '',
+    tags: '',
+  });
+  const [editCollabLogo, setEditCollabLogo] = useState(null);
+  const [editCollabLogoPreview, setEditCollabLogoPreview] = useState(null);
+  const [updatingCollab, setUpdatingCollab] = useState(false);
+  const editLogoInputRef = useRef(null);
 
   // Logo upload states
   const [logoFile, setLogoFile] = useState(null);
@@ -515,12 +530,26 @@ const ManageSiteContent = () => {
       stats_3_label: '24/7 Help'
     },
     about: {
-      badge: 'About Us',
-      heading: 'Transforming Math Anxiety into',
-      heading_gradient: 'Mathematical Mastery',
-      paragraph1: 'Calculus Corner is more than just a tutoring platform. We are a dedicated educational hub designed to make complex mathematical concepts intuitive, engaging, and accessible to everyone. Our mission is to build foundational strength that lasts a lifetime.',
-      paragraph2: '',
-      image_url: ''
+      badge: 'About the Founder',
+      heading: 'Mr. Muhammad Mehtab',
+      heading_gradient: 'PhD (Cont.) Mathematics',
+      profile_description: 'The objective of my career is to become a better researcher in my field to deliver a positive contribution in scientific community and to become a creative and resourceful teacher with proven abilities to enhance students’ performance. Possess a positive and effective teaching style with the willingness to work above and beyond the call of duty.',
+      education_phd: 'PhD Mathematics: National University of Modern Languages, Islamabad, Pakistan (January 2025 – Cont.).',
+      education_ms: 'MS Mathematics: National University of Modern Languages, Islamabad, Pakistan (2020 – 2023). Thesis: Extension of finite difference scheme for the time-fractional hyperbolic problem with stability analysis.',
+      education_msc: 'MSc Mathematics: Allama Iqbal Open University, Islamabad, Pakistan (2018 – 2020). Specialization: Pure & Applied Mathematics.',
+      education_bsc: 'BSc Mathematics: University of the Punjab, Lahore, Pakistan (2015 – 2018). Specialization: Pure & Applied Mathematics.',
+      education_bed: 'B.Ed. Education: Virtual University of Pakistan (2021 – 2022). Specialization: Education.',
+      experience_ssms: 'School Teacher: Federal Government Education Institute, Rawalpindi (November 2023 – To Date). I have taught Mathematics to the students of SSC level.',
+      experience_aps: 'Lecturer & HOD: Army Public School and College, Rawat, Islamabad (May 2020 – November 2023). Teaching math at HSSC level, Head of Department of Mathematics, and Discipline Incharge.',
+      experience_oxford: 'Lecturer: Oxford Girls Degree College, Shah Bagh, Rawalpindi (August 2019 – May 2020). Taught metric space, mechanics, vector calculus, mathematical methods, and calculus to undergraduate students.',
+      experience_potohar: 'Lecturer: Potohar College of Science & Commerce for Boys, Kallar Syadan (August 2018 – June 2019). Taught mathematics to the students of HSSC level.',
+      skill_cpp: '90',
+      skill_maple: '60',
+      skill_mathtype: '60',
+      skill_office: '95',
+      personal_email: 'muhammadmehtab1995@gmail.com',
+      personal_hobbies: 'Badminton, Cricket, Programming, Article reading, Poetry',
+      image_url: '/Final.webp'
     },
     contact: {
       email: 'calculuscorner.official@gmail.com',
@@ -534,6 +563,20 @@ const ManageSiteContent = () => {
       heading: 'Subscribe to Newsletter',
       subheading: 'Get the latest study tips, new video alerts, and exclusive resources delivered directly to your inbox.'
     },
+    community: {
+      badge: 'Join The Club',
+      title_part1: 'A Community of',
+      title_gradient: 'Math Enthusiasts',
+      description: "You don't have to study alone. Join thousands of students already learning together, asking questions, and sharing resources on our platforms.",
+      youtube_stats: '58.2K',
+      youtube_url: 'https://www.youtube.com/@Calculus.Corner',
+      whatsapp_stats: '2.3K',
+      whatsapp_url: 'https://whatsapp.com/channel/0029VaE4Wcn8KMqo8oK8LH18',
+      instagram_stats: '3.6K',
+      instagram_url: 'https://instagram.com/calculus.corner?igsh=cmtmdTY0YmVqYnJx',
+      twitter_stats: '5',
+      twitter_url: 'https://x.com/CalculusCorner'
+    },
     visibility: {
       courses: true,
       practice: true,
@@ -544,7 +587,15 @@ const ManageSiteContent = () => {
       contact: true,
       success_stories: true,
       updates: true,
-      past_papers: true
+      past_papers: true,
+      collaboration: true,
+      faq: true
+    },
+    collaboration: {
+      title: 'Work Together & Collaborate',
+      subtitle: 'Collaboration & Partnerships',
+      description: 'Interested in partnering with Calculus Corner? We collaborate with educational institutions, businesses, and content developers. Click below to submit your details and proposal.',
+      buttonText: 'Want to Collaborate?'
     }
   };
 
@@ -553,7 +604,14 @@ const ManageSiteContent = () => {
     if (activeTab !== 'question_pool' && activeTab !== 'logo' && activeTab !== 'newsletter' && activeTab !== 'pdf_import' && activeTab !== 'bank_details') {
       const dbData = content && content[activeTab] ? content[activeTab] : {};
       const defaultData = defaultSchemas[activeTab] || {};
-      setFormData({ ...defaultData, ...dbData });
+      const merged = { ...defaultData, ...dbData };
+      if (activeTab === 'visibility') {
+        delete merged.subjects;
+      }
+      setFormData(merged);
+      if (activeTab === 'collaboration') {
+        fetchCollabSubmissions();
+      }
     } else if (activeTab === 'question_pool') {
       fetchQuestionStats();
       fetchQuestions();
@@ -609,6 +667,11 @@ const ManageSiteContent = () => {
         fetchQuestions();
       }
     };
+    const refreshCollaborations = () => {
+      if (activeTab === 'collaboration') {
+        fetchCollabSubmissions();
+      }
+    };
 
     socket.on('announcement:create', refreshAnnouncements);
     socket.on('announcement:update', refreshAnnouncements);
@@ -618,12 +681,17 @@ const ManageSiteContent = () => {
 
     socket.on('question_pool:update', refreshQuestions);
 
+    socket.on('collaboration:create', refreshCollaborations);
+    socket.on('collaboration:delete', refreshCollaborations);
+
     return () => {
       socket.off('announcement:create', refreshAnnouncements);
       socket.off('announcement:update', refreshAnnouncements);
       socket.off('announcement:delete', refreshAnnouncements);
       socket.off('newsletter:update', refreshSubscribers);
       socket.off('question_pool:update', refreshQuestions);
+      socket.off('collaboration:create', refreshCollaborations);
+      socket.off('collaboration:delete', refreshCollaborations);
     };
   }, [socket, activeTab, subscribersPage, subscribersSearch, subscribersStatus]);
 
@@ -689,6 +757,83 @@ const ManageSiteContent = () => {
       fetchSubscribers();
     } catch (err) {
       showToast('Failed to update subscriber status.', 'error');
+    }
+  };
+
+  const fetchCollabSubmissions = async () => {
+    try {
+      setCollabLoading(true);
+      const res = await api.get('/collaborations/admin');
+      if (res.data && res.data.success) {
+        setCollabSubmissions(res.data.data || []);
+      }
+    } catch (err) {
+    } finally {
+      setCollabLoading(false);
+    }
+  };
+
+  const handleDeleteCollabSubmission = async (id) => {
+    const isConfirmed = await confirm(
+      'Delete Submission?',
+      'Remove this collaboration submission? This action cannot be undone.',
+      { confirmLabel: 'Delete', danger: true }
+    );
+    if (!isConfirmed) return;
+    try {
+      await api.delete(`/collaborations/admin/${id}`);
+      showToast('Submission deleted successfully.', 'success');
+      fetchCollabSubmissions();
+    } catch (err) {
+      showToast('Failed to delete submission.', 'error');
+    }
+  };
+
+  const handleUpdateCollabDisplay = async (id, isVisible, sequence, isFeatured) => {
+    try {
+      await api.put(`/collaborations/admin/${id}`, { isVisible, sequence, isFeatured });
+      fetchCollabSubmissions();
+    } catch (err) {
+      showToast('Failed to update display settings.', 'error');
+    }
+  };
+
+  const handleStartEditCollab = (collab) => {
+    setEditingCollab(collab);
+    setEditCollabForm({
+      businessName: collab.businessName || '',
+      businessNiche: collab.businessNiche || '',
+      description: collab.description || '',
+      tags: collab.tags || '',
+    });
+    setEditCollabLogo(null);
+    setEditCollabLogoPreview(collab.logoUrl ? (collab.logoUrl.startsWith('http') ? collab.logoUrl : `${import.meta.env.VITE_BACKEND_URL || ''}${collab.logoUrl}`) : null);
+  };
+
+  const handleUpdateCollabSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setUpdatingCollab(true);
+      const fd = new FormData();
+      fd.append('businessName', editCollabForm.businessName);
+      fd.append('businessNiche', editCollabForm.businessNiche);
+      fd.append('description', editCollabForm.description);
+      fd.append('tags', editCollabForm.tags);
+      if (editCollabLogo) {
+        fd.append('logo', editCollabLogo);
+      }
+
+      await api.put(`/collaborations/admin/${editingCollab.id}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      showToast('Collaborator details updated successfully.', 'success');
+      setEditingCollab(null);
+      fetchCollabSubmissions();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to update details.', 'error');
+    } finally {
+      setUpdatingCollab(false);
     }
   };
 
@@ -889,6 +1034,13 @@ const ManageSiteContent = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleInputChange = (key, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await updateSection(activeTab, formData);
@@ -1008,6 +1160,38 @@ const ManageSiteContent = () => {
     return "/official.webp";
   };
 
+  const handleFormatText = (key, formatType) => {
+    const textarea = document.getElementsByName(key)[0];
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = formData[key] || '';
+    const selectedText = val.substring(start, end);
+
+    if (start === end) {
+      showToast('Please select some text first to apply formatting', 'info');
+      return;
+    }
+
+    let formattedText = '';
+    if (formatType === 'bold') {
+      formattedText = `**${selectedText}**`;
+    } else if (formatType === 'italic') {
+      formattedText = `*${selectedText}*`;
+    } else if (formatType === 'clear') {
+      formattedText = selectedText.replace(/\*/g, '');
+    }
+
+    const newVal = val.substring(0, start) + formattedText + val.substring(end);
+    setFormData(prev => ({ ...prev, [key]: newVal }));
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start, start + formattedText.length);
+    }, 50);
+  };
+
   if (contentLoading) return <div className="flex justify-center items-center h-48 text-primary font-semibold">Loading site configuration...</div>;
   if (!content) return <div className="flex justify-center items-center h-48 text-primary font-semibold">Please make sure you imported the database!</div>;
 
@@ -1022,7 +1206,7 @@ const ManageSiteContent = () => {
 
       {/* Tabs list */}
       <div className="flex flex-wrap gap-2.5 border-b border-border-color pb-3">
-        {['hero', 'about', 'contact', 'logo', 'question_pool', 'newsletter', 'bank_details', 'visibility'].map(tab => (
+        {['hero', 'about', 'community', 'contact', 'logo', 'question_pool', 'newsletter', 'bank_details', 'collaboration', 'visibility'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1031,7 +1215,7 @@ const ManageSiteContent = () => {
               : 'bg-transparent text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
               }`}
           >
-            {tab === 'hero' ? 'Hero Section' : tab === 'about' ? 'About Section' : tab === 'contact' ? 'Contact Details' : tab === 'logo' ? 'Site Logo' : tab === 'newsletter' ? 'Newsletter' : tab === 'bank_details' ? 'Global Bank Details' : tab === 'visibility' ? 'Page Visibility' : 'Question Pool'}
+            {tab === 'hero' ? 'Hero Section' : tab === 'about' ? 'About Section' : tab === 'community' ? 'Community Section' : tab === 'contact' ? 'Contact Details' : tab === 'logo' ? 'Site Logo' : tab === 'newsletter' ? 'Newsletter' : tab === 'bank_details' ? 'Global Bank Details' : tab === 'collaboration' ? 'Collaboration' : tab === 'visibility' ? 'Page Visibility' : 'Question Pool'}
           </button>
         ))}
       </div>
@@ -1177,7 +1361,7 @@ const ManageSiteContent = () => {
 
                   <button
                     onClick={savePdfDraft}
-                    className="py-2.5 px-4 bg-bg-secondary hover:bg-slate-200 text-text-primary font-bold text-xs border border-border-color rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    className="py-2.5 px-4 bg-bg-secondary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white text-text-primary font-bold text-xs border border-border-color rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <Save size={14} /> Save Draft
                   </button>
@@ -1726,7 +1910,7 @@ const ManageSiteContent = () => {
               <label className="text-xs font-bold text-text-secondary uppercase">Select Logo File</label>
               <input
                 type="file"
-                accept=".png,.jpg,.jpeg,.svg"
+                accept=".png,.jpg,.jpeg,.webp,.svg"
                 onChange={handleLogoFileChange}
                 className="text-xs font-sans file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 file:cursor-pointer"
               />
@@ -1780,22 +1964,24 @@ const ManageSiteContent = () => {
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-            {Object.keys(formData).map(key => (
-              <div key={key} className="flex items-center justify-between p-4 border border-border-color rounded-2xl bg-bg-secondary/50">
-                <span className="font-semibold text-sm text-text-primary capitalize">
-                  {key.replace(/_/g, ' ')}
-                </span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={formData[key] !== false}
-                    onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.checked }))}
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                </label>
-              </div>
-            ))}
+            {Object.keys(formData)
+              .filter(key => key !== 'subjects')
+              .map(key => (
+                <div key={key} className="flex items-center justify-between p-4 border border-border-color rounded-2xl bg-bg-secondary/50">
+                  <span className="font-semibold text-sm text-text-primary capitalize">
+                    {key.replace(/_/g, ' ')}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={formData[key] !== false}
+                      onChange={(e) => setFormData(prev => ({ ...prev, [key]: e.target.checked }))}
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+              ))}
           </div>
 
           <div className="mt-4 flex">
@@ -1808,7 +1994,7 @@ const ManageSiteContent = () => {
             </button>
           </div>
         </div>
-      ) : ['bank_details', 'announcements', 'newsletter', 'question_pool'].includes(activeTab) ? null : (
+      ) : ['bank_details', 'announcements', 'newsletter', 'question_pool', 'collaboration'].includes(activeTab) ? null : (
         /* Regular section config forms */
         <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-xl max-w-3xl glass flex flex-col gap-6">
           <h3 className="font-display font-bold text-lg text-text-primary capitalize">
@@ -1817,7 +2003,7 @@ const ManageSiteContent = () => {
 
           <div className="flex flex-col gap-4">
             {Object.keys(formData)
-              .filter(key => !['facebook_url', 'twitter_url', 'instagram_url', 'youtube_url', 'whatsapp_number'].includes(key))
+              .filter(key => activeTab === 'community' || !['facebook_url', 'twitter_url', 'instagram_url', 'youtube_url', 'whatsapp_number'].includes(key))
               .map(key => (
                 <div key={key} className="flex flex-col gap-1.5 text-left">
                   <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">
@@ -1836,14 +2022,14 @@ const ManageSiteContent = () => {
                                     : formData[key].startsWith('/uploads')
                                       ? `${import.meta.env.VITE_BACKEND_URL || ''}${formData[key]}`
                                       : `${import.meta.env.VITE_SITE_URL || window.location.origin}${formData[key]}`)
-                                  : '/SirMehtabPhoto.png'
+                                  : '/Final.webp'
                               }
                               alt="Section Preview"
                               className="w-full h-full object-contain p-1 bg-bg-color"
                               onError={(e) => {
-                                const fallback = window.location.origin + '/SirMehtabPhoto.png';
+                                const fallback = window.location.origin + '/Final.webp';
                                 if (e.target.src !== fallback) {
-                                  e.target.src = '/SirMehtabPhoto.png';
+                                  e.target.src = '/Final.webp';
                                 }
                               }}
                             />
@@ -1877,14 +2063,46 @@ const ManageSiteContent = () => {
                         </div>
                       </div>
                     </div>
-                  ) : key.includes('paragraph') || key.includes('subheadline') || key.includes('notice') ? (
-                    <textarea
-                      name={key}
-                      value={formData[key] || ''}
-                      onChange={handleChange}
-                      rows={4}
-                      className="w-full p-3 border border-border-color rounded-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-y"
-                    />
+                  ) : key.includes('paragraph') || key.includes('subheadline') || key.includes('notice') || key.includes('description') || key.includes('education') || key.includes('experience') || key.includes('address') || key.includes('hobbies') ? (
+                    <div className="flex flex-col w-full relative">
+                      <div className="flex items-center gap-1.5 bg-bg-secondary/90 border border-border-color p-1.5 rounded-t-xl text-xs -mb-px select-none shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleFormatText(key, 'bold')}
+                          className="px-2.5 py-1 bg-bg-color hover:bg-primary hover:text-white text-text-primary rounded-lg border border-border-color/80 font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          title="Apply Bold & Primary Blue Color"
+                        >
+                          <span className="font-extrabold text-primary hover:text-inherit">B</span> Bold & Blue
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFormatText(key, 'italic')}
+                          className="px-2.5 py-1 bg-bg-color hover:bg-primary hover:text-white text-text-primary rounded-lg border border-border-color/80 font-bold transition-all flex items-center gap-1 cursor-pointer"
+                          title="Apply Italic Styling"
+                        >
+                          <span className="italic font-serif">I</span> Italic
+                        </button>
+                        <div className="w-px h-4 bg-border-color mx-1"></div>
+                        <button
+                          type="button"
+                          onClick={() => handleFormatText(key, 'clear')}
+                          className="px-2 py-1 bg-bg-color hover:bg-red-500 hover:text-white text-text-secondary rounded-lg border border-border-color/80 text-[10px] font-bold transition-all cursor-pointer"
+                          title="Clear Selected Formatting"
+                        >
+                          Clear Format
+                        </button>
+                        <span className="text-[10px] text-text-tertiary ml-auto pr-2 hidden sm:inline italic">
+                          Select text in box first, then click format
+                        </span>
+                      </div>
+                      <textarea
+                        name={key}
+                        value={formData[key] || ''}
+                        onChange={handleChange}
+                        rows={4}
+                        className="w-full p-3 border border-border-color rounded-b-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-y"
+                      />
+                    </div>
                   ) : typeof formData[key] === 'boolean' ? (
                     <label className="flex items-center gap-2 mt-1 cursor-pointer select-none">
                       <input
@@ -1897,13 +2115,41 @@ const ManageSiteContent = () => {
                       <span className="text-sm font-semibold text-text-primary">Enable / Show {key.replace(/_/g, ' ')}</span>
                     </label>
                   ) : (
-                    <input
-                      type="text"
-                      name={key}
-                      value={formData[key] || ''}
-                      onChange={handleChange}
-                      className="w-full p-3 border border-border-color rounded-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                    />
+                    <div className="flex flex-col w-full relative">
+                      <div className="flex items-center gap-1.5 bg-bg-secondary/90 border border-border-color p-1 rounded-t-xl text-xs -mb-px select-none shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleFormatText(key, 'bold')}
+                          className="px-2 py-0.5 bg-bg-color hover:bg-primary hover:text-white text-text-primary rounded-md border border-border-color/80 font-bold transition-all text-[10px] cursor-pointer"
+                          title="Bold & Blue"
+                        >
+                          <span className="text-primary hover:text-inherit">B</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFormatText(key, 'italic')}
+                          className="px-2 py-0.5 bg-bg-color hover:bg-primary hover:text-white text-text-primary rounded-md border border-border-color/80 font-bold transition-all text-[10px] cursor-pointer"
+                          title="Italic"
+                        >
+                          <span className="italic font-serif">I</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleFormatText(key, 'clear')}
+                          className="px-1.5 py-0.5 bg-bg-color hover:bg-red-500 hover:text-white text-text-secondary rounded-md border border-border-color/80 text-[8px] font-bold transition-all cursor-pointer"
+                          title="Clear Formatting"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <input
+                        type="text"
+                        name={key}
+                        value={formData[key] || ''}
+                        onChange={handleChange}
+                        className="w-full p-3 border border-border-color rounded-b-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                      />
+                    </div>
                   )}
                 </div>
               ))}
@@ -1935,7 +2181,7 @@ const ManageSiteContent = () => {
               </h3>
               <button
                 onClick={() => setEditingQuestion(null)}
-                className="p-2 bg-bg-secondary hover:bg-slate-200 text-text-secondary rounded-full transition-colors border-0 cursor-pointer"
+                className="p-2 bg-bg-secondary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white text-text-secondary rounded-full transition-colors border-0 cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -2027,7 +2273,7 @@ const ManageSiteContent = () => {
                 <button type="submit" className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-lg border-0 shadow-sm grow cursor-pointer transition-all">
                   <Save size={16} /> Save Changes
                 </button>
-                <button type="button" className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary text-text-secondary font-bold text-sm rounded-lg hover:bg-slate-200 border-0 grow cursor-pointer" onClick={() => setEditingQuestion(null)}>
+                <button type="button" className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary text-text-secondary font-bold text-sm rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white border-0 grow cursor-pointer" onClick={() => setEditingQuestion(null)}>
                   <X size={16} /> Cancel
                 </button>
               </div>
@@ -2120,7 +2366,7 @@ const ManageSiteContent = () => {
             <div className="flex gap-2">
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-text-primary border border-border-color font-semibold text-xs rounded-xl cursor-pointer transition-all"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white text-text-primary border border-border-color font-semibold text-xs rounded-xl cursor-pointer transition-all"
               >
                 <Download size={14} /> Export CSV
               </button>
@@ -2226,6 +2472,216 @@ const ManageSiteContent = () => {
                       <ChevronRight size={14} />
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Collaboration Settings & Submissions Panel */}
+      {activeTab === 'collaboration' && (
+        <div className="flex flex-col gap-6 animate-fadeIn text-left">
+          {/* Sub-tabs switch */}
+          <div className="flex gap-2 border-b border-border-color pb-2 shrink-0">
+            <button
+              onClick={() => setCollabSubTab('settings')}
+              className={`px-4 py-2 rounded-lg font-bold text-xs border-0 cursor-pointer transition-all ${collabSubTab === 'settings'
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-transparent text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                }`}
+            >
+              Section Settings
+            </button>
+            <button
+              onClick={() => setCollabSubTab('submissions')}
+              className={`px-4 py-2 rounded-lg font-bold text-xs border-0 cursor-pointer transition-all ${collabSubTab === 'submissions'
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-transparent text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                }`}
+            >
+              Submissions Received ({collabSubmissions.length})
+            </button>
+          </div>
+
+          {collabSubTab === 'settings' ? (
+            <div className="p-8 rounded-3xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-6">
+              <div>
+                <h3 className="font-display font-bold text-lg text-text-primary m-0">Collaboration Section Settings</h3>
+                <p className="text-text-secondary text-xs mt-1">Configure section headers and labels shown on the public landing page.</p>
+              </div>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Subtitle / Category</label>
+                  <input
+                    type="text"
+                    value={formData.subtitle || ''}
+                    onChange={(e) => handleInputChange('subtitle', e.target.value)}
+                    className="px-4 py-3 bg-bg-secondary border border-border-color rounded-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-text-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Main Title</label>
+                  <input
+                    type="text"
+                    value={formData.title || ''}
+                    onChange={(e) => handleInputChange('title', e.target.value)}
+                    className="px-4 py-3 bg-bg-secondary border border-border-color rounded-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-text-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Description Text</label>
+                  <textarea
+                    value={formData.description || ''}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    rows={4}
+                    className="p-4 bg-bg-secondary border border-border-color rounded-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-y text-text-primary"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider">Button Text</label>
+                  <input
+                    type="text"
+                    value={formData.buttonText || ''}
+                    onChange={(e) => handleInputChange('buttonText', e.target.value)}
+                    className="px-4 py-3 bg-bg-secondary border border-border-color rounded-xl font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-text-primary"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end mt-2 pt-6 border-t border-border-color">
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white border-0 font-semibold text-sm rounded-lg hover:bg-primary-dark disabled:opacity-70 transition-all cursor-pointer shadow-sm"
+                >
+                  {saving ? 'Saving...' : <><Save size={18} /> Save Settings</>}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-6">
+              {collabLoading ? (
+                <div className="p-10 text-center text-text-secondary text-sm">Loading submissions...</div>
+              ) : collabSubmissions.length === 0 ? (
+                <div className="p-10 text-center bg-bg-color border border-border-color rounded-3xl flex flex-col gap-3 items-center">
+                  <Handshake size={36} className="text-text-tertiary" />
+                  <div>
+                    <h4 className="font-display font-bold text-sm text-text-primary">No submissions received yet</h4>
+                    <p className="text-xs text-text-secondary mt-1">Partnership inquiries submitted from the homepage will appear here.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {collabSubmissions.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="p-6 rounded-3xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between gap-4 text-left transition-all hover:shadow-md"
+                    >
+                      <div className="flex flex-col gap-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex gap-3">
+                            {/* Logo Thumbnail preview */}
+                            <div className="w-12 h-12 rounded-xl bg-bg-secondary/60 border border-border-color/60 p-1 flex items-center justify-center shrink-0">
+                              <img
+                                src={
+                                  sub.logoUrl
+                                    ? (sub.logoUrl.startsWith('http')
+                                      ? sub.logoUrl
+                                      : `${import.meta.env.VITE_BACKEND_URL || ''}${sub.logoUrl}`)
+                                    : '/Final.webp'
+                                }
+                                alt="Logo"
+                                className="w-full h-full object-contain"
+                                onError={(e) => { e.target.src = '/Final.webp'; }}
+                              />
+                            </div>
+                            <div>
+                              <h4 className="font-display font-bold text-sm text-text-primary leading-tight">{sub.name}</h4>
+                              <a href={`mailto:${sub.email}`} className="text-xxs font-medium text-primary hover:underline mt-0.5 block">{sub.email}</a>
+                            </div>
+                          </div>
+                          <div className="flex gap-1 items-center">
+                            <button
+                              onClick={() => handleStartEditCollab(sub)}
+                              className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/5 rounded-lg transition-colors border-0 bg-transparent cursor-pointer"
+                              title="Edit Partner Details"
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCollabSubmission(sub.id)}
+                              className="p-1.5 text-text-tertiary hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg transition-colors border-0 bg-transparent cursor-pointer"
+                              title="Delete Proposal"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 py-2.5 px-3.5 bg-bg-secondary/60 border border-border-color/60 rounded-2xl text-xs">
+                          <div>
+                            <span className="text-[9px] font-extrabold text-text-tertiary uppercase tracking-wider block">Business</span>
+                            <span className="font-semibold text-text-primary mt-0.5 block truncate">{sub.businessName}</span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-extrabold text-text-tertiary uppercase tracking-wider block">Niche</span>
+                            <span className="font-semibold text-text-primary mt-0.5 block truncate">{sub.businessNiche}</span>
+                          </div>
+                        </div>
+                        {sub.message && (
+                          <div className="bg-bg-secondary/30 p-3 rounded-2xl border border-border-color/55 text-xs text-left">
+                            <span className="text-[9px] font-extrabold text-text-tertiary uppercase tracking-wider block mb-1">Proposal / Inquiry Message</span>
+                            <p className="text-text-secondary leading-relaxed font-sans whitespace-pre-wrap m-0 font-medium">{sub.message}</p>
+                          </div>
+                        )}
+                        {sub.description && (
+                          <div className="bg-primary/5 p-3 rounded-2xl border border-primary/10 text-xs text-left">
+                            <span className="text-[9px] font-extrabold text-primary uppercase tracking-wider block mb-1">Partner Bio / Description</span>
+                            <p className="text-text-secondary leading-relaxed font-sans whitespace-pre-wrap m-0 font-medium">{sub.description}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Display Visibility and Order Controls */}
+                      <div className="border-t border-border-color/40 pt-3 flex flex-col gap-2">
+                        <div className="flex items-center justify-between flex-wrap gap-3 text-xs select-none">
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer font-semibold text-text-secondary">
+                              <input
+                                type="checkbox"
+                                checked={sub.isVisible === 1 || sub.isVisible === true}
+                                onChange={(e) => handleUpdateCollabDisplay(sub.id, e.target.checked, sub.sequence, sub.isFeatured)}
+                                className="rounded border-border-color text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                              />
+                              <span className="text-[10px] uppercase font-extrabold tracking-wider">Show on Homepage</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 cursor-pointer font-semibold text-text-secondary">
+                              <input
+                                type="checkbox"
+                                checked={sub.isFeatured === 1 || sub.isFeatured === true}
+                                onChange={(e) => handleUpdateCollabDisplay(sub.id, sub.isVisible, sub.sequence, e.target.checked)}
+                                className="rounded border-border-color text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                              />
+                              <span className="text-[10px] uppercase font-extrabold tracking-wider text-primary font-black">★ Featured</span>
+                            </label>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] text-text-tertiary font-extrabold uppercase tracking-wider">Order:</span>
+                            <input
+                              type="number"
+                              value={sub.sequence}
+                              onChange={(e) => handleUpdateCollabDisplay(sub.id, sub.isVisible, parseInt(e.target.value) || 0, sub.isFeatured)}
+                              className="w-12 p-1 text-center border border-border-color rounded-lg text-xxs font-bold focus:outline-none bg-bg-secondary text-text-primary shadow-inner"
+                            />
+                          </div>
+                        </div>
+                        <div className="text-[9px] text-text-tertiary font-extrabold uppercase tracking-widest text-right">
+                          Received: {new Date(sub.createdAt || sub.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -2485,6 +2941,85 @@ const ManageSiteContent = () => {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Edit Collaborator Modal */}
+      {editingCollab && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/45 backdrop-blur-md animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-bg-color rounded-3xl shadow-2xl border border-border-color flex flex-col max-h-[90vh] text-left overflow-hidden">
+            {/* Header */}
+            <div className="p-6 md:p-8 pb-4 border-b border-border-color flex justify-between items-center shrink-0">
+              <h3 className="font-display font-bold text-xl text-text-primary m-0">
+                Edit Collaborator Details
+              </h3>
+              <button
+                onClick={() => setEditingCollab(null)}
+                className="p-2 bg-bg-secondary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white text-text-secondary rounded-full transition-colors border-0 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleUpdateCollabSubmit} className="grow flex flex-col overflow-hidden">
+              <div className="grow p-6 md:p-8 overflow-y-auto flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-text-secondary uppercase">Partner Brand Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editCollabForm.businessName}
+                    onChange={(e) => setEditCollabForm(prev => ({ ...prev, businessName: e.target.value }))}
+                    className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all bg-transparent text-text-primary"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-text-secondary uppercase">Partner Niche *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editCollabForm.businessNiche}
+                    onChange={(e) => setEditCollabForm(prev => ({ ...prev, businessNiche: e.target.value }))}
+                    placeholder="e.g. AGENCY, E-LEARNING"
+                    className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all bg-transparent text-text-primary"
+                  />
+                </div>
+
+
+
+                <div className="flex flex-col gap-1.5 text-left">
+                  <label className="text-xs font-bold text-text-secondary uppercase">Partner Description / Bio</label>
+                  <textarea
+                    rows={3}
+                    value={editCollabForm.description}
+                    onChange={(e) => setEditCollabForm(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Short description of the partner to display on landing page..."
+                    className="w-full p-3 border border-border-color rounded-lg font-sans text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all resize-none bg-transparent text-text-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-border-color flex gap-3 shrink-0 bg-bg-secondary/40">
+                <button
+                  type="submit"
+                  disabled={updatingCollab}
+                  className="flex items-center justify-center gap-1.5 px-6 py-2.5 bg-primary hover:bg-primary-dark text-white font-bold text-sm rounded-lg border-0 shadow-sm grow cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {updatingCollab ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingCollab(null)}
+                  className="flex items-center justify-center gap-1.5 px-6 py-2.5 bg-bg-secondary text-text-secondary font-bold text-sm rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 border-0 grow cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

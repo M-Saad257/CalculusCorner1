@@ -22,7 +22,7 @@ pool.getConnection()
       // Ensure last_login column exists on users table
       await conn.query(`
         ALTER TABLE \`users\` ADD COLUMN IF NOT EXISTS \`last_login\` TIMESTAMP NULL DEFAULT NULL
-      `).catch(() => {}); // Silently skip if DB engine doesn't support IF NOT EXISTS
+      `).catch(() => { }); // Silently skip if DB engine doesn't support IF NOT EXISTS
       // Fallback for older MySQL that doesn't support IF NOT EXISTS on ALTER
       try {
         await conn.query('ALTER TABLE `users` ADD COLUMN `last_login` TIMESTAMP NULL DEFAULT NULL');
@@ -92,6 +92,95 @@ pool.getConnection()
           CONSTRAINT \`fk_video_progress_video\` FOREIGN KEY (\`video_id\`) REFERENCES \`videos\` (\`id\`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
+
+      // Auto-create collaboration submissions table if not exists
+      await conn.query(`
+        CREATE TABLE IF NOT EXISTS \`collaboration_submissions\` (
+          \`id\` int(11) NOT NULL AUTO_INCREMENT,
+          \`name\` varchar(255) NOT NULL,
+          \`email\` varchar(255) NOT NULL,
+          \`business_name\` varchar(255) NOT NULL,
+          \`business_niche\` varchar(255) NOT NULL,
+          \`message\` text DEFAULT NULL,
+          \`logo_url\` text DEFAULT NULL,
+          \`is_visible\` tinyint(1) NOT NULL DEFAULT 0,
+          \`sequence\` int(11) NOT NULL DEFAULT 0,
+          \`description\` text DEFAULT NULL,
+          \`tags\` text DEFAULT NULL,
+          \`is_featured\` tinyint(1) NOT NULL DEFAULT 0,
+          \`created_at\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (\`id\`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+
+      // Ensure logo_url, is_visible, sequence, description, tags, and is_featured columns exist on collaboration_submissions table
+      await conn.query(`
+        ALTER TABLE \`collaboration_submissions\` 
+        ADD COLUMN IF NOT EXISTS \`logo_url\` TEXT DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS \`is_visible\` TINYINT(1) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS \`sequence\` INT NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS \`description\` TEXT DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS \`tags\` TEXT DEFAULT NULL,
+        ADD COLUMN IF NOT EXISTS \`is_featured\` TINYINT(1) NOT NULL DEFAULT 0
+      `).catch(() => { });
+      try {
+        await conn.query('ALTER TABLE `collaboration_submissions` ADD COLUMN `logo_url` TEXT DEFAULT NULL');
+      } catch (e) { }
+      try {
+        await conn.query('ALTER TABLE `collaboration_submissions` ADD COLUMN `is_visible` TINYINT(1) NOT NULL DEFAULT 0');
+      } catch (e) { }
+      try {
+        await conn.query('ALTER TABLE `collaboration_submissions` ADD COLUMN `sequence` INT NOT NULL DEFAULT 0');
+      } catch (e) { }
+      try {
+        await conn.query('ALTER TABLE `collaboration_submissions` ADD COLUMN `description` TEXT DEFAULT NULL');
+      } catch (e) { }
+      try {
+        await conn.query('ALTER TABLE `collaboration_submissions` ADD COLUMN `tags` TEXT DEFAULT NULL');
+      } catch (e) { }
+      try {
+        await conn.query('ALTER TABLE `collaboration_submissions` ADD COLUMN `is_featured` TINYINT(1) NOT NULL DEFAULT 0');
+      } catch (e) { }
+
+      // Ensure duration column exists on videos table
+      await conn.query(`
+        ALTER TABLE \`videos\` ADD COLUMN IF NOT EXISTS \`duration\` VARCHAR(50) DEFAULT NULL
+      `).catch(() => { });
+      try {
+        await conn.query('ALTER TABLE `videos` ADD COLUMN `duration` VARCHAR(50) DEFAULT NULL');
+      } catch (e) { /* column already exists */ }
+
+      // Ensure show_on_homepage column exists on videos table
+      await conn.query(`
+        ALTER TABLE \`videos\` ADD COLUMN IF NOT EXISTS \`show_on_homepage\` TINYINT(1) NOT NULL DEFAULT 0
+      `).catch(() => { });
+      try {
+        await conn.query('ALTER TABLE `videos` ADD COLUMN `show_on_homepage` TINYINT(1) NOT NULL DEFAULT 0');
+      } catch (e) { /* column already exists */ }
+
+      // Ensure show_on_homepage column exists on resources table
+      await conn.query(`
+        ALTER TABLE \`resources\` ADD COLUMN IF NOT EXISTS \`show_on_homepage\` TINYINT(1) NOT NULL DEFAULT 0
+      `).catch(() => { });
+      try {
+        await conn.query('ALTER TABLE `resources` ADD COLUMN `show_on_homepage` TINYINT(1) NOT NULL DEFAULT 0');
+      } catch (e) { /* column already exists */ }
+
+      // Ensure show_on_homepage column exists on books table
+      await conn.query(`
+        ALTER TABLE \`books\` ADD COLUMN IF NOT EXISTS \`show_on_homepage\` TINYINT(1) NOT NULL DEFAULT 0
+      `).catch(() => { });
+      try {
+        await conn.query('ALTER TABLE `books` ADD COLUMN `show_on_homepage` TINYINT(1) NOT NULL DEFAULT 0');
+      } catch (e) { /* column already exists */ }
+
+      // Ensure last_position column exists on video_progress table
+      await conn.query(`
+        ALTER TABLE \`video_progress\` ADD COLUMN IF NOT EXISTS \`last_position\` INT NOT NULL DEFAULT 0
+      `).catch(() => { });
+      try {
+        await conn.query('ALTER TABLE `video_progress` ADD COLUMN `last_position` INT NOT NULL DEFAULT 0');
+      } catch (e) { /* column already exists */ }
 
       await conn.query(`
         CREATE TABLE IF NOT EXISTS \`course_progress\` (
@@ -166,6 +255,11 @@ pool.getConnection()
       try {
         await conn.query("ALTER TABLE `courses` ADD COLUMN `thumbnail` VARCHAR(255) NULL");
       } catch (colErr) { }
+
+      // Add class to students_profile
+      try {
+        await conn.query("ALTER TABLE `students_profile` ADD COLUMN `class` VARCHAR(50) NULL DEFAULT NULL");
+      } catch (e) { }
 
       // Add thumbnail and subcategory to resources (Notes)
       try { await conn.query("ALTER TABLE `resources` ADD COLUMN `thumbnail_url` VARCHAR(255) NULL"); } catch (e) { }
@@ -248,6 +342,8 @@ pool.getConnection()
           PRIMARY KEY (\`id\`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
       `);
+
+
 
       // Add optional link column to updates
       try { await conn.query("ALTER TABLE `updates` ADD COLUMN `link` VARCHAR(500) NULL"); } catch (e) { }
@@ -347,7 +443,7 @@ pool.getConnection()
       // Automatically verify any users created before OTP feature
       try {
         await conn.query("UPDATE `users` SET `is_verified` = 1 WHERE `verification_otp` IS NULL");
-      } catch (e) {}
+      } catch (e) { }
 
       // Create unban_requests table with complete production schema
       await conn.query(`
@@ -411,6 +507,28 @@ pool.getConnection()
       // Update enrollments for certificate tracking
       try {
         await conn.query(`ALTER TABLE \`enrollments\` ADD COLUMN \`certificate_status\` VARCHAR(20) NOT NULL DEFAULT 'none'`);
+      } catch (e) { }
+
+      // Update enrollments for payment screenshot upload
+      try {
+        await conn.query(`ALTER TABLE \`enrollments\` ADD COLUMN \`payment_screenshot\` VARCHAR(255) DEFAULT NULL`);
+      } catch (e) { }
+
+      // Add analytics columns (views/downloads) to books, resources, and videos
+      try {
+        await conn.query(`ALTER TABLE \`books\` ADD COLUMN \`views\` INT NOT NULL DEFAULT 0`);
+      } catch (e) { }
+      try {
+        await conn.query(`ALTER TABLE \`books\` ADD COLUMN \`downloads\` INT NOT NULL DEFAULT 0`);
+      } catch (e) { }
+      try {
+        await conn.query(`ALTER TABLE \`resources\` ADD COLUMN \`views\` INT NOT NULL DEFAULT 0`);
+      } catch (e) { }
+      try {
+        await conn.query(`ALTER TABLE \`resources\` ADD COLUMN \`downloads\` INT NOT NULL DEFAULT 0`);
+      } catch (e) { }
+      try {
+        await conn.query(`ALTER TABLE \`videos\` ADD COLUMN \`views\` INT NOT NULL DEFAULT 0`);
       } catch (e) { }
 
       // Update testimonials for review requests
@@ -481,7 +599,7 @@ pool.getConnection()
           INSERT INTO \`site_content\` (\`section_name\`, \`content_data\`)
           VALUES ('bank_details', '{"account_name": "Calculus Corner Admin", "account_number": "1234-5678-9012", "bank_name": "Standard Chartered"}')
         `);
-      } catch (e) {}
+      } catch (e) { }
 
       // Add is_past_paper to resources and videos
       try { await conn.query("ALTER TABLE `resources` ADD COLUMN `is_past_paper` TINYINT(1) NOT NULL DEFAULT 0"); } catch (e) { }

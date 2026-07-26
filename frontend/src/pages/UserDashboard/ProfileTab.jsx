@@ -1,8 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Edit3, Save, Medal, Sparkles, Clock, CheckCircle, GraduationCap, X, Loader2, Camera, Upload, Flame, Lock, Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import api from '../../services/api';
 import { useContent } from '../../context/ContentContext';
+import { RESOURCE_CATEGORIES } from '../../utils/categories';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 const SimpleCropper = ({ imageSrc, onCrop, onCancel }) => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -164,11 +167,82 @@ const ProfileTab = ({
   const showLectures = visibility.lectures !== false;
   const showNotes = visibility.notes !== false;
 
+  const studentClass = student?.class || 'All';
+
+  const classVideosCount = useMemo(() => {
+    if (!studentClass || studentClass === 'All') return videos?.length || 0;
+    const target = studentClass.trim().toLowerCase();
+    const matched = (videos || []).filter(v => {
+      const cat = (v.category || '').trim().toLowerCase();
+      return cat === target || cat.includes(target) || target.includes(cat);
+    });
+    return matched.length;
+  }, [videos, studentClass]);
+
+  const classResourcesCount = useMemo(() => {
+    if (!studentClass || studentClass === 'All') return resources?.length || 0;
+    const target = studentClass.trim().toLowerCase();
+    const matched = (resources || []).filter(r => {
+      const cat = (r.category || '').trim().toLowerCase();
+      return cat === target || cat.includes(target) || target.includes(cat);
+    });
+    return matched.length;
+  }, [resources, studentClass]);
+
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarError, setAvatarError] = useState('');
   const [cropImageSrc, setCropImageSrc] = useState(null);
   const avatarInputRef = useRef(null);
+
+  // Editable local fields
+  const [nameVal, setNameVal] = useState(student?.name || '');
+  const [emailVal, setEmailVal] = useState(student?.email || '');
+  const [passwordVal, setPasswordVal] = useState('');
+  const [classVal, setClassVal] = useState(student?.class || '');
+  const [errorVal, setErrorVal] = useState('');
+  const [successVal, setSuccessVal] = useState('');
+  const [submittingVal, setSubmittingVal] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
+
+  React.useEffect(() => {
+    if (student) {
+      setNameVal(student.name || '');
+      setEmailVal(student.email || '');
+      setClassVal(student.class || '');
+    }
+  }, [student]);
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setErrorVal('');
+    setSuccessVal('');
+    if (!classVal) {
+      setErrorVal('Please select your Class/Grade to personalize your study workspace.');
+      return;
+    }
+    setSubmittingVal(true);
+    const updateData = {
+      bio: bio,
+      avatar: avatar,
+      class: classVal,
+      name: nameVal,
+      email: emailVal
+    };
+    if (passwordVal) {
+      updateData.password = passwordVal;
+    }
+    const res = await handleUpdateProfile(updateData);
+    setSubmittingVal(false);
+    if (res && res.success) {
+      setSuccessVal('Profile settings personalized successfully!');
+      setIsEditingProfile(false);
+      setPasswordVal('');
+    } else {
+      setErrorVal(res?.error || 'Failed to update profile.');
+    }
+  };
+
 
   // Password state
   const [passwordData, setPasswordData] = useState({
@@ -246,112 +320,210 @@ const ProfileTab = ({
     }
   };
   return (
-    <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-8 animate-fadeIn text-left">
-      {/* Left Section - Profile Card */}
-      <div className="w-full md:w-1/3 flex flex-col gap-6">
-        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border-color p-6 shadow-sm flex flex-col items-center relative overflow-hidden">
-          {/* Decorative background gradient */}
-          <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-r from-primary/10 via-primary-light/5 to-transparent"></div>
-
-          <div className="relative mt-8">
-            <div className="w-24 h-24 rounded-full bg-indigo-100 border-4 border-white shadow-md flex items-center justify-center font-bold text-3xl text-primary overflow-hidden">
-              {avatarPreview ? (
-                <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" />
-              ) : student?.avatar ? (
-                <img src={student.avatar.startsWith('http') ? student.avatar : `${student.avatar}`} alt="Avatar" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
-              ) : (
-                student?.name ? student.name.charAt(0).toUpperCase() : 'S'
-              )}
-            </div>
-            <span className="absolute bottom-1 right-1 w-4.5 h-4.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+    <div className="max-w-5xl mx-auto flex flex-col gap-6 animate-fadeIn text-left w-full">
+      {/* Dynamic Profile Warning Banner */}
+      {!student?.class && (
+        <div className="w-full p-5 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 flex items-start gap-4 shadow-sm animate-pulse">
+          <Sparkles className="shrink-0 mt-0.5 text-amber-500" size={20} />
+          <div className="flex-1">
+            <h4 className="font-display font-bold text-base mb-1">Personalize Your Study Workspace</h4>
+            <p className="text-sm opacity-90 leading-relaxed">
+              Please click the <strong>"Edit Profile"</strong> button below, select your <strong>Class/Grade</strong>, and save your settings. This customizes your study dashboard and unlocks all other dashboard features!
+            </p>
           </div>
+        </div>
+      )}
 
-          <h3 className="font-display font-bold text-xl text-text-primary mt-4">{student?.name || 'Student'}</h3>
-          <span className="text-xs font-semibold px-2.5 py-0.5 bg-indigo-50 text-primary border border-indigo-100 rounded-full mt-1.5">
-            {student?.role ? student.role.charAt(0).toUpperCase() + student.role.slice(1) : 'Student Member'}
-          </span>
+      {errorVal && (
+        <div className="w-full p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-600 text-sm font-semibold">
+          {errorVal}
+        </div>
+      )}
+      {successVal && (
+        <div className="w-full p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 text-sm font-semibold">
+          {successVal}
+        </div>
+      )}
 
-          {isEditingProfile ? (
-            <form onSubmit={handleUpdateProfile} className="w-full flex flex-col gap-4 mt-6">
-              {/* Avatar Upload */}
-              <div>
-                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 block">Profile Photo</label>
-                <div className="flex flex-col items-center gap-3">
-                  <div
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="w-20 h-20 rounded-full border-2 border-dashed border-primary/40 hover:border-primary bg-bg-secondary flex items-center justify-center cursor-pointer overflow-hidden transition-colors group relative"
-                  >
-                    {avatarPreview ? (
-                      <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
-                    ) : student?.avatar ? (
-                      <img src={student.avatar.startsWith('http') ? student.avatar : `${student.avatar}`} alt="Current" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
-                    ) : (
-                      <Camera size={20} className="text-text-tertiary group-hover:text-primary transition-colors" />
+      <div className="flex flex-col md:flex-row gap-8 w-full">
+        {/* Left Section - Profile Card */}
+        <div className="w-full md:w-1/3 flex flex-col gap-6">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl border border-border-color p-6 shadow-sm flex flex-col items-center relative overflow-hidden">
+            {/* Decorative background gradient */}
+            <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-r from-primary/10 via-primary-light/5 to-transparent"></div>
+
+            <div className="relative mt-8">
+              <div className="w-24 h-24 rounded-full bg-indigo-100 border-4 border-white shadow-md flex items-center justify-center font-bold text-3xl text-primary overflow-hidden">
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar Preview" className="w-full h-full object-cover" />
+                ) : student?.avatar ? (
+                  <img src={student.avatar.startsWith('http') || student.avatar.startsWith('data:') ? student.avatar : `${BACKEND_URL}${student.avatar}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  student?.name ? student.name.charAt(0).toUpperCase() : 'S'
+                )}
+              </div>
+              <span className="absolute bottom-1 right-1 w-4.5 h-4.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+            </div>
+
+            <h3 className="font-display font-bold text-xl text-text-primary mt-4">{student?.name || 'Student'}</h3>
+            <span className="text-xs font-semibold px-2.5 py-0.5 bg-indigo-50 text-primary border border-indigo-100 rounded-full mt-1.5">
+              {student?.role ? student.role.charAt(0).toUpperCase() + student.role.slice(1) : 'Student Member'}
+            </span>
+
+            {isEditingProfile ? (
+              <form onSubmit={handleSaveProfile} className="w-full flex flex-col gap-4 mt-6">
+                {/* Avatar Upload */}
+                <div>
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 block">Profile Photo</label>
+                  <div className="flex flex-col items-center gap-3">
+                    <div
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-primary/40 hover:border-primary bg-bg-secondary flex items-center justify-center cursor-pointer overflow-hidden transition-colors group relative"
+                    >
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : student?.avatar ? (
+                        <img src={student.avatar.startsWith('http') || student.avatar.startsWith('data:') ? student.avatar : `${BACKEND_URL}${student.avatar}`} alt="Current" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera size={20} className="text-text-tertiary group-hover:text-primary transition-colors" />
+                      )}
+                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
+                        <Camera size={18} className="text-white" />
+                      </div>
+                    </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml"
+                      onChange={handleAvatarFileChange}
+                      className="hidden"
+                    />
+                    {avatarUploading && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-secondary text-text-secondary text-xs font-bold rounded-lg transition-all">
+                        <Loader2 size={12} className="animate-spin text-primary" />
+                        Uploading...
+                      </div>
                     )}
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full">
-                      <Camera size={18} className="text-white" />
-                    </div>
+                    {avatarError && <p className="text-xs text-red-500 font-semibold">{avatarError}</p>}
+                    <p className="text-xxs text-text-tertiary">JPG, PNG, WEBP up to 20 MB</p>
                   </div>
-                  <input
-                    ref={avatarInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp,image/svg+xml"
-                    onChange={handleAvatarFileChange}
-                    className="hidden"
-                  />
-                  {avatarUploading && (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-secondary text-text-secondary text-xs font-bold rounded-lg transition-all">
-                      <Loader2 size={12} className="animate-spin text-primary" />
-                      Uploading...
-                    </div>
-                  )}
-                  {avatarError && <p className="text-xs text-red-500 font-semibold">{avatarError}</p>}
-                  <p className="text-xxs text-text-tertiary">JPG, PNG, WEBP up to 20 MB</p>
                 </div>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Student Bio</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full p-3 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30"
-                  rows={4}
-                  placeholder="Share your learning goals..."
-                />
-              </div>
-              <div className="flex gap-2 w-full mt-2">
-                <Button type="submit" className="grow py-2.5 text-xs font-bold shadow-sm border-0 cursor-pointer">
-                  <Save size={14} className="mr-1 inline" /> Save
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={() => setIsEditingProfile(false)}
-                  className="py-2.5 text-xs font-bold shadow-sm cursor-pointer border border-border-color bg-transparent hover:bg-bg-secondary grow"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <div className="w-full flex flex-col items-center mt-6">
-              <p className="text-text-secondary text-sm text-center italic leading-relaxed px-2">
-                "{student?.bio || 'No bio set yet. Click Edit Profile to tell us about your calculus learning goals!'}"
-              </p>
 
-              <div className="w-full border-t border-border-color/60 my-5 pt-5 flex flex-col gap-3.5 text-xs font-semibold text-text-secondary text-left">
-                <div className="flex justify-between">
-                  <span className="text-text-tertiary">Email:</span>
-                  <span className="text-text-primary font-medium">{student?.email || 'N/A'}</span>
+                {/* Name field */}
+                <div>
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={nameVal}
+                    onChange={(e) => setNameVal(e.target.value)}
+                    className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30 text-text-primary"
+                    placeholder="Your name"
+                  />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-text-tertiary">Join Date:</span>
-                  <span className="text-text-primary font-medium">{student?.createdAt ? new Date(student.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'June 2026'}</span>
+
+                {/* Email field */}
+                <div>
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    value={emailVal}
+                    onChange={(e) => setEmailVal(e.target.value)}
+                    className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30 text-text-primary"
+                    placeholder="name@example.com"
+                  />
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-text-tertiary">Status:</span>
-                  <span className={`${studentBanned ? 'text-red-600 bg-red-50 border-red-100' : 'text-emerald-500 bg-emerald-50'} inline-flex px-2.5 py-1 rounded-full text-xxs font-extrabold uppercase`}>{studentBanned ? 'Banned Account' : 'Active Account'}</span>
+
+                {/* Class Selection */}
+                <div>
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Class / Grade</label>
+                  <select
+                    required
+                    value={classVal}
+                    onChange={(e) => setClassVal(e.target.value)}
+                    className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30 text-text-primary cursor-pointer"
+                  >
+                    <option value="">Select your Class/Grade</option>
+                    {Object.keys(RESOURCE_CATEGORIES).map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
+
+                {/* Password field
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-bold text-text-secondary uppercase tracking-wider block">Password</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPassword(!showEditPassword)}
+                      className="text-xxs text-primary hover:underline bg-transparent border-0 cursor-pointer font-bold"
+                    >
+                      {showEditPassword ? 'Keep Current' : 'Change Password'}
+                    </button>
+                  </div>
+                  {showEditPassword && (
+                    <input
+                      type="password"
+                      value={passwordVal}
+                      onChange={(e) => setPasswordVal(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full p-2.5 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30 text-text-primary"
+                    />
+                  )}
+                </div> */}
+
+                <div>
+                  <label className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-1 block">Student Bio</label>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    className="w-full p-3 text-sm border border-border-color rounded-xl focus:outline-none focus:border-primary bg-bg-secondary/30 text-text-primary"
+                    rows={3}
+                    placeholder="Share your learning goals..."
+                  />
+                </div>
+
+                <div className="flex gap-2 w-full mt-2">
+                  <Button type="submit" disabled={submittingVal} className="grow py-2.5 text-xs font-bold shadow-sm border-0 cursor-pointer flex justify-center items-center gap-1.5">
+                    {submittingVal ? <Loader2 size={12} className="animate-spin" /> : <Save size={14} />} Save
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setIsEditingProfile(false)}
+                    className="py-2.5 text-xs font-bold shadow-sm cursor-pointer border border-border-color bg-transparent hover:bg-bg-secondary grow"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <div className="w-full flex flex-col items-center mt-6">
+                <p className="text-text-secondary text-sm text-center italic leading-relaxed px-2">
+                  "{student?.bio || 'No bio set yet. Click Edit Profile to tell us about your calculus learning goals!'}"
+                </p>
+
+                <div className="w-full border-t border-border-color/60 my-5 pt-5 flex flex-col gap-3.5 text-xs font-semibold text-text-secondary text-left">
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Email:</span>
+                    <span className="text-text-primary font-medium">{student?.email || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Class/Grade:</span>
+                    <span className="text-text-primary font-medium">{student?.class || 'Not Personalized'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Join Date:</span>
+                    <span className="text-text-primary font-medium">{student?.createdAt ? new Date(student.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'June 2026'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-text-tertiary">Status:</span>
+                    <span className={`${studentBanned ? 'text-red-600 bg-red-50 border-red-100' : 'text-emerald-500 bg-emerald-50'} inline-flex px-2.5 py-1 rounded-full text-xxs font-extrabold uppercase`}>{studentBanned ? 'Banned Account' : 'Active Account'}</span>
+                  </div>
+                </div>
 
               {studentBanned && (
                 <div className="mb-6 rounded-3xl border border-red-200 bg-red-50 px-5 py-4 text-red-700">
@@ -422,7 +594,7 @@ const ProfileTab = ({
                 <button
                   type="button"
                   onClick={() => togglePass('current')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary transition-colors cursor-pointer border-0 bg-transparent p-0"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer border-0 bg-transparent p-0"
                   tabIndex={-1}
                 >
                   {showPasswords.current ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -444,7 +616,7 @@ const ProfileTab = ({
                 <button
                   type="button"
                   onClick={() => togglePass('new')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary transition-colors cursor-pointer border-0 bg-transparent p-0"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer border-0 bg-transparent p-0"
                   tabIndex={-1}
                 >
                   {showPasswords.new ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -466,7 +638,7 @@ const ProfileTab = ({
                 <button
                   type="button"
                   onClick={() => togglePass('confirm')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary transition-colors cursor-pointer border-0 bg-transparent p-0"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-primary dark:text-white/70 dark:hover:text-white transition-colors cursor-pointer border-0 bg-transparent p-0"
                   tabIndex={-1}
                 >
                   {showPasswords.confirm ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -509,14 +681,14 @@ const ProfileTab = ({
                 {showLectures && (
                   <div className="p-4 bg-violet-500/10 rounded-2xl border border-violet-500/20 text-left">
                     <span className="text-xxs font-extrabold uppercase text-violet-400">Videos Available</span>
-                    <p className="font-display font-black text-2xl text-text-primary mt-1">{videos.length}</p>
+                    <p className="font-display font-black text-2xl text-text-primary mt-1">{classVideosCount}</p>
                   </div>
                 )}
 
                 {showNotes && (
                   <div className="p-4 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-left">
                     <span className="text-xxs font-extrabold uppercase text-emerald-400">Formula Sheets</span>
-                    <p className="font-display font-black text-2xl text-text-primary mt-1">{resources.length}</p>
+                    <p className="font-display font-black text-2xl text-text-primary mt-1">{classResourcesCount}</p>
                   </div>
                 )}
               </div>
@@ -594,6 +766,8 @@ const ProfileTab = ({
         </div>
       </div>
       
+      </div>
+
       {cropImageSrc && (
         <SimpleCropper 
           imageSrc={cropImageSrc} 

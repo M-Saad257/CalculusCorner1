@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Send, CheckCircle, AlertCircle } from 'lucide-react';
-import { FaInstagram, FaYoutube, FaTwitter, FaWhatsapp } from 'react-icons/fa';
+import { FaInstagram, FaYoutube, FaWhatsapp } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
 import { useContent } from '../../context/ContentContext';
 import api from '../../services/api';
 
@@ -84,7 +85,7 @@ const Footer = () => {
             </span>
           </div>
           <p className="text-text-secondary text-sm leading-relaxed max-w-sm">
-            Where math actually makes sense. Helping students build real confidence through expert lessons, AI-powered tools, and a community that grows together.
+            Where math actually makes sense. Helping students build real confidence through expert lessons, personalized learning, and a community that grows together.
           </p>
           <div className="flex gap-3 mt-2">
             <a href="https://www.youtube.com/@Calculus.Corner" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="YouTube">
@@ -93,8 +94,8 @@ const Footer = () => {
             <a href="https://instagram.com/calculus.corner?igsh=cmtmdTY0YmVqYnJx" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="Instagram">
               <FaInstagram size={18} />
             </a>
-            <a href="https://x.com/CalculusCorner" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="Twitter">
-              <FaTwitter size={18} />
+            <a href="https://x.com/CalculusCorner" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="X (Twitter)">
+              <FaXTwitter size={18} />
             </a>
             <a href="https://whatsapp.com/channel/0029VaE4Wcn8KMqo8oK8LH18" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-bg-color border border-border-color text-text-secondary flex items-center justify-center hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm" aria-label="WhatsApp">
               <FaWhatsapp size={18} />
@@ -122,8 +123,8 @@ const Footer = () => {
             {visibility.lectures !== false && <li><Link to="/lectures" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Video Library</Link></li>}
             {visibility.practice !== false && <li><a href="/#practice" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Practice Quizzes</a></li>}
             {visibility.notes !== false && <li><Link to="/notes" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">PDF Notes</Link></li>}
-            {visibility.books !== false && <li><Link to="/books" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Books & Subjects</Link></li>}
-            {visibility.contact !== false && <li><a href="/#contact" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">FAQ</a></li>}
+            {visibility.books !== false && <li><Link to="/books" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">Books</Link></li>}
+            {visibility.faq !== false && <li><Link to="/faq" className="text-text-secondary text-sm hover:text-primary transition-colors duration-200 hover:pl-1 transition-all">FAQ</Link></li>}
           </ul>
         </div>
 

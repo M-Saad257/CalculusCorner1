@@ -11,7 +11,7 @@ const UserModel = {
     return rows[0] || null;
   },
 
-  async createStudent(name, email, hashedPassword) {
+  async createStudent(name, email, hashedPassword, className = null) {
     // Start transaction
     const connection = await db.getConnection();
     try {
@@ -26,8 +26,8 @@ const UserModel = {
 
       // Insert Profile
       await connection.query(
-        'INSERT INTO students_profile (user_id, bio, avatar, progress) VALUES (?, NULL, NULL, ?)',
-        [userId, JSON.stringify({})]
+        'INSERT INTO students_profile (user_id, bio, avatar, progress, class) VALUES (?, NULL, NULL, ?, ?)',
+        [userId, JSON.stringify({}), className]
       );
 
       await connection.commit();
@@ -57,20 +57,20 @@ const UserModel = {
   },
 
   async getStudentsCount() {
-    const [rows] = await db.query('SELECT COUNT(*) as count FROM users WHERE role = "student"');
+    const [rows] = await db.query('SELECT COUNT(*) as count FROM users WHERE role = "student" AND is_verified = 1');
     return rows[0].count;
   },
 
   async getAllStudents() {
     const [rows] = await db.query(`
-      SELECT u.id, u.name, u.email, u.status, u.created_at, sp.bio, sp.avatar, sp.progress,
+      SELECT u.id, u.name, u.email, u.status, u.created_at, sp.bio, sp.avatar, sp.progress, sp.class,
              u.isBanned, u.banReason, u.bannedAt, u.bannedBy, u.restore_notified,
              (SELECT COUNT(*) FROM unban_requests WHERE student_id = u.id AND status = 'pending') > 0 AS hasPendingUnbanRequest,
              (SELECT message FROM unban_requests WHERE student_id = u.id AND status = 'pending' ORDER BY created_at DESC LIMIT 1) AS pendingUnbanMessage,
              (SELECT id FROM unban_requests WHERE student_id = u.id AND status = 'pending' ORDER BY created_at DESC LIMIT 1) AS pendingUnbanRequestId
       FROM users u
       LEFT JOIN students_profile sp ON u.id = sp.user_id
-      WHERE u.role = 'student'
+      WHERE u.role = 'student' AND u.is_verified = 1
       ORDER BY u.created_at DESC
     `);
     return rows;
@@ -123,7 +123,7 @@ const UserModel = {
 
   async getProfile(userId) {
     const [rows] = await db.query(`
-      SELECT u.id, u.name, u.email, u.role, u.created_at, u.last_login, sp.bio, sp.avatar, sp.progress,
+      SELECT u.id, u.name, u.email, u.role, u.created_at, u.last_login, sp.bio, sp.avatar, sp.progress, sp.class,
              u.isBanned, u.banReason, u.bannedAt, u.bannedBy, u.restore_notified
       FROM users u
       LEFT JOIN students_profile sp ON u.id = sp.user_id
@@ -132,20 +132,38 @@ const UserModel = {
     return rows[0] || null;
   },
 
-  async updateProfile(userId, bio, avatar) {
-    const [result] = await db.query(
-      'UPDATE students_profile SET bio = ?, avatar = ? WHERE user_id = ?',
-      [bio, avatar, userId]
-    );
-    return result.affectedRows > 0;
+  async updateProfile(userId, bio, avatar, studentClass) {
+    const [rows] = await db.query('SELECT user_id FROM students_profile WHERE user_id = ?', [userId]);
+    if (rows.length === 0) {
+      const [result] = await db.query(
+        'INSERT INTO students_profile (user_id, bio, avatar, class, progress) VALUES (?, ?, ?, ?, ?)',
+        [userId, bio, avatar, studentClass, JSON.stringify({})]
+      );
+      return result.affectedRows > 0;
+    } else {
+      const [result] = await db.query(
+        'UPDATE students_profile SET bio = ?, avatar = ?, class = ? WHERE user_id = ?',
+        [bio, avatar, studentClass, userId]
+      );
+      return result.affectedRows > 0;
+    }
   },
 
   async updateProgress(userId, progress) {
-    const [result] = await db.query(
-      'UPDATE students_profile SET progress = ? WHERE user_id = ?',
-      [JSON.stringify(progress), userId]
-    );
-    return result.affectedRows > 0;
+    const [rows] = await db.query('SELECT user_id FROM students_profile WHERE user_id = ?', [userId]);
+    if (rows.length === 0) {
+      const [result] = await db.query(
+        'INSERT INTO students_profile (user_id, bio, avatar, class, progress) VALUES (?, NULL, NULL, NULL, ?)',
+        [userId, JSON.stringify(progress)]
+      );
+      return result.affectedRows > 0;
+    } else {
+      const [result] = await db.query(
+        'UPDATE students_profile SET progress = ? WHERE user_id = ?',
+        [JSON.stringify(progress), userId]
+      );
+      return result.affectedRows > 0;
+    }
   },
 
   async updatePassword(userId, hashedPassword) {

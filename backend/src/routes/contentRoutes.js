@@ -24,15 +24,15 @@ const logoStorage = multer.diskStorage({
 });
 
 const logoFileFilter = (req, file, cb) => {
-  const allowedExts = ['.png', '.jpg', '.jpeg', '.svg'];
-  const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+  const allowedExts = ['.png', '.jpg', '.jpeg', '.svg', '.webp'];
+  const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
   const ext = path.extname(file.originalname).toLowerCase();
   const mime = file.mimetype;
 
   if (allowedExts.includes(ext) && allowedMimeTypes.includes(mime)) {
     cb(null, true);
   } else {
-    cb(new Error('Only PNG, JPG, JPEG and SVG files are allowed with valid mimetypes.'), false);
+    cb(new Error('Only PNG, JPG, JPEG, WebP, and SVG files are allowed with valid mimetypes.'), false);
   }
 };
 
@@ -82,7 +82,24 @@ router.get('/', contentController.getAllContent);
 router.get('/videos', contentController.getPublicVideos);
 router.get('/announcements', contentController.getActiveAnnouncements);
 
-// ─── Admin: Protected Site Config Updates ──────────────────────────────────
+// ─── Public: Content View/Download Tracking ─────────────────────────────────
+router.post('/track', async (req, res) => {
+  const { type, id, action } = req.body; // type: 'video'|'book'|'resource', action: 'view'|'download'
+  if (!type || !id || !action) return res.status(200).json({ success: true }); // silently ignore bad requests
+  try {
+    const db = require('../config/db');
+    let table = null;
+    let column = action === 'download' ? 'downloads' : 'views';
+    if (type === 'video') { table = 'videos'; column = 'views'; } // videos only have views
+    else if (type === 'book') table = 'books';
+    else if (type === 'resource') table = 'resources';
+    if (table) {
+      await db.query(`UPDATE ${table} SET ${column} = COALESCE(${column}, 0) + 1 WHERE id = ?`, [id]);
+    }
+  } catch (e) { /* silently fail if column doesn't exist */ }
+  res.status(200).json({ success: true });
+});
+
 router.put('/:section', protect, isAdmin, contentController.updateSectionContent);
 
 // ─── Admin: Logo Upload ─────────────────────────────────────────────────────

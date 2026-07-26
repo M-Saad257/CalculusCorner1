@@ -28,8 +28,64 @@ const normaliseRow = (row) => {
 
 const BookModel = {
   async getAll() {
-    const [rows] = await db.query('SELECT * FROM books ORDER BY created_at DESC');
+    const [rows] = await db.query('SELECT * FROM books ORDER BY show_on_homepage DESC, category ASC, subcategory ASC, id ASC');
     return rows.map(normaliseRow);
+  },
+
+  async getPaginated(page, limit, category = null, subcategory = null, search = null, sortBy = 'default') {
+    const offset = (page - 1) * limit;
+
+    let whereClauses = [];
+    let queryParams = [];
+
+    if (category && category !== 'All') {
+      whereClauses.push('category = ?');
+      queryParams.push(category);
+    }
+    if (subcategory && subcategory !== 'All') {
+      whereClauses.push('subcategory = ?');
+      queryParams.push(subcategory);
+    }
+    if (search && search.trim() !== '') {
+      const q = `%${search.trim()}%`;
+      whereClauses.push('(title LIKE ? OR category LIKE ? OR subcategory LIKE ?)');
+      queryParams.push(q, q, q);
+    }
+
+    let whereSql = '';
+    if (whereClauses.length > 0) {
+      whereSql = 'WHERE ' + whereClauses.join(' AND ');
+    }
+
+    let orderBySql = 'ORDER BY show_on_homepage DESC, category ASC, subcategory ASC, id ASC';
+    if (sortBy === 'newest') {
+      orderBySql = 'ORDER BY id DESC';
+    } else if (sortBy === 'oldest') {
+      orderBySql = 'ORDER BY id ASC';
+    } else if (sortBy === 'title_asc') {
+      orderBySql = 'ORDER BY title ASC';
+    } else if (sortBy === 'title_desc') {
+      orderBySql = 'ORDER BY title DESC';
+    } else if (sortBy === 'category_asc') {
+      orderBySql = 'ORDER BY category ASC, subcategory ASC, title ASC';
+    }
+
+    // Count query
+    const [countRows] = await db.query(`SELECT COUNT(*) as count FROM books ${whereSql}`, queryParams);
+    const totalItems = countRows[0].count;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    // Fetch query
+    const [rows] = await db.query(
+      `SELECT * FROM books ${whereSql} ${orderBySql} LIMIT ? OFFSET ?`,
+      [...queryParams, limit, offset]
+    );
+
+    return {
+      data: rows.map(normaliseRow),
+      totalItems,
+      totalPages
+    };
   },
 
   async getById(id) {
@@ -46,11 +102,11 @@ const BookModel = {
    * @param {string|null} subcategory
    * @param {string|null} thumbnail_url
    */
-  async create(title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null) {
+  async create(title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null, show_on_homepage = 0) {
     const metaJson = metadata ? JSON.stringify(metadata) : null;
     const [result] = await db.query(
-      'INSERT INTO books (title, file_url, original_filename, metadata, category, subcategory, thumbnail_url) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url]
+      'INSERT INTO books (title, file_url, original_filename, metadata, category, subcategory, thumbnail_url, show_on_homepage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url, show_on_homepage ? 1 : 0]
     );
     return result.insertId;
   },
@@ -64,12 +120,13 @@ const BookModel = {
    * @param {string}      category
    * @param {string|null} subcategory
    * @param {string|null} thumbnail_url
+   * @param {number}      show_on_homepage
    */
-  async update(id, title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null) {
+  async update(id, title, file_url, original_filename, metadata = null, category = 'General', subcategory = null, thumbnail_url = null, show_on_homepage = 0) {
     const metaJson = metadata ? JSON.stringify(metadata) : null;
     const [result] = await db.query(
-      'UPDATE books SET title = ?, file_url = ?, original_filename = ?, metadata = ?, category = ?, subcategory = ?, thumbnail_url = ? WHERE id = ?',
-      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url, id]
+      'UPDATE books SET title = ?, file_url = ?, original_filename = ?, metadata = ?, category = ?, subcategory = ?, thumbnail_url = ?, show_on_homepage = ? WHERE id = ?',
+      [title, file_url, original_filename, metaJson, category, subcategory, thumbnail_url, show_on_homepage ? 1 : 0, id]
     );
     return result.affectedRows > 0;
   },

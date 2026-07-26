@@ -1,57 +1,66 @@
 import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { FaInstagram, FaYoutube, FaTwitter, FaWhatsapp } from 'react-icons/fa';
-
-const communityPlatforms = [
-  {
-    name: 'YouTube',
-    icon: FaYoutube,
-    stats: '58.2K',
-    label: 'Subscribers',
-    actionText: 'Subscribe Now',
-    themeColor: 'hover:border-[#FF0000] hover:text-[#FF0000]',
-    iconBg: 'bg-[#FF0000]',
-    url: 'https://www.youtube.com/@Calculus.Corner',
-    barColor: 'bg-[#FF0000]'
-  },
-  {
-    name: 'WhatsApp',
-    icon: FaWhatsapp,
-    stats: '2.3K',
-    label: 'Active Members',
-    actionText: 'Join Community',
-    themeColor: 'hover:border-[#25D366] hover:text-[#25D366]',
-    iconBg: 'bg-[#25D366]',
-    url: 'https://whatsapp.com/channel/0029VaE4Wcn8KMqo8oK8LH18',
-    barColor: 'bg-[#25D366]'
-  },
-  {
-    name: 'Instagram',
-    icon: FaInstagram,
-    stats: '3.6K',
-    label: 'Followers',
-    actionText: 'Follow Us',
-    themeColor: 'hover:border-[#E1306C] hover:text-[#E1306C]',
-    iconBg: 'bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]',
-    url: 'https://instagram.com/calculus.corner?igsh=cmtmdTY0YmVqYnJx',
-    barColor: 'bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888]'
-  },
-  {
-    name: 'X (Twitter)',
-    icon: FaTwitter,
-    stats: '5',
-    label: 'Followers',
-    actionText: 'Follow Updates',
-    themeColor: 'hover:border-[#1DA1F2] hover:text-[#1DA1F2]',
-    iconBg: 'bg-[#1DA1F2]',
-    url: 'https://x.com/CalculusCorner',
-    barColor: 'bg-[#1DA1F2]'
-  }
-];
+import { FaInstagram, FaYoutube, FaWhatsapp } from 'react-icons/fa';
+import { FaXTwitter } from 'react-icons/fa6';
+import { useContent } from '../../context/ContentContext';
 
 const Community = () => {
   const containerRef = useRef(null);
   const isInView = useInView(containerRef, { once: true, margin: "-50px" });
+  const { content } = useContent();
+
+  const communityData = content?.community || {};
+  const badge = communityData.badge || 'Join The Club';
+  const titlePart1 = communityData.title_part1 || 'A Community of';
+  const titleGradient = communityData.title_gradient || 'Math Enthusiasts';
+  const description = communityData.description || "You don't have to study alone. Join thousands of students already learning together, asking questions, and sharing resources on our platforms.";
+
+  const communityPlatforms = [
+    {
+      name: 'YouTube',
+      icon: FaYoutube,
+      stats: communityData.youtube_stats || '58.2K',
+      label: 'Subscribers',
+      actionText: 'Subscribe Now',
+      themeColor: 'hover:border-[#FF0000] hover:text-[#FF0000]',
+      iconBg: 'bg-[#FF0000]',
+      url: communityData.youtube_url || 'https://www.youtube.com/@Calculus.Corner',
+      barColor: 'bg-[#FF0000]'
+    },
+    {
+      name: 'WhatsApp',
+      icon: FaWhatsapp,
+      stats: communityData.whatsapp_stats || '2.3K',
+      label: 'Active Members',
+      actionText: 'Join Community',
+      themeColor: 'hover:border-[#25D366] hover:text-[#25D366]',
+      iconBg: 'bg-[#25D366]',
+      url: communityData.whatsapp_url || 'https://whatsapp.com/channel/0029VaE4Wcn8KMqo8oK8LH18',
+      barColor: 'bg-[#25D366]'
+    },
+    {
+      name: 'Instagram',
+      icon: FaInstagram,
+      stats: communityData.instagram_stats || '3.6K',
+      label: 'Followers',
+      actionText: 'Follow Us',
+      themeColor: 'hover:border-[#E1306C] hover:text-[#E1306C]',
+      iconBg: 'bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]',
+      url: communityData.instagram_url || 'https://instagram.com/calculus.corner?igsh=cmtmdTY0YmVqYnJx',
+      barColor: 'bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888]'
+    },
+    {
+      name: 'X (Twitter)',
+      icon: FaXTwitter,
+      stats: communityData.twitter_stats || '5',
+      label: 'Followers',
+      actionText: 'Follow Updates',
+      themeColor: 'hover:border-[#000000] dark:hover:border-[#ffffff] hover:text-[#000000] dark:hover:text-[#ffffff]',
+      iconBg: 'bg-black text-white dark:bg-white dark:text-black border border-border-color',
+      url: communityData.twitter_url || 'https://x.com/CalculusCorner',
+      barColor: 'bg-black dark:bg-white'
+    }
+  ];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -72,13 +81,13 @@ const Community = () => {
         
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="inline-block text-xs uppercase font-extrabold tracking-widest text-primary mb-3 px-3 py-1 bg-primary/10 rounded-full">
-            Join The Club
+            {badge}
           </span>
           <h2 className="font-display font-bold text-3xl md:text-4xl lg:text-5xl text-text-primary mb-4 leading-tight">
-            A Community of <span className="text-gradient">Math Enthusiasts</span>
+            {titlePart1} <span className="text-gradient">{titleGradient}</span>
           </h2>
           <p className="text-base md:text-lg text-text-secondary leading-relaxed">
-            You don't have to study alone. Join thousands of students already learning together, asking questions, and sharing resources on our platforms.
+            {description}
           </p>
         </div>
 

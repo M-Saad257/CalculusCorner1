@@ -10,6 +10,8 @@ import NotificationBell from '../components/ui/NotificationBell';
 import { useDialog } from '../context/DialogContext';
 import { useContent } from '../context/ContentContext';
 import ThemeToggle from '../components/ui/ThemeToggle';
+import VideoPlayerModal from '../components/ui/VideoPlayerModal';
+import CertificateModal from '../components/ui/CertificateModal';
 
 const defaultCourses = [
   {
@@ -112,22 +114,19 @@ import CourseDetailTab from './UserDashboard/CourseDetailTab';
 
 const ConnectionIndicator = ({ status }) => {
   const statusConfig = {
-    connected: { label: 'Connected', dotColor: 'bg-emerald-500 shadow-emerald-500/50', textColor: 'text-emerald-600', bgColor: 'bg-emerald-500/10 border-emerald-500/20' },
-    reconnecting: { label: 'Reconnecting', dotColor: 'bg-amber-500 shadow-amber-500/50', textColor: 'text-amber-600', bgColor: 'bg-amber-500/10 border-amber-500/20 animate-pulse' },
-    offline: { label: 'Offline', dotColor: 'bg-rose-500 shadow-rose-500/50', textColor: 'text-rose-600', bgColor: 'bg-rose-500/10 border-rose-500/20' },
+    connected: { dotColor: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' },
+    reconnecting: { dotColor: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse' },
+    offline: { dotColor: 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' },
   };
 
   const current = statusConfig[status] || statusConfig.offline;
 
   return (
-    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm transition-all duration-300 select-none ${current.bgColor} ${current.textColor}`}>
-      <span className="relative flex h-1.5 w-1.5">
-        {status === 'reconnecting' && (
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${current.dotColor}`}></span>
-        )}
-        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${current.dotColor}`}></span>
-      </span>
-      <span>{current.label}</span>
+    <div className="relative flex h-2 w-2 flex-shrink-0 select-none mx-2" title={`Connection: ${status}`}>
+      {status === 'reconnecting' && (
+        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${current.dotColor}`}></span>
+      )}
+      <span className={`relative inline-flex rounded-full h-2 w-2 ${current.dotColor}`}></span>
     </div>
   );
 };
@@ -140,6 +139,26 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
 
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [selectedCourseForDetail, setSelectedCourseForDetail] = useState(null);
+  const [showCertModal, setShowCertModal] = useState(false);
+  const [certModalData, setCertModalData] = useState(null);
+
+  const handleOpenCertModal = (data) => {
+    setCertModalData({
+      title: data?.title || data?.badgeName || 'Gold Milestone Certificate',
+      studentName: student?.name || 'Student'
+    });
+    setShowCertModal(true);
+  };
+
+  const handlePlayVideo = (video) => {
+    navigate(`/viewer/video/${video.id}`);
+  };
+
+  const navigateTab = (tabName) => {
+    setActiveTab(tabName);
+    setIsSidebarOpen(false);
+  };
+
   const containerRef = useRef(null);
 
   // Support Chat States
@@ -375,15 +394,28 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
   }, []);
 
   useEffect(() => {
+    if (student && !student.class && activeTab !== 'profile') {
+      setActiveTab('profile');
+    }
+  }, [student, activeTab]);
+
+  useEffect(() => {
     if (!socket) return;
     
     const refreshData = () => {
       fetchDashboardData();
     };
 
+    const handleCertEvent = (data) => {
+      refreshData();
+      handleOpenCertModal(data);
+    };
+
     socket.on('course:update', refreshData);
     socket.on('course:create', refreshData);
     socket.on('enrollment:updated', refreshData);
+    socket.on('certificate:issued', handleCertEvent);
+    socket.on('badge:awarded', handleCertEvent);
     socket.on('student:review-request', () => {
       setReviewForm({
         name: student?.name || '',
@@ -398,6 +430,8 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
       socket.off('course:update', refreshData);
       socket.off('course:create', refreshData);
       socket.off('enrollment:updated', refreshData);
+      socket.off('certificate:issued', handleCertEvent);
+      socket.off('badge:awarded', handleCertEvent);
       socket.off('student:review-request');
     };
   }, [socket, student]);
@@ -709,17 +743,27 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
     }
   }, [socket, selectedVideo]);
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
+  const handleUpdateProfile = async (profileData) => {
+    let dataToSend = profileData;
+    if (profileData && typeof profileData.preventDefault === 'function') {
+      profileData.preventDefault();
+      dataToSend = { bio, avatar };
+    }
     setError('');
     try {
-      const res = await api.put('/student/profile', { bio, avatar });
+      const res = await api.put('/student/profile', dataToSend);
       if (res.data && res.data.success) {
         setStudent(res.data.data);
+        setBio(res.data.data.bio || '');
+        setAvatar(res.data.data.avatar || '');
         setIsEditingProfile(false);
+        return { success: true };
       }
+      return { success: false, error: 'Unknown response' };
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update profile settings.');
+      const msg = err.response?.data?.message || 'Failed to update profile settings.';
+      setError(msg);
+      return { success: false, error: msg };
     }
   };
 
@@ -766,7 +810,8 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
   const getFileUrl = (url) => {
     if (!url) return '';
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `${url}`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || '';
+    return `${backendUrl}${url}`;
   };
 
 
@@ -790,7 +835,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
       )}
 
       <aside className={`fixed inset-y-0 left-0 w-64 bg-bg-color border-r border-border-color flex flex-col shadow-lg z-50 transition-transform duration-300 lg:static lg:translate-x-0 lg:shadow-sm shrink-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-5 flex items-center justify-between border-b border-border-color shadow-sm">
+        <div className="p-6.5 lg:p-7.5 flex items-center justify-between border-b border-border-color shadow-sm">
           <div className="flex items-center gap-3">
             <h2 className="text-center font-display font-extrabold text-base" style={
               {
@@ -807,39 +852,46 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
         </div>
 
         <nav className="grow flex flex-col py-2.5 gap-1 text-sm overflow-y-auto cc-scroll">
-          <button onClick={() => { setActiveTab('overview'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'overview' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <LayoutDashboard size={18} /> <span>Overview</span>
-          </button>
-          {visibility.courses !== false && (
-            <button onClick={() => { setActiveTab('courses'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'courses' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-              <BookOpen size={18} /> <span>Courses</span>
-            </button>
-          )}
-          {visibility.notes !== false && (
-            <button onClick={() => { setActiveTab('resources'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'resources' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-              <FileText size={18} /> <span>Formula Sheets</span>
-            </button>
-          )}
-          {visibility.lectures !== false && (
-            <button onClick={() => { setActiveTab('videos'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'videos' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-              <Play size={18} /> <span>Video Lectures</span>
-            </button>
-          )}
-          <button onClick={() => { setActiveTab('books'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'books' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <BookOpen size={18} /> <span>Books Library</span>
-          </button>
-          <button onClick={() => { setActiveTab('profile'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'profile' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <User size={18} /> <span>My Profile</span>
-          </button>
-          <button onClick={() => { setActiveTab('performance'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'performance' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <TrendingUp size={18} /> <span>Performance Reports</span>
-          </button>
-          <button onClick={() => { setActiveTab('badges'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'badges' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <Award size={18} /> <span>Achievement Badges</span>
-          </button>
-          <button onClick={() => { setActiveTab('support_chat'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 px-6 py-3 font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'support_chat' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
-            <Headset size={18} /> <span>Support Chat</span>
-          </button>
+          {(() => {
+            const tabPy = visibility.courses !== false ? 'py-2.5' : 'py-3';
+            return (
+              <>
+                <button onClick={() => navigateTab('overview')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'overview' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                  <LayoutDashboard size={18} /> <span>Overview</span>
+                </button>
+                {visibility.courses !== false && (
+                  <button onClick={() => navigateTab('courses')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'courses' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                    <BookOpen size={18} /> <span>Courses</span>
+                  </button>
+                )}
+                {visibility.notes !== false && (
+                  <button onClick={() => navigateTab('resources')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'resources' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                    <FileText size={18} /> <span>Formula Sheets</span>
+                  </button>
+                )}
+                {visibility.lectures !== false && (
+                  <button onClick={() => navigateTab('videos')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'videos' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                    <Play size={18} /> <span>Video Lectures</span>
+                  </button>
+                )}
+                <button onClick={() => navigateTab('books')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'books' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                  <BookOpen size={18} /> <span>Books Library</span>
+                </button>
+                <button onClick={() => navigateTab('profile')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'profile' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                  <User size={18} /> <span>My Profile</span>
+                </button>
+                <button onClick={() => navigateTab('performance')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'performance' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                  <TrendingUp size={18} /> <span>Analytics</span>
+                </button>
+                <button onClick={() => navigateTab('badges')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'badges' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                  <Award size={18} /> <span>Achievement Badges</span>
+                </button>
+                <button onClick={() => navigateTab('support_chat')} className={`flex items-center gap-3 px-6 ${tabPy} font-semibold border-0 text-left cursor-pointer transition-all ${activeTab === 'support_chat' ? 'bg-primary text-white border-r-4 border-primary-dark' : 'bg-transparent text-text-secondary hover:bg-bg-tertiary hover:text-primary'}`}>
+                  <Headset size={18} /> <span>Support Chat</span>
+                </button>
+              </>
+            );
+          })()}
         </nav>
 
         <div className="p-3 px-6 border-t border-border-color flex flex-col gap-2">
@@ -862,7 +914,7 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
               <Menu size={20} />
             </button>
             <span className="text-text-secondary text-sm font-medium">
-              {student?.name ? `${student.name}'s Workspace` : 'My Workspace'}
+              {student?.name ? `${student.name.split(' ')[0]}'s Workspace` : 'My Workspace'}
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -877,7 +929,9 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
 
         <div ref={containerRef} className="grow p-8 overflow-y-auto relative z-10">
           {loading ? (
-            <Loader text="Syncing credentials & content database..." />
+            <div className="col-span-full">
+              <Loader text="Loading your personalized dashboard..." />
+            </div>
           ) : error && !student ? (
             <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm">{error}</div>
           ) : (
@@ -919,6 +973,8 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
                   courseProgress={courseProgress}
                   setActiveTab={setActiveTab}
                   setSelectedCourseForDetail={setSelectedCourseForDetail}
+                  onPlayVideo={handlePlayVideo}
+                  earnedBadges={earnedBadges}
                 />
               )}
 
@@ -945,17 +1001,20 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
                 <ResourceTab
                   resources={resources}
                   getFileUrl={getFileUrl}
+                  studentClass={student?.class}
                 />
               )}
 
               {activeTab === 'videos' && (
                 <PracticeTab
                   videos={videos}
+                  onPlayVideo={handlePlayVideo}
+                  studentClass={student?.class}
                 />
               )}
 
               {activeTab === 'books' && (
-                <BooksTab />
+                <BooksTab studentClass={student?.class} />
               )}
 
               {activeTab === 'profile' && (
@@ -1007,6 +1066,9 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
                   badgesLoading={badgesLoading}
                   fetchAnalytics={fetchAnalytics}
                   fetchBadges={fetchBadges}
+                  videos={videos}
+                  studentClass={student?.class}
+                  setActiveTab={setActiveTab}
                 />
               )}
             </>
@@ -1107,6 +1169,14 @@ const UserDashboard = ({ defaultTab = 'overview' }) => {
           </div>
         </div>
       )}
+
+
+      {/* Certificate Instant Download Modal */}
+      <CertificateModal
+        isOpen={showCertModal}
+        onClose={() => setShowCertModal(false)}
+        certificateData={certModalData}
+      />
     </div>
   );
 };

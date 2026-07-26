@@ -181,6 +181,16 @@ a {
   background: var(--color-primary-dark);
 }
 
+/* Hide scrollbar but keep scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE & Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
 /* Custom Jimu Loader Animation */
 .jimu-primary-loading:before,
 .jimu-primary-loading:after {

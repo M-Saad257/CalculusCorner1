@@ -14,23 +14,70 @@ const db = require('../config/db');
 
 const isConfigured = () => {
   return !!(
-    process.env.SMTP_HOST &&
-    process.env.SMTP_PORT &&
-    process.env.SMTP_USER &&
-    process.env.SMTP_PASS &&
-    process.env.SMTP_FROM
+    process.env.RESEND_API_KEY ||
+    (process.env.SMTP_HOST &&
+     process.env.SMTP_PORT &&
+     process.env.SMTP_USER &&
+     process.env.SMTP_PASS &&
+     process.env.SMTP_FROM)
   );
 };
 
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT, 10),
-    secure: parseInt(process.env.SMTP_PORT, 10) === 465,
+const sendEmail = async ({ to, subject, html, text, attachments }) => {
+  const siteName = 'Calculus Corner';
+  let from = process.env.SMTP_FROM || 'onboarding@resend.dev';
+  
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const resendTransporter = nodemailer.createTransport({
+        host: 'smtp.resend.com',
+        port: 465,
+        secure: true,
+        auth: {
+          user: 'resend',
+          pass: process.env.RESEND_API_KEY,
+        },
+      });
+
+      let resendFrom = from;
+      if (resendFrom.includes('@gmail.com') || resendFrom.includes('sirmehtab.calculuscorner@gmail.com') || resendFrom.includes('Thecalculuscornerofficial@gmail.com')) {
+        resendFrom = 'Calculus Corner <onboarding@resend.dev>';
+      } else {
+        resendFrom = `"${siteName}" <${resendFrom}>`;
+      }
+
+      const info = await resendTransporter.sendMail({
+        from: resendFrom,
+        to,
+        subject,
+        html,
+        text,
+        attachments
+      });
+      return info;
+    } catch (resendErr) {
+      console.warn('[EmailService] Resend SMTP failed, falling back to standard SMTP:', resendErr.message);
+    }
+  }
+
+  // Fallback to standard SMTP (Gmail)
+  const fallbackTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: parseInt(process.env.SMTP_PORT || '587', 10) === 465,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+  });
+
+  return await fallbackTransporter.sendMail({
+    from: `"${siteName}" <${from}>`,
+    to,
+    subject,
+    html,
+    text,
+    attachments
   });
 };
 
@@ -176,9 +223,7 @@ const sendUnbanEmail = async (student) => {
   `.trim();
 
   try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: `"${siteName}" <${process.env.SMTP_FROM}>`,
+    await sendEmail({
       to: student.email,
       subject: `Your ${siteName} Account Has Been Restored`,
       html,
@@ -286,9 +331,7 @@ const sendSubscriptionConfirmation = async (email, token) => {
   `.trim();
 
   try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: `"${siteName}" <${process.env.SMTP_FROM}>`,
+    await sendEmail({
       to: email,
       subject: `Subscription Confirmed — ${siteName}`,
       html,
@@ -366,8 +409,6 @@ const sendAnnouncementEmailToSubscribers = async (announcement) => {
       }
     } catch (err) {}
 
-    const transporter = createTransporter();
-    
     // Process sending asynchronously in batches to prevent event loop lag
     const batchSize = 10;
     for (let i = 0; i < subscribers.length; i += batchSize) {
@@ -429,8 +470,7 @@ const sendAnnouncementEmailToSubscribers = async (announcement) => {
           `.trim();
 
           try {
-            await transporter.sendMail({
-              from: `"${siteName}" <${process.env.SMTP_FROM}>`,
+            await sendEmail({
               to: sub.email,
               subject: `${announcement.title || 'New Announcement'} — ${siteName}`,
               html,
@@ -535,12 +575,11 @@ const sendOTPVerificationEmail = async (email, name, otp) => {
   `;
 
   try {
-    const transporter = createTransporter();
-    await transporter.sendMail({
-      from: `"${siteName}" <${process.env.SMTP_FROM}>`,
+    await sendEmail({
       to: email,
       subject: `Your Verification Code: ${otp}`,
       html,
+      text: `Welcome ${name}!\n\nYour ${siteName} verification code is: ${otp}\n\n© ${new Date().getFullYear()} ${siteName}`
     });
 
     await logEmail(email, EMAIL_TYPE, 'sent');
@@ -551,6 +590,91 @@ const sendOTPVerificationEmail = async (email, name, otp) => {
   }
 };
 
+/**
+ * Sends a collaboration request email to Sir Mehtab (admin).
+ * @param {Object} collab - { name, email, businessName, businessNiche, message }
+ * @returns {Promise<{ sent: boolean, error: string|null }>}
+ */
+const sendCollabEmail = async (collab) => {
+  const EMAIL_TYPE = 'collaboration_request';
+  let adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER || 'sirmehtab.calculuscorner@gmail.com';
+
+  try {
+    const [rows] = await db.query(
+      "SELECT content_data FROM site_content WHERE section_name = 'contact' LIMIT 1"
+    );
+    if (rows.length > 0) {
+      const data = typeof rows[0].content_data === 'string'
+        ? JSON.parse(rows[0].content_data)
+        : rows[0].content_data;
+      if (data && data.email) {
+        adminEmail = data.email;
+      }
+    }
+  } catch (err) {
+    console.error('[EmailService] Failed to load contact email from site_content:', err.message);
+  }
+
+  if (!isConfigured()) {
+    await logEmail(adminEmail, EMAIL_TYPE, 'skipped', 'SMTP not configured');
+    return { sent: false, error: 'SMTP not configured' };
+  }
+
+  try {
+    const html = `
+      <div style="font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <h2 style="color: #4f46e5; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">New Collaboration Request</h2>
+        <p>Hi Sir Mehtab,</p>
+        <p>You have received a new collaboration request from the Calculus Corner platform. Details below:</p>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7; font-weight: bold; width: 140px;">Name:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${collab.name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7; font-weight: bold;">Email:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;"><a href="mailto:${collab.email}">${collab.email}</a></td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7; font-weight: bold;">Business Name:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${collab.businessName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7; font-weight: bold;">Business Niche:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">${collab.businessNiche}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7; font-weight: bold;">Business Logo:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7;">
+              ${collab.logoUrl ? `<a href="${process.env.SITE_URL || 'http://localhost:5173'}${collab.logoUrl}" target="_blank">View Uploaded Logo</a>` : 'No logo uploaded.'}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7; font-weight: bold; vertical-align: top;">Message:</td>
+            <td style="padding: 8px; border-bottom: 1px solid #edf2f7; white-space: pre-wrap;">${collab.message || 'No description provided.'}</td>
+          </tr>
+        </table>
+        <p style="margin-top: 30px; font-size: 12px; color: #a0aec0;">
+          This email was sent automatically by the Calculus Corner platform.
+        </p>
+      </div>
+    `;
+
+    await sendEmail({
+      to: adminEmail,
+      subject: `New Collaboration Request from ${collab.name}`,
+      html,
+      text: `New Collaboration Request from ${collab.name}`
+    });
+    await logEmail(adminEmail, EMAIL_TYPE, 'sent');
+    return { sent: true, error: null };
+  } catch (err) {
+    console.error('[EmailService] Failed to send collab email:', err);
+    await logEmail(adminEmail, EMAIL_TYPE, 'failed', err.message);
+    return { sent: false, error: err.message };
+  }
+};
+
 module.exports = { 
   sendUnbanEmail, 
   isConfigured, 
@@ -558,5 +682,6 @@ module.exports = {
   wasEmailAlreadySent,
   sendSubscriptionConfirmation,
   sendAnnouncementEmailToSubscribers,
-  sendOTPVerificationEmail
+  sendOTPVerificationEmail,
+  sendCollabEmail
 };

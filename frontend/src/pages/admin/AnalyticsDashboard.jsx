@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Users, BookOpen, FileText, Play, Eye, Loader2, Sparkles, TrendingUp, Bell } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, BookOpen, FileText, Play, Eye, Download, Library, TrendingUp, Sparkles, Video, BookMarked, BarChart3, ExternalLink } from 'lucide-react';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
 import Loader from '../../components/ui/Loader';
@@ -7,8 +7,9 @@ import Loader from '../../components/ui/Loader';
 const AnalyticsDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeSubTab, setActiveSubTab] = useState('videos'); // 'videos' | 'notes' | 'books'
 
-  const { adminStats, activeUsers } = useSocket();
+  const { adminStats, activeUsers, socket } = useSocket();
 
   const fetchStats = async () => {
     try {
@@ -18,6 +19,7 @@ const AnalyticsDashboard = () => {
         setStats(res.data.data);
       }
     } catch (err) {
+      console.error('Failed to fetch analytics:', err);
     } finally {
       setLoading(false);
     }
@@ -27,7 +29,7 @@ const AnalyticsDashboard = () => {
     fetchStats();
   }, []);
 
-  // Sync stats in real-time on socket updates
+  // Sync real-time updates
   useEffect(() => {
     if (adminStats) {
       setStats(prev => ({
@@ -37,251 +39,318 @@ const AnalyticsDashboard = () => {
     }
   }, [adminStats]);
 
-  // -----------------------
-  // Scale helper utilities
-  // -----------------------
-  const generateScale = (maxValue) => {
-    // Returns array of 3 numeric scale points: [max, max/2, 0]
-    const max = Number(maxValue) || 0;
-    if (max <= 0) return [0, 0, 0];
-    const mid = max / 2;
-    // Preserve decimals for halves (e.g., 2.5, 0.5)
-    const top = Math.round(max * 100) / 100;
-    const middle = Math.round(mid * 100) / 100;
-    return [top, middle, 0];
-  };
+  // Real-time auto-refresh when views, downloads, or video progress change
+  useEffect(() => {
+    if (!socket) return;
+    const handleAnalyticsUpdate = () => {
+      api.get('/admin/analytics').then(res => {
+        if (res.data && res.data.success) {
+          setStats(res.data.data);
+        }
+      }).catch(err => console.error('Silent analytics refresh failed:', err));
+    };
 
-  const formatLabel = (num) => {
-    // Keep integer formatting for integer-like values, otherwise one decimal
-    if (Number.isInteger(num)) return String(num);
-    if (Math.abs(num - Math.round(num)) < 0.0001) return String(Math.round(num));
-    return String(num);
-  };
+    socket.on('admin:analytics:update', handleAnalyticsUpdate);
+    socket.on('analytics:update', handleAnalyticsUpdate);
 
-  // Refs and measurement state for aligning labels to bars
-  const chartContainerRef = useRef(null);
-  const barRefs = useRef([]);
-  const [labelPositions, setLabelPositions] = useState([]);
+    return () => {
+      socket.off('admin:analytics:update', handleAnalyticsUpdate);
+      socket.off('analytics:update', handleAnalyticsUpdate);
+    };
+  }, [socket]);
+
+  if (loading) {
+    return (
+      <div className="py-20 flex flex-col items-center justify-center">
+        <Loader />
+        <p className="mt-4 text-xs font-bold text-text-tertiary">Loading Detailed Analytics...</p>
+      </div>
+    );
+  }
+
+  // Filter items so ONLY items with views > 0 or downloads > 0 are displayed
+  const filteredVideos = (stats?.topVideos || []).filter(v => (parseInt(v.views) || 0) > 0);
+  const filteredNotes = (stats?.topResources || []).filter(r => (parseInt(r.views) || 0) > 0 || (parseInt(r.downloads) || 0) > 0);
+  const filteredBooks = (stats?.topBooks || []).filter(b => (parseInt(b.views) || 0) > 0 || (parseInt(b.downloads) || 0) > 0);
 
   const kpis = [
+    {
+      title: 'Total Platform Views',
+      value: stats?.viewsCount || 0,
+      icon: Eye,
+      color: 'text-blue-600 bg-blue-50 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/40',
+      description: 'Combined views on videos & documents'
+    },
+    {
+      title: 'Total Downloads',
+      value: stats?.downloadsCount || 0,
+      icon: Download,
+      color: 'text-emerald-600 bg-emerald-50 border-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800/40',
+      description: 'PDF sheets and book downloads'
+    },
     {
       title: 'Total Students',
       value: stats?.studentsCount || 0,
       icon: Users,
-      color: 'text-blue-600 bg-blue-50',
-      description: 'Active learning student registrations'
-    },
-    {
-      title: 'Active Courses',
-      value: stats?.coursesCount || 0,
-      icon: BookOpen,
-      color: 'text-indigo-600 bg-indigo-50',
-      description: 'Calculus and math syllabuses'
-    },
-    {
-      title: 'Soft Resources',
-      value: stats?.resourcesCount || 0,
-      icon: FileText,
-      color: 'text-amber-600 bg-amber-50',
-      description: 'Reference files available'
+      color: 'text-indigo-600 bg-indigo-50 border-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:border-indigo-800/40',
+      description: 'Active registered student accounts'
     },
     {
       title: 'Lecture Videos',
       value: stats?.videosCount || 0,
       icon: Play,
-      color: 'text-emerald-600 bg-emerald-50',
-      description: 'Embedded video walkthroughs'
+      color: 'text-amber-600 bg-amber-50 border-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40',
+      description: 'Published video walkthroughs'
     },
     {
-      title: 'Active Online Users',
-      value: stats?.activeUsersCount !== undefined ? stats.activeUsersCount : activeUsers.length,
-      icon: Eye,
-      color: 'text-rose-600 bg-rose-50',
-      description: 'Students currently browsing platform'
-    },
-    {
-      title: 'Announcements',
-      value: stats?.announcementsCount || 0,
-      icon: Bell,
-      color: 'text-indigo-600 bg-indigo-50',
-      description: 'Platform wide alerts'
+      title: 'Active Online',
+      value: stats?.activeUsersCount !== undefined ? stats.activeUsersCount : (activeUsers?.length || 0),
+      icon: TrendingUp,
+      color: 'text-rose-600 bg-rose-50 border-rose-100 dark:bg-rose-900/20 dark:text-rose-400 dark:border-rose-800/40',
+      description: 'Students browsing live right now'
     }
   ];
 
-  const chartData = [
-    { label: 'Students', value: stats?.studentsCount || 0, color: 'bg-blue-600' },
-    { label: 'Courses', value: stats?.coursesCount || 0, color: 'bg-indigo-600' },
-    { label: 'PDFs', value: stats?.resourcesCount || 0, color: 'bg-amber-500' },
-    { label: 'Videos', value: stats?.videosCount || 0, color: 'bg-emerald-500' },
-    { label: 'Online', value: stats?.activeUsersCount !== undefined ? stats.activeUsersCount : activeUsers.length, color: 'bg-rose-500' },
-    { label: 'Alerts', value: stats?.announcementsCount || 0, color: 'bg-indigo-600' },
+  const subTabs = [
+    { id: 'videos', label: 'Lecture Videos Analytics', icon: Video, count: filteredVideos.length },
+    { id: 'notes', label: 'Formula Sheets & Notes Analytics', icon: BookMarked, count: filteredNotes.length },
+    { id: 'books', label: 'Books Library Analytics', icon: Library, count: filteredBooks.length }
   ];
 
-  // Measure bar wrappers and compute label coordinates whenever stats change or layout resizes
-  useLayoutEffect(() => {
-    const computePositions = () => {
-      const container = chartContainerRef.current;
-      if (!container) return setLabelPositions([]);
-      const containerRect = container.getBoundingClientRect();
-      const newPositions = chartData.map((item, idx) => {
-        const wrapper = barRefs.current[idx];
-        if (!wrapper) return { left: 0, points: [] };
-        const wrapRect = wrapper.getBoundingClientRect();
-        const relativeLeft = wrapRect.left - containerRect.left; // relative to chart container
-        const height = wrapRect.height;
-        const topBase = wrapRect.top - containerRect.top; // top of wrapper relative
-        const max = Number(item.value) || 0;
-        const points = generateScale(max).map((val) => {
-          const pct = max > 0 ? (val / max) : 0; // 0..1
-          const y = topBase + (1 - pct) * height; // px from container top
-          return { value: val, top: y };
-        });
-        return { left: relativeLeft, points };
-      });
-      setLabelPositions(newPositions);
-    };
-
-    computePositions();
-    const ro = new ResizeObserver(() => computePositions());
-    if (chartContainerRef.current) ro.observe(chartContainerRef.current);
-    window.addEventListener('resize', computePositions);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', computePositions);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stats, adminStats]);
-
-  if (loading) {
-    return <Loader text="Aggregating platform metrics..." />;
-  }
-
-
-
   return (
-    <div className="max-w-5xl mx-auto flex flex-col gap-8 text-left">
-      <div>
-        <h2 className="font-display font-black text-3xl text-text-primary">
-          Welcome to the CMS Dashboard
-        </h2>
-        <p className="text-text-secondary text-sm md:text-base mt-1">
-          Monitor registrations, content counts, and active modules for Calculus Corner.
-        </p>
+    <div className="flex flex-col gap-8 text-left animate-fadeIn">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="p-2 rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <BarChart3 size={20} />
+            </span>
+            <h1 className="font-display font-black text-2xl md:text-3xl text-text-primary">
+              Platform Analytics
+            </h1>
+          </div>
+          <p className="text-text-tertiary text-xs md:text-sm mt-1">
+            Showing content with active views (&gt; 0) or downloads (&gt; 0).
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-extrabold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            Live Stats Active
+          </span>
+        </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Top High-level Total KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         {kpis.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
             <div
               key={idx}
-              className="p-4 px-5 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden glass group"
+              className={`p-5 rounded-3xl border ${kpi.color} flex flex-col justify-between shadow-xs transition-transform hover:-translate-y-1`}
             >
-              <div className="flex justify-between items-center w-full">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xxs font-extrabold uppercase tracking-wider text-text-tertiary">
-                    {kpi.title}
-                  </span>
-                  <span className="text-2.5xl font-display font-black text-text-primary mt-1 group-hover:text-primary transition-colors">
-                    {kpi.value}
-                  </span>
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wider opacity-80">{kpi.title}</p>
+                  <p className="text-2xl font-black font-display mt-1">{kpi.value}</p>
                 </div>
-                <div className={`p-2.5 rounded-xl ${kpi.color}`}>
-                  <Icon size={18} />
+                <div className="p-2.5 rounded-xl bg-white/70 dark:bg-slate-800/70 shadow-xs">
+                  <Icon size={20} />
                 </div>
               </div>
+              <p className="text-[11px] opacity-75 mt-3 leading-snug">{kpi.description}</p>
             </div>
           );
         })}
       </div>
 
-      {/* Analytics Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Statistics Bar Chart Panel */}
-        <div className="md:col-span-2 p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-4 text-left">
-          <div className="flex justify-between items-center gap-3">
-            <h3 className="font-display font-bold text-base text-text-primary">Platform Statistics Overview</h3>
-            <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0">
-              <TrendingUp size={12} /> Live Metrics
-            </span>
-          </div>
+      {/* Analytics Sub-Tabs Container */}
+      <div className="bg-bg-color border border-border-color rounded-3xl p-6 shadow-sm flex flex-col gap-6">
+        
+        {/* Sub-Tabs Navigation */}
+        <div className="flex items-center gap-2 p-1.5 max-w-full bg-bg-secondary rounded-2xl border border-border-color/60 overflow-x-auto">
+          {subTabs.map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab(tab.id)}
+                className={`flex items-center gap-2.5 px-8.5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer border-0 shrink-0 ${
+                  isActive
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary'
+                }`}
+              >
+                <Icon size={16} />
+                <span>{tab.label}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-border-color text-text-tertiary'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-          <div ref={chartContainerRef} className="h-48 pt-6 px-4 flex items-end justify-between border-b border-l border-border-color/60 bg-bg-secondary/20 rounded-xl relative">
-            {/* Overlay for dynamic left-side scale labels */}
-            <div className="absolute inset-0 pointer-events-none">
-              {labelPositions.map((pos, i) => (
-                pos.points.map((p, pi) => (
-                  <div
-                    key={`${i}-${pi}`}
-                    style={{ left: (pos.left - 25) + 'px',
-                      top: (p.top - 8) + 'px',
-                      position: 'absolute' }}
-                    className="hidden lg:block text-[11px] font-extrabold text-text-secondary whitespace-nowrap"
-                  >
-                    {formatLabel(p.value)} 
-                  </div>
-                ))
-              ))}
+        {/* Sub-Tab Content: Lecture Videos */}
+        {activeSubTab === 'videos' && (
+          <div className="flex flex-col gap-5 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-display font-bold text-base text-text-primary flex items-center gap-2">
+                  <Video size={18} className="text-emerald-500" /> Lecture Video Engagement
+                </h3>
+                <p className="text-text-tertiary text-xs mt-0.5">Videos with views &gt; 0 sorted by total watch count.</p>
+              </div>
             </div>
 
-            {(() => {
-              const maxVal = Math.max(...chartData.map(c => c.value), 1);
-              return chartData.map((item, idx) => {
-                const heightPercent = (item.value / maxVal) * 100;
-                return (
-                  <div key={idx} className="flex flex-col items-center gap-2 grow group select-none">
-                    <div ref={el => barRefs.current[idx] = el} className="w-full max-w-[28px] bg-bg-tertiary rounded-t-md relative h-32 flex items-end">
-                      <div
-                        style={{ height: `${heightPercent}%` }}
-                        className={`w-full ${item.color} rounded-t-md relative group-hover:opacity-85 transition-all duration-300`}
-                      />
-                      <div className="absolute top-[-24px] left-1/2 -translate-x-1/2 bg-text-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow z-10">
-                        {item.value} {item.label.toLowerCase()}
+            {filteredVideos.length > 0 ? (
+              <div className="divide-y divide-border-color/60 border border-border-color rounded-2xl overflow-hidden bg-bg-secondary">
+                {filteredVideos.map((item, idx) => (
+                  <div key={item.id} className="p-4 flex items-center justify-between gap-4 hover:bg-bg-color transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold text-xs flex items-center justify-center shrink-0 border border-emerald-500/20">
+                        #{idx + 1}
+                      </span>
+                      <div className="min-w-0 text-left">
+                        <h4 className="font-bold text-xs text-text-primary truncate">{item.title}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            {item.category || 'General'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <span className="text-[9px] font-extrabold text-text-secondary whitespace-nowrap uppercase tracking-wider">
-                      {item.label}
-                    </span>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-right">
+                        <span className="text-sm font-black text-text-primary block">{item.views || 0}</span>
+                        <span className="text-[10px] text-text-tertiary uppercase tracking-wider font-bold">Total Views</span>
+                      </div>
+                      <button
+                        onClick={() => window.open(`/viewer/video/${item.id}`, '_blank')}
+                        className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-all border-0 cursor-pointer"
+                        title="Open in Viewer"
+                      >
+                        <ExternalLink size={15} />
+                      </button>
+                    </div>
                   </div>
-                );
-              });
-            })()}
-          </div>
-        </div>
-
-        {/* Live Active Student Sessions */}
-        <div className="p-6 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-display font-bold text-base text-text-primary">Live Student Activity</h3>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-              <span>{activeUsers.length} Online</span>
-            </span>
-          </div>
-
-          <div className="grow max-h-48 overflow-y-auto flex flex-col gap-2.5">
-            {activeUsers.length === 0 ? (
-              <div className="py-8 text-center text-xs text-text-tertiary font-semibold">
-                No students online.
+                ))}
               </div>
             ) : (
-              activeUsers.map(user => (
-                <div key={user.id} className="p-2.5 bg-bg-secondary/50 border border-border-color/60 rounded-xl flex items-center justify-between text-xs">
-                  <div className="flex flex-col gap-0.5 text-left">
-                    <span className="font-bold text-text-primary leading-tight">{(user.name || user.username).replace(/[0-9]/g, '').toUpperCase()}</span>
-                    <span className="text-[10px] text-text-tertiary">{user.email}</span>
-                  </div>
-                  <div className="flex flex-col items-end gap-0.5">
-                    <span className="px-2 py-0.5 bg-primary/10 border border-primary/20 text-[9px] font-extrabold text-primary rounded-full uppercase">
-                      {user.currentTab ? user.currentTab.replace('_', ' ') : 'Courses'}
-                    </span>
-                  </div>
-                </div>
-              ))
+              <div className="py-12 text-center text-text-tertiary text-xs italic border-2 border-dashed border-border-color rounded-2xl">
+                No videos with views &gt; 0 recorded yet.
+              </div>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Sub-Tab Content: Formula Sheets & Notes */}
+        {activeSubTab === 'notes' && (
+          <div className="flex flex-col gap-5 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-display font-bold text-base text-text-primary flex items-center gap-2">
+                  <BookMarked size={18} className="text-amber-500" /> Formula Sheets & Notes Engagement
+                </h3>
+                <p className="text-text-tertiary text-xs mt-0.5">Formula sheets with views &gt; 0 or downloads &gt; 0.</p>
+              </div>
+            </div>
+
+            {filteredNotes.length > 0 ? (
+              <div className="divide-y divide-border-color/60 border border-border-color rounded-2xl overflow-hidden bg-bg-secondary">
+                {filteredNotes.map((item, idx) => (
+                  <div key={item.id} className="p-4 flex items-center justify-between gap-4 hover:bg-bg-color transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-extrabold text-xs flex items-center justify-center shrink-0 border border-amber-500/20">
+                        #{idx + 1}
+                      </span>
+                      <div className="min-w-0 text-left">
+                        <h4 className="font-bold text-xs text-text-primary truncate">{item.title}</h4>
+                        <span className="text-[10px] text-text-tertiary block mt-0.5">PDF Formula Sheet</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6 shrink-0">
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-text-primary block">{item.views || 0} Views</span>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block">{item.downloads || 0} Downloads</span>
+                      </div>
+                      <button
+                        onClick={() => window.open(`/viewer/resource/${item.id}`, '_blank')}
+                        className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-all border-0 cursor-pointer"
+                        title="Open in Viewer"
+                      >
+                        <ExternalLink size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-text-tertiary text-xs italic border-2 border-dashed border-border-color rounded-2xl">
+                No formula sheets with views &gt; 0 or downloads &gt; 0 recorded yet.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sub-Tab Content: Books Library */}
+        {activeSubTab === 'books' && (
+          <div className="flex flex-col gap-5 animate-fadeIn">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="font-display font-bold text-base text-text-primary flex items-center gap-2">
+                  <Library size={18} className="text-purple-500" /> Books Library Engagement
+                </h3>
+                <p className="text-text-tertiary text-xs mt-0.5">Reference books with views &gt; 0 or downloads &gt; 0.</p>
+              </div>
+            </div>
+
+            {filteredBooks.length > 0 ? (
+              <div className="divide-y divide-border-color/60 border border-border-color rounded-2xl overflow-hidden bg-bg-secondary">
+                {filteredBooks.map((item, idx) => (
+                  <div key={item.id} className="p-4 flex items-center justify-between gap-4 hover:bg-bg-color transition-colors">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 font-extrabold text-xs flex items-center justify-center shrink-0 border border-purple-500/20">
+                        #{idx + 1}
+                      </span>
+                      <div className="min-w-0 text-left">
+                        <h4 className="font-bold text-xs text-text-primary truncate">{item.title}</h4>
+                        <span className="text-[10px] text-text-tertiary block mt-0.5">Reference Textbook</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6 shrink-0">
+                      <div className="text-right">
+                        <span className="text-xs font-bold text-text-primary block">{item.views || 0} Views</span>
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block">{item.downloads || 0} Downloads</span>
+                      </div>
+                      <button
+                        onClick={() => window.open(`/viewer/book/${item.id}`, '_blank')}
+                        className="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-all border-0 cursor-pointer"
+                        title="Open in Viewer"
+                      >
+                        <ExternalLink size={15} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-text-tertiary text-xs italic border-2 border-dashed border-border-color rounded-2xl">
+                No books with views &gt; 0 or downloads &gt; 0 recorded yet.
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

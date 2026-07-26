@@ -43,15 +43,7 @@ const login = async (req, res, next) => {
       });
     }
 
-    // NEW: Check if email is verified
-    if (user.is_verified === 0) {
-      return res.status(403).json({
-        success: false,
-        requireOTP: true,
-        email: user.email,
-        message: 'Please verify your email address to continue.'
-      });
-    }
+
 
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
@@ -59,8 +51,23 @@ const login = async (req, res, next) => {
       { expiresIn: '30d' }
     );
 
-    // Stamp last_login timestamp
-    try { await UserModel.updateLastLogin(user.id); } catch (_) {}
+    // Stamp last_login timestamp and award Welcome Badge
+    try {
+      await UserModel.updateLastLogin(user.id);
+      if (user.role === 'student') {
+        const BadgeModel = require('../models/BadgeModel');
+        await BadgeModel.awardBadge(user.id, 'Welcome Badge');
+      }
+    } catch (_) {}
+
+    let studentClass = null;
+    if (user.role === 'student') {
+      const db = require('../config/db');
+      const [pRows] = await db.query('SELECT class FROM students_profile WHERE user_id = ?', [user.id]);
+      if (pRows.length > 0) {
+        studentClass = pRows[0].class;
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -70,7 +77,8 @@ const login = async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        class: studentClass
       },
       data: {
         token,
@@ -78,7 +86,8 @@ const login = async (req, res, next) => {
           id: user.id,
           username: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          class: studentClass
         }
       }
     });
@@ -92,7 +101,7 @@ const login = async (req, res, next) => {
 const register = async (req, res, next) => {
   const startTime = performance.now();
   try {
-    const { name, email, password, courseId } = req.body;
+    const { name, email, password, courseId, class: className } = req.body;
 
     if (!name || !email || !password) {
       res.status(400);
@@ -102,8 +111,15 @@ const register = async (req, res, next) => {
     // Check if email already exists
     const existingUser = await UserModel.findByEmail(email);
     if (existingUser) {
-      res.status(400);
-      throw new Error('Email address already registered');
+      if (existingUser.is_verified === 1) {
+        res.status(400);
+        throw new Error('Email address already registered');
+      } else {
+        // Delete unverified student records so they can register fresh
+        const db = require('../config/db');
+        await db.query('DELETE FROM students_profile WHERE user_id = ?', [existingUser.id]);
+        await db.query('DELETE FROM users WHERE id = ?', [existingUser.id]);
+      }
     }
 
     // Hash password
@@ -111,26 +127,26 @@ const register = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // Create student user and blank profile
-    const userId = await UserModel.createStudent(name, email, hashedPassword);
+    const userId = await UserModel.createStudent(name, email, hashedPassword, className);
 
     // Auto-enroll student if course is selected
     if (courseId) {
       try {
         const EnrollmentModel = require('../models/EnrollmentModel');
         const ProgressModel = require('../models/ProgressModel');
+        const CourseModel = require('../models/CourseModel');
         await EnrollmentModel.enrollWithCheck(userId, courseId);
         await ProgressModel.upsertCourseProgress(userId, courseId, 0);
+
+        // Also update class field in profile based on course grade
+        const course = await CourseModel.getById(courseId);
+        if (course && course.grade) {
+          const db = require('../config/db');
+          await db.query('UPDATE students_profile SET class = ? WHERE user_id = ?', [course.grade, userId]);
+        }
       } catch (enrollErr) {
         console.error('Failed to auto-enroll student on registration:', enrollErr.message);
       }
-    }
-
-    // Create admin notification
-    try {
-      const NotificationModel = require('../models/NotificationModel');
-      await NotificationModel.create(null, 'New Student Registered', `Student ${name} (${email}) has joined the platform.`, 'registration', 'admin');
-    } catch (notifErr) {
-      console.error('Failed to create admin notification for registration', notifErr.message);
     }
 
     // NEW: Generate OTP and send email instead of logging in
@@ -189,12 +205,29 @@ const verifyOTP = async (req, res, next) => {
     // Mark as verified
     await UserModel.verifyStudent(email);
 
+    // Create admin notification upon successful OTP verification
+    try {
+      const NotificationModel = require('../models/NotificationModel');
+      await NotificationModel.create(null, 'New Student Registered', `Student ${user.name} (${email}) has joined the platform.`, 'registration', 'admin');
+    } catch (notifErr) {
+      console.error('Failed to create admin notification for registration', notifErr.message);
+    }
+
     // Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '30d' }
     );
+
+    let studentClass = null;
+    if (user.role === 'student') {
+      const db = require('../config/db');
+      const [pRows] = await db.query('SELECT class FROM students_profile WHERE user_id = ?', [user.id]);
+      if (pRows.length > 0) {
+        studentClass = pRows[0].class;
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -204,7 +237,8 @@ const verifyOTP = async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role
+        role: user.role,
+        class: studentClass
       },
       data: {
         token,
@@ -212,7 +246,8 @@ const verifyOTP = async (req, res, next) => {
           id: user.id,
           username: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          class: studentClass
         }
       }
     });

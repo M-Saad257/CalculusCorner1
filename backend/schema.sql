@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS `students_profile` (
   `bio` text DEFAULT NULL,
   `avatar` varchar(255) DEFAULT NULL,
   `progress` json DEFAULT NULL,
+  `class` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`user_id`),
   CONSTRAINT `fk_student_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -65,6 +66,28 @@ CREATE TABLE IF NOT EXISTS `resources` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `title` varchar(255) NOT NULL,
   `file_url` varchar(255) NOT NULL,
+  `original_filename` varchar(255) NOT NULL,
+  `metadata` json DEFAULT NULL,
+  `category` varchar(50) NOT NULL DEFAULT 'General',
+  `subcategory` varchar(50) DEFAULT NULL,
+  `thumbnail_url` varchar(255) DEFAULT NULL,
+  `is_past_paper` tinyint(4) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 6.5 BOOKS TABLE
+CREATE TABLE IF NOT EXISTS `books` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `file_url` varchar(255) NOT NULL,
+  `original_filename` varchar(255) NOT NULL,
+  `metadata` json DEFAULT NULL,
+  `category` varchar(50) NOT NULL DEFAULT 'General',
+  `subcategory` varchar(50) DEFAULT NULL,
+  `thumbnail_url` varchar(255) DEFAULT NULL,
+  `views` int(11) NOT NULL DEFAULT 0,
+  `downloads` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

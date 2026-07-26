@@ -102,7 +102,28 @@ export const SocketProvider = ({ children }) => {
         
         showToast(newNotification.title, 'success');
 
-        // Optional: show browser native notification or in-app toast
+        // Play notification chime using Web Audio API
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const playTone = (freq, startTime, duration, gain = 0.3) => {
+            const osc = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(gain, startTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+          };
+          const now = ctx.currentTime;
+          playTone(880, now, 0.2);
+          playTone(1100, now + 0.15, 0.25);
+        } catch (e) { /* silently ignore if audio not available */ }
+
+        // Optional: show browser native notification
         if (Notification.permission === 'granted') {
           new Notification(newNotification.title, { body: newNotification.text });
         }

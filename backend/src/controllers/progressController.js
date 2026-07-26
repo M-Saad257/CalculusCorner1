@@ -7,16 +7,44 @@ const progressController = {
   async updateVideoProgress(req, res) {
     try {
       const { videoId } = req.params;
-      const { progressPercent } = req.body;
+      const { progressPercent, lastPosition, duration } = req.body;
       const userId = req.user.id;
 
       if (!videoId || progressPercent === undefined) {
         return res.status(400).json({ success: false, message: 'Video ID and progress percentage are required.' });
       }
 
-      await ProgressModel.upsertVideoProgress(userId, videoId, progressPercent);
+      const parsedLastPosition = parseInt(lastPosition) || 0;
 
-      res.json({ success: true, message: 'Video progress updated successfully.' });
+      await ProgressModel.upsertVideoProgress(userId, videoId, progressPercent, parsedLastPosition);
+
+      if (duration) {
+        const db = require('../config/db');
+        await db.query('UPDATE videos SET duration = ? WHERE id = ?', [duration, videoId]);
+      }
+
+      // Clear student dashboard cache so that the recently watched list is refreshed
+      const studentController = require('./studentController');
+      studentController.clearDashboardCache(userId);
+
+      // Broadcast analytics update to admins real-time
+      try {
+        const { broadcastToAdmins } = require('../socket');
+        broadcastToAdmins('admin:analytics:update', { type: 'video_progress', videoId });
+      } catch (socketErr) {}
+
+      // Check and award video milestone badges if video completed
+      let newlyAwarded = [];
+      if (progressPercent >= 90.0) {
+        const BadgeModel = require('../models/BadgeModel');
+        newlyAwarded = await BadgeModel.checkAndAwardVideoBadges(userId);
+      }
+
+      res.json({ 
+        success: true, 
+        message: 'Video progress updated successfully.',
+        newlyAwarded
+      });
     } catch (error) {
       console.error('Error updating video progress:', error);
       res.status(500).json({ success: false, message: 'Server error updating progress.' });
@@ -57,7 +85,7 @@ const progressController = {
     try {
       const userId = req.user.id;
       const courseProgress = await ProgressModel.getAllCourseProgress(userId);
-      const recentVideos = await ProgressModel.getRecentlyWatchedVideos(userId, 5);
+      const recentVideos = await ProgressModel.getRecentlyWatchedVideos(userId, 6);
       
       res.json({
         success: true,

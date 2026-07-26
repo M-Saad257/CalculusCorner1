@@ -47,7 +47,7 @@ const studentController = {
   async updateProfile(req, res, next) {
     try {
       const studentId = req.user.id;
-      const { bio, avatar } = req.body;
+      const { bio, avatar, class: studentClass, name, email, password } = req.body;
 
       const profile = await UserModel.getProfile(studentId);
       if (!profile) {
@@ -55,11 +55,40 @@ const studentController = {
         throw new Error('Student profile not found');
       }
 
+      // 1. If name or email are changed, update users table
+      if ((name && name !== profile.name) || (email && email !== profile.email)) {
+        const finalName = name || profile.name;
+        const finalEmail = email || profile.email;
+
+        if (email && email !== profile.email) {
+          const existing = await UserModel.findByEmail(email);
+          if (existing && existing.id !== studentId) {
+            res.status(400);
+            throw new Error('Email is already taken by another student');
+          }
+        }
+
+        await UserModel.updateStudent(studentId, finalName, finalEmail);
+      }
+
+      // 2. If password is changed, hash and update it
+      if (password) {
+        const bcrypt = require('bcryptjs');
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        await UserModel.updatePassword(studentId, hashedPassword);
+      }
+
+      // 3. Update bio, avatar, and class in profile
       await UserModel.updateProfile(
         studentId,
         bio !== undefined ? bio : profile.bio,
-        avatar !== undefined ? avatar : profile.avatar
+        avatar !== undefined ? avatar : profile.avatar,
+        studentClass !== undefined ? studentClass : profile.class
       );
+
+      // Clear cached dashboard data for this student
+      studentController.clearDashboardCache(studentId);
 
       const updatedProfile = await UserModel.getProfile(studentId);
       res.status(200).json({ success: true, message: 'Profile updated successfully', data: updatedProfile });
@@ -85,7 +114,7 @@ const studentController = {
 
       const avatarUrl = `/uploads/images/${req.file.filename}`;
 
-      await UserModel.updateProfile(studentId, profile.bio, avatarUrl);
+      await UserModel.updateProfile(studentId, profile.bio, avatarUrl, profile.class);
 
       const updatedProfile = await UserModel.getProfile(studentId);
       res.status(200).json({
@@ -135,7 +164,10 @@ const studentController = {
         throw new Error('Course not found.');
       }
 
-      const result = await EnrollmentModel.enrollWithCheck(studentId, courseId);
+      // Save receipt screenshot path if uploaded
+      const receiptPath = req.file ? `/uploads/enrollments/${req.file.filename}` : null;
+
+      const result = await EnrollmentModel.enrollWithCheck(studentId, courseId, receiptPath);
 
       if (result.alreadyEnrolled) {
         return res.status(200).json({
@@ -530,6 +562,9 @@ const studentController = {
       };
       */
 
+      // Recent watched videos
+      const recentVideos = await ProgressModel.getRecentlyWatchedVideos(userId, 6);
+
       const dashboardData = {
         profile,
         enrolled,
@@ -542,6 +577,7 @@ const studentController = {
         badges,
         timeline,
         courseProgress,
+        recentVideos,
         stats: {
           streak,
           studyTime,
@@ -569,7 +605,37 @@ const studentController = {
 
   async getResources(req, res, next) {
     try {
-      const resources = await ResourceModel.getAll();
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit);
+      let category = req.query.category;
+      const subcategory = req.query.subcategory;
+      const search = req.query.search;
+      const is_past_paper = req.query.is_past_paper;
+
+      const db = require('../config/db');
+      const [profileRows] = await db.query('SELECT class FROM students_profile WHERE user_id = ?', [req.user.id]);
+      const studentClass = profileRows[0]?.class || null;
+
+      if (studentClass && studentClass !== 'All') {
+        category = studentClass;
+      }
+
+      if (page && limit) {
+        const { data, totalItems, totalPages } = await ResourceModel.getPaginated(page, limit, category, subcategory, search, is_past_paper);
+        return res.status(200).json({
+          success: true,
+          data,
+          page,
+          limit,
+          totalPages,
+          totalItems
+        });
+      }
+
+      let resources = await ResourceModel.getAll();
+      if (studentClass && studentClass !== 'All') {
+        resources = resources.filter(r => (r.category || '').toLowerCase() === studentClass.toLowerCase());
+      }
       res.status(200).json({ success: true, data: resources });
     } catch (err) {
       next(err);
@@ -578,8 +644,169 @@ const studentController = {
 
   async getVideos(req, res, next) {
     try {
-      const videos = await VideoModel.getAll();
-      res.status(200).json({ success: true, data: videos });
+      const studentId = req.user.id;
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit);
+      let category = req.query.category;
+      const subcategory = req.query.subcategory;
+      const search = req.query.search;
+      const is_past_paper = req.query.is_past_paper;
+      const sort = req.query.sort || 'lecture_asc';
+
+      const sortLecturesNaturally = (a, b) => {
+        if (!a || !b) return 0;
+        const titleA = (a.title || '').trim();
+        const titleB = (b.title || '').trim();
+
+        const matchA = titleA.match(/(\d+)\.(\d+)/);
+        const matchB = titleB.match(/(\d+)\.(\d+)/);
+
+        if (matchA && matchB) {
+          const majorA = parseInt(matchA[1], 10);
+          const minorA = parseInt(matchA[2], 10);
+          const majorB = parseInt(matchB[1], 10);
+          const minorB = parseInt(matchB[2], 10);
+
+          if (majorA !== majorB) return majorA - majorB;
+          if (minorA !== minorB) return minorA - minorB;
+        } else if (matchA) {
+          const singleB = titleB.match(/(\d+)/);
+          if (singleB) {
+            const numA = parseInt(matchA[1], 10);
+            const numB = parseInt(singleB[1], 10);
+            if (numA !== numB) return numA - numB;
+          }
+        } else if (matchB) {
+          const singleA = titleA.match(/(\d+)/);
+          if (singleA) {
+            const numA = parseInt(singleA[1], 10);
+            const numB = parseInt(matchB[1], 10);
+            if (numA !== numB) return numA - numB;
+          }
+        }
+
+        return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
+      };
+
+      const db = require('../config/db');
+      const [profileRows] = await db.query('SELECT class FROM students_profile WHERE user_id = ?', [studentId]);
+      const studentClass = profileRows[0]?.class || null;
+
+      if (studentClass && studentClass !== 'All') {
+        category = studentClass;
+      }
+
+      if (page && limit) {
+        const offset = (page - 1) * limit;
+        const whereClauses = [];
+        const queryParams = [];
+
+        if (category && category !== 'All') {
+          whereClauses.push('v.category = ?');
+          queryParams.push(category);
+        }
+        if (subcategory && subcategory !== 'All') {
+          whereClauses.push('v.subcategory = ?');
+          queryParams.push(subcategory);
+        }
+        if (search) {
+          whereClauses.push('v.title LIKE ?');
+          queryParams.push(`%${search}%`);
+        }
+        if (is_past_paper !== undefined && is_past_paper !== null && is_past_paper !== 'all') {
+          whereClauses.push('v.is_past_paper = ?');
+          queryParams.push(is_past_paper === 'past_papers' || is_past_paper === '1' || is_past_paper === 1 || is_past_paper === true ? 1 : 0);
+        }
+
+        let whereSql = '';
+        if (whereClauses.length > 0) {
+          whereSql = 'WHERE ' + whereClauses.join(' AND ');
+        }
+
+        // Count query
+        const [countRows] = await db.query(
+          `SELECT COUNT(*) as count FROM videos v ${whereSql}`,
+          queryParams
+        );
+        const totalItems = countRows[0].count;
+        const totalPages = Math.ceil(totalItems / limit);
+
+        if (sort === 'lecture_asc' || sort === 'title_az' || sort === 'category' || !sort) {
+          const [rows] = await db.query(
+            `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail, v.category, v.subcategory, v.is_past_paper, v.created_at AS createdAt,
+                    COALESCE(vp.progress_percent, 0.00) AS progressPercent,
+                    COALESCE(vp.is_completed, 0) AS isCompleted,
+                    COALESCE(vp.last_position, 0) AS lastPosition
+             FROM videos v
+             LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.user_id = ?
+             ${whereSql}`,
+            [studentId, ...queryParams]
+          );
+          rows.sort(sortLecturesNaturally);
+          const paginatedData = rows.slice(offset, offset + limit);
+
+          return res.status(200).json({
+            success: true,
+            data: paginatedData,
+            page,
+            limit,
+            totalPages,
+            totalItems
+          });
+        }
+
+        // Sorting mapping
+        let orderSql = 'ORDER BY v.category ASC, v.subcategory ASC, v.id ASC';
+        if (sort === 'newest') orderSql = 'ORDER BY v.created_at DESC';
+        else if (sort === 'oldest') orderSql = 'ORDER BY v.created_at ASC';
+        else if (sort === 'title_za') orderSql = 'ORDER BY v.title DESC';
+        else if (sort === 'completed') orderSql = 'ORDER BY COALESCE(vp.is_completed, 0) DESC, v.id ASC';
+        else if (sort === 'in_progress') orderSql = 'ORDER BY COALESCE(vp.progress_percent, 0) DESC, v.id ASC';
+
+        // Fetch query
+        const [rows] = await db.query(
+          `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail, v.category, v.subcategory, v.is_past_paper, v.created_at AS createdAt,
+                  COALESCE(vp.progress_percent, 0.00) AS progressPercent,
+                  COALESCE(vp.is_completed, 0) AS isCompleted,
+                  COALESCE(vp.last_position, 0) AS lastPosition
+           FROM videos v
+           LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.user_id = ?
+           ${whereSql}
+           ${orderSql}
+           LIMIT ? OFFSET ?`,
+          [studentId, ...queryParams, limit, offset]
+        );
+
+        return res.status(200).json({
+          success: true,
+          data: rows,
+          page,
+          limit,
+          totalPages,
+          totalItems
+        });
+      }
+
+      // Fallback non-paginated
+      let whereSql = '';
+      let queryParams = [studentId];
+      if (studentClass && studentClass !== 'All') {
+        whereSql = 'WHERE v.category = ?';
+        queryParams.push(studentClass);
+      }
+
+      const [rows] = await db.query(
+        `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail, v.category, v.subcategory, v.is_past_paper, v.created_at AS createdAt,
+                COALESCE(vp.progress_percent, 0.00) AS progressPercent,
+                COALESCE(vp.is_completed, 0) AS isCompleted,
+                COALESCE(vp.last_position, 0) AS lastPosition
+         FROM videos v
+         LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.user_id = ?
+         ${whereSql}`,
+        queryParams
+      );
+      rows.sort(sortLecturesNaturally);
+      res.status(200).json({ success: true, data: rows });
     } catch (err) {
       next(err);
     }
@@ -743,6 +970,8 @@ const studentController = {
   async getBadgesList(req, res, next) {
     try {
       const userId = req.user.id;
+      // Auto-award any eligible badges before returning the list
+      await BadgeModel.checkAndAwardVideoBadges(userId);
       const badges = await BadgeModel.getByUserId(userId);
       res.status(200).json({ success: true, data: badges });
     } catch (err) {
@@ -767,6 +996,14 @@ const studentController = {
         res.status(404);
         throw new Error('Resource file does not exist on server');
       }
+
+      // Increment downloads count in database
+      const db = require('../config/db');
+      await db.query('UPDATE resources SET downloads = downloads + 1 WHERE id = ?', [id]).catch(e => console.error('Failed to increment resource downloads:', e));
+      try {
+        const { broadcastToAdmins } = require('../socket');
+        broadcastToAdmins('admin:analytics:update', { type: 'resource_download', id });
+      } catch (socketErr) { }
 
       const originalFilename = resource.original_filename || path.basename(resource.file_url);
       res.download(filePath, originalFilename);
@@ -1082,6 +1319,183 @@ const studentController = {
     } catch (err) {
       console.error(err);
       res.status(500).json({ success: false, message: 'Error fetching certificate' });
+    }
+  },
+
+  async downloadMilestoneCertificate(req, res, next) {
+    try {
+      const studentId = req.user.id;
+      const { milestone } = req.params;
+      const db = require('../config/db');
+
+      // Map milestone/badge parameter to Badge Name & Achievement Description
+      let badgeName = 'Gold Learner Badge';
+      let achievementDesc = 'in recognition of completing 30 educational video lessons and demonstrating commitment to continuous learning on Calculus Corner.';
+
+      if (milestone.startsWith('Welcome')) {
+        badgeName = 'Welcome Badge';
+        achievementDesc = 'in recognition of your first successful login and joining the learning community on Calculus Corner.';
+        const BadgeModel = require('../models/BadgeModel');
+        await BadgeModel.awardBadge(studentId, 'Welcome Badge');
+      } else if (milestone.startsWith('Fast')) {
+        badgeName = 'Fast Starter Badge';
+        achievementDesc = 'in recognition of starting your first educational video lesson on Calculus Corner.';
+      } else if (milestone.startsWith('Consistency')) {
+        badgeName = 'Consistency Badge';
+        achievementDesc = 'in recognition of successfully completing 5 practice quiz assessments on Calculus Corner.';
+      } else if (milestone.startsWith('Calculus')) {
+        badgeName = 'Calculus Champion Badge';
+        achievementDesc = 'in recognition of completing 10 high-scoring practice quizzes with 80% or higher accuracy on Calculus Corner.';
+      } else if (milestone.startsWith('Bronze')) {
+        badgeName = 'Bronze Learner Badge';
+        achievementDesc = 'in recognition of completing 5 educational video lessons and demonstrating commitment to continuous learning on Calculus Corner.';
+      } else if (milestone.startsWith('Silver')) {
+        badgeName = 'Silver Learner Badge';
+        achievementDesc = 'in recognition of completing 15 educational video lessons and demonstrating commitment to continuous learning on Calculus Corner.';
+      } else if (milestone.startsWith('Gold')) {
+        badgeName = 'Gold Learner Badge';
+        achievementDesc = 'in recognition of completing 30 educational video lessons and demonstrating commitment to continuous learning on Calculus Corner.';
+      } else if (milestone.startsWith('Master')) {
+        badgeName = 'Master Learner Badge';
+        achievementDesc = 'in recognition of completing 50 educational video lessons and demonstrating commitment to continuous learning on Calculus Corner.';
+      }
+
+      // Check and auto-evaluate video badges
+      const BadgeModel = require('../models/BadgeModel');
+      await BadgeModel.checkAndAwardVideoBadges(studentId);
+
+      // Verify student has earned this badge
+      const [badgeRows] = await db.query(
+        'SELECT earnedAt FROM user_badges WHERE userId = ? AND (badgeName = ? OR badgeName LIKE ?)',
+        [studentId, badgeName, `%${milestone}%`]
+      );
+
+      if (badgeRows.length === 0) {
+        return res.status(403).json({
+          success: false,
+          message: `You have not earned the ${milestone} certificate yet.`
+        });
+      }
+
+      // Dynamic Image generation with Jimp
+      const Jimp = require('jimp');
+      const path = require('path');
+      const fs = require('fs');
+
+      const profile = await UserModel.getProfile(studentId);
+      const studentName = profile ? (profile.name || 'Student') : 'Student';
+
+      // Load All.png template (or fallback)
+      // __dirname = backend/src/controllers → ../../../ = CalculusCorner root
+      let templatePath = path.join(__dirname, '../../../frontend/public/All.png');
+      if (!fs.existsSync(templatePath)) {
+        templatePath = path.join(__dirname, '../../../frontend/public/CalculusCorner-Milestone-Certificate.png');
+      }
+      if (!fs.existsSync(templatePath)) {
+        return res.status(500).json({ success: false, message: 'Certificate template not found' });
+      }
+
+      const image = await Jimp.read(templatePath);
+      const fontLarge = await Jimp.loadFont(Jimp.FONT_SANS_64_BLACK);
+      const fontMed   = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
+
+      const width  = image.bitmap.width;   // 2000
+      const height = image.bitmap.height;  // 1414
+
+      // Transparent layers for each colored text section
+      const nameLayer   = new Jimp(width, height, 0x00000000); // Student Name   → blue
+      const prefixLayer = new Jimp(width, height, 0x00000000); // prefix text    → dark navy
+      const badgeLayer  = new Jimp(width, height, 0x00000000); // Badge Name     → gold
+      const suffixLayer = new Jimp(width, height, 0x00000000); // achievement desc → dark navy
+
+      const printBold = (targetLayer, font, x, y, textOptions, boxWidth) => {
+        targetLayer.print(font, x, y, textOptions, boxWidth);
+        targetLayer.print(font, x + 1, y, textOptions, boxWidth);
+        targetLayer.print(font, x, y + 1, textOptions, boxWidth);
+      };
+
+      // Build achievement description suffix per badge (with line break for readability)
+      const achievementSuffix = achievementDesc.replace(
+        ' and demonstrating',
+        ' and\ndemonstrating'
+      );
+
+      // 1. STUDENT NAME — centered, X=350, Y=650, blue
+      printBold(nameLayer, fontLarge, 350, 650, {
+        text: studentName,
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
+      }, 1300);
+
+      // 2. PREFIX TEXT — centered, X=350, Y=750, dark navy
+      printBold(prefixLayer, fontMed, 350, 750, {
+        text: 'has successfully earned the',
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
+      }, 1300);
+
+      // 3. BADGE NAME — centered, X=350, Y=810, gold
+      printBold(badgeLayer, fontLarge, 350, 810, {
+        text: badgeName,
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
+      }, 1300);
+
+      // 4. ACHIEVEMENT DESCRIPTION — centered, X=550, Y=930, dark navy
+      printBold(suffixLayer, fontMed, 550, 930, {
+        text: achievementSuffix,
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
+      }, 1300);
+
+      // ── Colorize each layer ──
+
+      // Student Name → vibrant blue #2761f0 (39, 97, 240)
+      nameLayer.scan(0, 0, nameLayer.bitmap.width, nameLayer.bitmap.height, function (x, y, idx) {
+        if (this.bitmap.data[idx + 3] > 10) {
+          this.bitmap.data[idx]     = 39;
+          this.bitmap.data[idx + 1] = 97;
+          this.bitmap.data[idx + 2] = 240;
+        }
+      });
+
+      // Prefix text → dark navy #1e293b (30, 41, 59)
+      prefixLayer.scan(0, 0, prefixLayer.bitmap.width, prefixLayer.bitmap.height, function (x, y, idx) {
+        if (this.bitmap.data[idx + 3] > 10) {
+          this.bitmap.data[idx]     = 30;
+          this.bitmap.data[idx + 1] = 41;
+          this.bitmap.data[idx + 2] = 59;
+        }
+      });
+
+      // Badge Name → gold #D4981A (212, 152, 26)
+      badgeLayer.scan(0, 0, badgeLayer.bitmap.width, badgeLayer.bitmap.height, function (x, y, idx) {
+        if (this.bitmap.data[idx + 3] > 10) {
+          this.bitmap.data[idx]     = 212;
+          this.bitmap.data[idx + 1] = 152;
+          this.bitmap.data[idx + 2] = 26;
+        }
+      });
+
+      // Achievement description → dark navy #1e293b (30, 41, 59)
+      suffixLayer.scan(0, 0, suffixLayer.bitmap.width, suffixLayer.bitmap.height, function (x, y, idx) {
+        if (this.bitmap.data[idx + 3] > 10) {
+          this.bitmap.data[idx]     = 30;
+          this.bitmap.data[idx + 1] = 41;
+          this.bitmap.data[idx + 2] = 59;
+        }
+      });
+
+      // Composite all layers onto the certificate image
+      image.composite(nameLayer, 0, 0);
+      image.composite(prefixLayer, 0, 0);
+      image.composite(badgeLayer, 0, 0);
+      image.composite(suffixLayer, 0, 0);
+
+      const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
+
+      res.set('Content-Type', 'image/png');
+      res.set('Content-Disposition', `attachment; filename="CalculusCorner_${milestone}_Certificate.png"`);
+      res.send(buffer);
+    } catch (err) {
+      console.error('Error generating certificate:', err);
+      res.status(500).json({ success: false, message: 'Error generating certificate file' });
     }
   },
 

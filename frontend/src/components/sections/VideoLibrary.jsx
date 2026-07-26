@@ -1,42 +1,83 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, PlayCircle, Clock, AlertCircle, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, PlayCircle, Clock, AlertCircle, X, CheckCircle2, ArrowUpDown } from 'lucide-react';
 import { FaYoutube } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
 import api from '../../services/api';
 import Button from '../ui/Button';
 import Loader from '../ui/Loader';
 import { useSocket } from '../../hooks/useSocket';
+import VideoPlayerModal from '../ui/VideoPlayerModal';
+import { sortLecturesNaturally } from '../../utils/sortUtils';
+
+const decodeToken = (token) => {
+  try {
+    if (!token) return null;
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      window.atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+};
 
 const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
   const [videos, setVideos] = useState([]);
+  const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeSubcategory, setActiveSubcategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedVideo, setSelectedVideo] = useState(null);
+  const navigate = useNavigate();
+  const [sortBy, setSortBy] = useState(isHomePage ? 'lecture_asc' : 'lecture_asc');
 
-  const getEmbedUrl = (url) => {
-    if (!url) return '';
-    let videoId = '';
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    if (match && match[2].length === 11) {
-      videoId = match[2];
-    }
-    return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0` : url;
-  };
-
+  const [allVideosList, setAllVideosList] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const containerRef = useRef(null);
 
   const fetchVideos = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/content/videos');
+      const token = localStorage.getItem('token');
+      const decoded = decodeToken(token);
+      const isStudentUser = decoded && decoded.role === 'student';
+
+      const params = {
+        page: currentPage,
+        limit: 12,
+        category: activeCategory,
+        subcategory: activeSubcategory,
+        search: searchQuery,
+        sort: sortBy
+      };
+
+      let res;
+      if (isStudentUser) {
+        try {
+          res = await api.get('/student/videos', { params });
+        } catch (tokenErr) {
+          res = await api.get('/content/videos', { params });
+        }
+      } else {
+        res = await api.get('/content/videos', { params });
+      }
+
       if (res.data && res.data.success) {
         setVideos(res.data.data || []);
+        setCurrentPage(res.data.page || 1);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalItems(res.data.totalItems || 0);
       } else {
         throw new Error('Response did not indicate success');
       }
@@ -47,15 +88,63 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
     }
   };
 
+  const fetchMetadata = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const decoded = decodeToken(token);
+      const isStudentUser = decoded && decoded.role === 'student';
+      let res;
+      if (isStudentUser) {
+        try {
+          res = await api.get('/student/videos');
+        } catch (tokenErr) {
+          res = await api.get('/content/videos');
+        }
+      } else {
+        res = await api.get('/content/videos');
+      }
+      if (res.data && res.data.success) {
+        setAllVideosList(res.data.data || []);
+      }
+    } catch (err) { }
+  };
+
+  useEffect(() => {
+    fetchMetadata();
+  }, []);
+
   useEffect(() => {
     fetchVideos();
-  }, []);
+  }, [activeCategory, activeSubcategory, searchQuery, sortBy, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, activeSubcategory, searchQuery, sortBy]);
+
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr && allVideosList.length > 0) {
+        const u = JSON.parse(userStr);
+        const userClass = u?.class || u?.grade || null;
+        if (userClass) {
+          const matched = allVideosList.find(v => (v.category || '').toLowerCase() === userClass.toLowerCase() || (v.category || '').toLowerCase().includes(userClass.toLowerCase()));
+          if (matched && matched.category) {
+            setActiveCategory(matched.category);
+          }
+        }
+      }
+    } catch (e) { }
+  }, [allVideosList]);
 
   const { socket } = useSocket();
 
   useEffect(() => {
     if (!socket) return;
-    const refreshData = () => fetchVideos();
+    const refreshData = () => {
+      fetchMetadata();
+      fetchVideos();
+    };
     socket.on('video:create', refreshData);
     socket.on('video:update', refreshData);
     socket.on('video:delete', refreshData);
@@ -68,13 +157,13 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
 
   const categoriesList = [
     'All',
-    ...Array.from(new Set(videos.map(v => v.category).filter(Boolean)))
+    ...Array.from(new Set(allVideosList.map(v => v.category).filter(Boolean)))
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   ];
 
   const subcategoriesList = [
     'All',
-    ...Array.from(new Set(videos.filter(v => v.category === activeCategory && v.subcategory).map(v => v.subcategory)))
+    ...Array.from(new Set(allVideosList.filter(v => v.category === activeCategory && v.subcategory).map(v => v.subcategory)))
       .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   ];
 
@@ -82,20 +171,18 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
     setActiveSubcategory('All');
   }, [activeCategory]);
 
-  const filteredVideos = videos
-    .filter(video => {
-      const matchesCat = activeCategory === 'All' || video.category === activeCategory;
-      const matchesSub = activeSubcategory === 'All' || video.subcategory === activeSubcategory;
-      const matchesSearch = video.title.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCat && matchesSub && matchesSearch;
-    })
-    .sort((a, b) => {
-      const catCompare = (a.category || '').localeCompare(b.category || '', undefined, { numeric: true });
-      if (catCompare !== 0) return catCompare;
-      return (a.subcategory || '').localeCompare(b.subcategory || '', undefined, { numeric: true });
-    });
-
-  const displayVideos = isHomePage ? filteredVideos.slice(0, 12) : filteredVideos;
+  const displayVideos = (() => {
+    let list = [...videos];
+    if (sortBy === 'lecture_asc') {
+      list.sort(sortLecturesNaturally);
+    }
+    if (isHomePage) {
+      return list.filter(v => v.show_on_homepage === 1 || v.showOnHomepage === 1);
+    }
+    const pinned = list.filter(v => v.show_on_homepage === 1 || v.showOnHomepage === 1);
+    const unpinned = list.filter(v => v.show_on_homepage !== 1 && v.showOnHomepage !== 1);
+    return [...pinned, ...unpinned];
+  })();
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Recently';
@@ -114,7 +201,7 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
 
   return (
     <section id="videos" className="py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] relative" ref={containerRef}>
-      <div className="container mx-auto px-4 md:px-8">
+      <div className="container mx-auto px-4 md:px-8 min-h-[700px]">
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-4 text-left">
           {!hideHeader && (
@@ -128,15 +215,33 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
             </div>
           )}
 
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
-            <input
-              type="text"
-              placeholder="Search for a topic..."
-              className="w-full pl-11 pr-4 py-2.5 border border-border-color rounded-full font-sans text-sm bg-bg-color shadow-inner focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all duration-200"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div className="flex items-center gap-2 w-full max-w-lg">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-tertiary" size={18} />
+              <input
+                type="text"
+                placeholder="Search for a topic..."
+                className="w-full pl-11 pr-4 py-2.5 border border-border-color rounded-full font-sans text-sm bg-bg-color shadow-inner focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all duration-200"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            {!isHomePage && (
+              <div className="relative shrink-0">
+                <ArrowUpDown size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="pl-8 pr-3 py-2.5 rounded-full bg-bg-color border border-border-color text-sm text-text-primary focus:outline-none focus:border-primary/50 transition-all cursor-pointer appearance-none shadow-inner"
+                >
+                  <option value="lecture_asc">Lecture Order (1.1, 1.2, 1.3...)</option>
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="title_az">A–Z</option>
+                  <option value="title_za">Z–A</option>
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
@@ -147,8 +252,8 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
                 key={category}
                 onClick={() => setActiveCategory(category)}
                 className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${activeCategory === category
-                    ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
+                  ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
                   }`}
               >
                 {category}
@@ -163,8 +268,8 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
                   key={subcat}
                   onClick={() => setActiveSubcategory(subcat)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${activeSubcategory === subcat
-                      ? 'bg-slate-800 text-white border-slate-800'
-                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 hover:text-slate-800'
+                    ? 'bg-slate-800 text-white border-slate-800'
+                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
                     }`}
                 >
                   {subcat}
@@ -191,91 +296,137 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
         {!loading && !error && (
           <div className="relative">
             <motion.div
-              className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 ${isHomePage && filteredVideos.length > 12 ? 'pb-36' : 'mb-0'}`}
+              className={`grid gap-8 mb-0 ${isHomePage ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}
               layout
             >
-              {displayVideos.map((video) => (
-                <motion.div
-                  key={video.id}
-                  onClick={() => setSelectedVideo(video)}
-                  className="group flex flex-col p-4 rounded-[2rem] bg-bg-color border border-border-color shadow-sm hover:shadow-xl hover:-translate-y-2 hover:border-primary/20 transition-all duration-300 relative text-left cursor-pointer"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  layout
-                >
-                  <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-5 bg-slate-100 isolate">
-                    {video.thumbnail ? (
-                      <img
-                        src={video.thumbnail}
-                        alt={video.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100">
-                        <PlayCircle size={48} />
+              {displayVideos.map((video) => {
+                const progressPercent = parseFloat(video.progressPercent !== undefined ? video.progressPercent : video.progress_percent) || 0;
+                const isCompleted = video.isCompleted === 1 || video.is_completed === 1 || progressPercent >= 90;
+                return (
+                  <motion.div
+                    key={video.id}
+                    onClick={() => {
+                      navigate(`/viewer/video/${video.id}`);
+                    }}
+                    className="group flex flex-col p-4 rounded-[2rem] bg-bg-color border border-border-color shadow-sm hover:shadow-xl hover:-translate-y-2 hover:border-primary/20 transition-all duration-300 relative text-left cursor-pointer"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
+                    layout
+                  >
+                    <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-5 bg-slate-100 isolate">
+                      {video.thumbnail ? (
+                        <img
+                          src={video.thumbnail}
+                          alt={video.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-300 bg-slate-100">
+                          <PlayCircle size={48} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 backdrop-blur-[2px]">
+                        <div className="w-16 h-16 rounded-full bg-primary/90 text-white flex items-center justify-center shadow-lg shadow-primary/30 transform scale-75 group-hover:scale-100 transition-transform duration-300 ease-out">
+                          <PlayCircle size={32} className="ml-1" />
+                        </div>
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 backdrop-blur-[2px]">
-                      <div className="w-16 h-16 rounded-full bg-primary/90 text-white flex items-center justify-center shadow-lg shadow-primary/30 transform scale-75 group-hover:scale-100 transition-transform duration-300 ease-out">
-                        <PlayCircle size={32} className="ml-1" />
-                      </div>
-                    </div>
-                    <div className="absolute top-4 left-4 z-20">
-                      <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg bg-bg-color/90 backdrop-blur-md text-text-primary shadow-sm">
-                        {video.subcategory ? video.subcategory : video.category}
-                      </span>
-                    </div>
-                    {/* YouTube direct link button */}
-                    <div className="absolute top-4 right-4 z-20">
-                      <a
-                        href={video.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-9 h-9 rounded-full bg-[#FF0000] text-white flex items-center justify-center shadow-md hover:scale-110 transition-all duration-200 cursor-pointer border-0"
-                        title="Watch on YouTube"
-                      >
-                        <FaYoutube size={16} />
-                      </a>
-                    </div>
-                  </div>
+                      {video.duration && (
+                        <span className="absolute bottom-4 right-4 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center justify-center backdrop-blur-sm z-20">
+                          {video.duration}
+                        </span>
+                      )}
+                      {/* Video Progress Bar Overlay */}
+                      {localStorage.getItem('token') && progressPercent > 0 && (
+                        <div className="absolute bottom-0 inset-x-0 h-1.5 bg-black/30 z-20">
+                          <div
+                            className="bg-primary h-full transition-all duration-300"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                      )}
 
-                  <div className="flex flex-col flex-grow px-2">
-                    <h3 className="font-display font-bold text-lg text-text-primary leading-snug mb-3 group-hover:text-primary transition-colors line-clamp-2">
-                      {video.title}
-                    </h3>
-                    <div className="flex items-center gap-4 text-xs font-semibold text-text-tertiary mt-auto">
-                      <span className="flex items-center gap-1.5">
-                        <Clock size={14} className="text-text-secondary" />
-                        {formatDate(video.createdAt)}
-                      </span>
+                      <div className="absolute top-4 left-4 z-20">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg bg-bg-color/90 backdrop-blur-md text-text-primary shadow-sm">
+                          {video.subcategory ? video.subcategory : video.category}
+                        </span>
+                      </div>
+                      {/* YouTube direct link button */}
+                      <div className="absolute top-4 right-4 z-20">
+                        <a
+                          href={video.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-9 h-9 rounded-full bg-[#FF0000] text-white flex items-center justify-center shadow-md hover:scale-110 transition-all duration-200 cursor-pointer border-0"
+                          title="Watch on YouTube"
+                        >
+                          <FaYoutube size={16} />
+                        </a>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))}
+
+                    <div className="flex flex-col flex-grow px-2">
+                      <h3 className="font-display font-bold text-lg text-text-primary leading-snug mb-3 group-hover:text-primary transition-colors line-clamp-2">
+                        {video.title}
+                      </h3>
+                      <div className="flex items-center justify-between text-xs font-semibold text-text-tertiary mt-auto">
+                        <span className="flex items-center gap-1.5">
+                          <Clock size={14} className="text-text-secondary" />
+                          {formatDate(video.createdAt)}
+                        </span>
+                        {localStorage.getItem('token') && progressPercent > 0 && (
+                          <span className={`font-bold ${isCompleted ? 'text-emerald-600' : 'text-primary'}`}>
+                            {isCompleted ? 'Completed' : `${progressPercent}%`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </motion.div>
 
-            {isHomePage && filteredVideos.length > 12 && (
-              <div className="absolute bottom-0 left-0 w-full h-72 bg-gradient-to-t from-bg-color/95 via-bg-color/70 to-transparent flex flex-col justify-end items-center pb-8 pointer-events-auto z-20">
-                <a
-                  href="/lectures"
-                  className="px-8 py-3.5 bg-primary text-white font-bold rounded-full shadow-lg shadow-primary/25 hover:shadow-primary/45 hover:scale-105 transition-all duration-300 flex items-center gap-2 cursor-pointer border-0 text-sm"
+            {/* Pagination Controls */}
+            {!isHomePage && totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12 bg-bg-color p-3 rounded-2xl border border-border-color shadow-sm w-fit mx-auto flex-wrap">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                      currentPage === pageNum
+                        ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
+                        : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {isHomePage && (
+              <div className="flex justify-center mt-10">
+                <button
+                  onClick={() => navigate('/lectures')}
+                  className="inline-flex items-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-full shadow-lg shadow-primary/25 hover:shadow-primary/45 hover:scale-105 transition-all duration-300 cursor-pointer border-0 text-sm"
                 >
-                  View All Lectures
-                </a>
+                  <span>More Lectures</span>
+                  <PlayCircle size={18} />
+                </button>
               </div>
             )}
           </div>
         )}
 
-        {!loading && !error && filteredVideos.length === 0 && (
+        {!loading && !error && videos.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center gap-4 py-20 px-4 border-2 border-dashed border-border-color rounded-3xl bg-bg-color text-center"
+            className="flex flex-col items-center justify-center gap-4 py-20 px-4 border-2 border-dashed border-border-color rounded-3xl bg-bg-color text-center shadow-inner"
           >
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
               <Search size={24} />
@@ -285,50 +436,7 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
           </motion.div>
         )}
 
-      {createPortal(
-        <AnimatePresence>
-          {selectedVideo && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-              onClick={() => setSelectedVideo(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, y: 15 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 15 }}
-                transition={{ type: "spring", duration: 0.5 }}
-                className="bg-bg-color rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl border border-border-color relative text-left"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-4 md:p-6 border-b border-border-color flex justify-between items-center bg-bg-secondary">
-                  <h3 className="font-display font-bold text-lg md:text-xl text-text-primary line-clamp-1 pr-6">
-                    {selectedVideo.title}
-                  </h3>
-                  <button
-                    onClick={() => setSelectedVideo(null)}
-                    className="p-2 text-text-secondary hover:text-red-500 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="relative w-full aspect-video bg-black flex items-center justify-center">
-                  <iframe
-                    src={getEmbedUrl(selectedVideo.url)}
-                    title={selectedVideo.title}
-                    className="absolute inset-0 w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+
 
       </div>
     </section>

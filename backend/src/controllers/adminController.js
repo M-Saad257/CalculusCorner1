@@ -279,7 +279,7 @@ const adminController = {
               isRead: 0,
               createdAt: new Date().toISOString()
             });
-          } catch (e) {}
+          } catch (e) { }
         } catch (notifErr) {
           console.error('Student approval notification failed:', notifErr.message);
         }
@@ -310,7 +310,7 @@ const adminController = {
               isRead: 0,
               createdAt: new Date().toISOString()
             });
-          } catch (e) {}
+          } catch (e) { }
         } catch (notifErr) {
           console.error('Student rejection notification failed:', notifErr.message);
         }
@@ -473,6 +473,26 @@ const adminController = {
   // --- RESOURCES CRUD ---
   async getResources(req, res, next) {
     try {
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit);
+      const category = req.query.category;
+      const subcategory = req.query.subcategory;
+      const search = req.query.search;
+      const is_past_paper = req.query.is_past_paper;
+      const sortBy = req.query.sortBy || req.query.sort || 'default';
+
+      if (page && limit) {
+        const { data, totalItems, totalPages } = await ResourceModel.getPaginated(page, limit, category, subcategory, search, is_past_paper, sortBy);
+        return res.status(200).json({
+          success: true,
+          data,
+          page,
+          limit,
+          totalPages,
+          totalItems
+        });
+      }
+
       const resources = await ResourceModel.getAll();
       res.status(200).json({ success: true, data: resources });
     } catch (err) {
@@ -484,6 +504,8 @@ const adminController = {
     try {
       const { title, category, subcategory } = req.body;
       const is_past_paper = req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0;
+      const show_on_homepage = req.body.show_on_homepage === 'true' || req.body.show_on_homepage === '1' || req.body.show_on_homepage === true || req.body.show_on_homepage === 1 ? 1 : 0;
+
       if (!title) {
         res.status(400);
         throw new Error('Resource title is required');
@@ -501,7 +523,7 @@ const adminController = {
       const original_filename = fileObj.originalname || fileObj.filename;
       let thumbnail_url = null;
       if (thumbObj) {
-         thumbnail_url = '/uploads/resources/' + thumbObj.filename;
+        thumbnail_url = '/uploads/resources/' + thumbObj.filename;
       }
 
       // Automatically extract and persist file metadata
@@ -518,7 +540,7 @@ const adminController = {
       const { broadcastToAll, broadcastToStudents, getIO } = require('../socket');
       const { sendUpdatedDashboardStats } = require('../socket/handlers/users');
 
-      const resourceId = await ResourceModel.create(title, file_url, original_filename, metadata, category || 'General', subcategory || null, thumbnail_url, is_past_paper);
+      const resourceId = await ResourceModel.create(title, file_url, original_filename, metadata, category || 'General', subcategory || null, thumbnail_url, is_past_paper, show_on_homepage);
       const newResource = await ResourceModel.getById(resourceId);
 
       // Real-time broadcasts & notifications
@@ -541,6 +563,10 @@ const adminController = {
       const is_past_paper = req.body.is_past_paper !== undefined
         ? (req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0)
         : undefined;
+      const show_on_homepage = req.body.show_on_homepage !== undefined
+        ? (req.body.show_on_homepage === 'true' || req.body.show_on_homepage === '1' || req.body.show_on_homepage === true || req.body.show_on_homepage === 1 ? 1 : 0)
+        : undefined;
+
       const ResourceModel = require('../models/ResourceModel');
       const path = require('path');
       const fs = require('fs');
@@ -599,7 +625,8 @@ const adminController = {
         category || resource.category,
         subcategory !== undefined ? subcategory : resource.subcategory,
         thumbnail_url,
-        is_past_paper !== undefined ? is_past_paper : resource.is_past_paper
+        is_past_paper !== undefined ? is_past_paper : resource.is_past_paper,
+        show_on_homepage !== undefined ? show_on_homepage : resource.show_on_homepage
       );
       const updatedResource = await ResourceModel.getById(id);
 
@@ -663,6 +690,26 @@ const adminController = {
   // Videos CRUD
   async getVideos(req, res, next) {
     try {
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit);
+      const category = req.query.category;
+      const subcategory = req.query.subcategory;
+      const search = req.query.search;
+      const is_past_paper = req.query.is_past_paper;
+      const sortBy = req.query.sortBy || req.query.sort || 'default';
+
+      if (page && limit) {
+        const { data, totalItems, totalPages } = await VideoModel.getPaginated(page, limit, category, subcategory, search, is_past_paper, sortBy);
+        return res.status(200).json({
+          success: true,
+          data,
+          page,
+          limit,
+          totalPages,
+          totalItems
+        });
+      }
+
       const videos = await VideoModel.getAll();
       res.status(200).json({ success: true, data: videos });
     } catch (err) {
@@ -672,8 +719,10 @@ const adminController = {
 
   async createVideo(req, res, next) {
     try {
-      const { title, url, videoId, thumbnail, category, subcategory } = req.body;
+      const { title, url, videoId, thumbnail, category, subcategory, duration } = req.body;
       const is_past_paper = req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0;
+      const show_on_homepage = req.body.show_on_homepage === 'true' || req.body.show_on_homepage === '1' || req.body.show_on_homepage === true || req.body.show_on_homepage === 1 ? 1 : 0;
+
       if (!title || !url || !videoId) {
         res.status(400);
         throw new Error('Title, video URL, and videoId are required');
@@ -686,7 +735,7 @@ const adminController = {
         throw new Error('This video has already been added to the library.');
       }
 
-      const insertedId = await VideoModel.create(title, url, videoId, thumbnail, category, subcategory || null, is_past_paper);
+      const insertedId = await VideoModel.create(title, url, videoId, thumbnail, category, subcategory || null, is_past_paper, duration || null, show_on_homepage);
       const newVideo = await VideoModel.getById(insertedId);
 
       // Real-time broadcasts & notifications
@@ -705,9 +754,12 @@ const adminController = {
   async updateVideo(req, res, next) {
     try {
       const { id } = req.params;
-      const { title, url, videoId, thumbnail, category, subcategory } = req.body;
+      const { title, url, videoId, thumbnail, category, subcategory, duration } = req.body;
       const is_past_paper = req.body.is_past_paper !== undefined
         ? (req.body.is_past_paper === 'true' || req.body.is_past_paper === '1' || req.body.is_past_paper === true || req.body.is_past_paper === 1 ? 1 : 0)
+        : undefined;
+      const show_on_homepage = req.body.show_on_homepage !== undefined
+        ? (req.body.show_on_homepage === 'true' || req.body.show_on_homepage === '1' || req.body.show_on_homepage === true || req.body.show_on_homepage === 1 ? 1 : 0)
         : undefined;
 
       const video = await VideoModel.getById(id);
@@ -733,7 +785,9 @@ const adminController = {
         thumbnail || video.thumbnail,
         category || video.category,
         subcategory !== undefined ? subcategory : video.subcategory,
-        is_past_paper !== undefined ? is_past_paper : video.is_past_paper
+        is_past_paper !== undefined ? is_past_paper : video.is_past_paper,
+        duration !== undefined ? duration : video.duration,
+        show_on_homepage !== undefined ? show_on_homepage : video.show_on_homepage
       );
       const updatedVideo = await VideoModel.getById(id);
 
@@ -773,20 +827,19 @@ const adminController = {
     try {
       const db = require('../config/db');
       const [rows] = await db.query(
-        `SELECT e.id as enrollmentId, e.created_at, e.status, e.certificate_status,
+        `SELECT e.id as enrollmentId, e.created_at, e.status, e.certificate_status, e.payment_screenshot,
                 u.name as studentName, u.email as studentEmail,
                 c.title as courseTitle, c.price as coursePrice, c.certificate_price
          FROM enrollments e
          JOIN users u ON e.student_id = u.id
          JOIN courses c ON e.course_id = c.id
-         ORDER BY 
-           (e.status = 'pending_payment' OR e.certificate_status = 'pending_payment') DESC, 
-           e.created_at DESC`
+         WHERE e.status = 'pending_payment' OR e.certificate_status = 'pending_payment'
+         ORDER BY e.created_at DESC`
       );
 
       const requests = rows.map(r => {
         let type = 'Course Enrollment';
-        if (r.certificate_status === 'pending_payment' || r.certificate_status === 'issued') {
+        if (r.certificate_status === 'pending_payment') {
           type = 'Certificate Request';
         }
         return {
@@ -815,13 +868,13 @@ const adminController = {
       const CourseModel = require('../models/CourseModel');
       const NotificationModel = require('../models/NotificationModel');
       const { getIO } = require('../socket');
-      
+
       const course = await CourseModel.getById(enroll.course_id);
       const courseName = course ? course.title : 'Course';
 
       if (enroll.status === 'pending_payment') {
         await db.query("UPDATE enrollments SET status = 'approved' WHERE id = ?", [id]);
-        
+
         const notifId = await NotificationModel.create(
           enroll.student_id,
           'Enrollment Approved',
@@ -845,7 +898,7 @@ const adminController = {
         } catch (e) { console.error(e.message); }
       } else if (enroll.certificate_status === 'pending_payment') {
         await db.query("UPDATE enrollments SET certificate_status = 'issued' WHERE id = ?", [id]);
-        
+
         const notifId = await NotificationModel.create(
           enroll.student_id,
           'Certificate Issued',
@@ -893,13 +946,13 @@ const adminController = {
       const CourseModel = require('../models/CourseModel');
       const NotificationModel = require('../models/NotificationModel');
       const { getIO, broadcastToAdmins } = require('../socket');
-      
+
       const course = await CourseModel.getById(enroll.course_id);
       const courseName = course ? course.title : 'Course';
 
       if (enroll.status === 'pending_payment') {
         await db.query("UPDATE enrollments SET status = 'rejected' WHERE id = ?", [id]);
-        
+
         const notifId = await NotificationModel.create(
           enroll.student_id,
           'Enrollment Rejected',
@@ -922,7 +975,7 @@ const adminController = {
         } catch (e) { console.error(e.message); }
       } else if (enroll.certificate_status === 'pending_payment') {
         await db.query("UPDATE enrollments SET certificate_status = 'rejected' WHERE id = ?", [id]);
-        
+
         const notifId = await NotificationModel.create(
           enroll.student_id,
           'Certificate Request Rejected',
@@ -1081,10 +1134,40 @@ const adminController = {
       const resourcesCount = await ResourceModel.getCount();
       const videosCount = await VideoModel.getCount();
 
-      // AI features were removed, mock the analytics so the frontend doesn't crash
       const aiStats = { totalConversations: 0, totalMessages: 0 };
 
       const [annRows] = await db.query("SELECT COUNT(*) as count FROM announcements");
+
+      // Real views/downloads data
+      let topVideos = [], topBooks = [], topResources = [], totalViews = 0, totalDownloads = 0;
+      try {
+        const [videoRows] = await db.query(
+          'SELECT id, title, category, COALESCE(views, 0) as views FROM videos WHERE COALESCE(views, 0) > 0 ORDER BY views DESC LIMIT 20'
+        );
+        topVideos = videoRows;
+        const [vSum] = await db.query('SELECT COALESCE(SUM(views), 0) as total FROM videos');
+        totalViews += parseInt(vSum[0].total) || 0;
+      } catch (e) { /* views column may not exist yet */ }
+
+      try {
+        const [bookRows] = await db.query(
+          'SELECT id, title, COALESCE(views, 0) as views, COALESCE(downloads, 0) as downloads FROM books WHERE COALESCE(views, 0) > 0 OR COALESCE(downloads, 0) > 0 ORDER BY (COALESCE(views, 0) + COALESCE(downloads, 0)) DESC LIMIT 20'
+        );
+        topBooks = bookRows;
+        const [bSum] = await db.query('SELECT COALESCE(SUM(views), 0) as totalViews, COALESCE(SUM(downloads), 0) as totalDownloads FROM books');
+        totalViews += parseInt(bSum[0].totalViews) || 0;
+        totalDownloads += parseInt(bSum[0].totalDownloads) || 0;
+      } catch (e) { /* downloads column may not exist yet */ }
+
+      try {
+        const [resRows] = await db.query(
+          'SELECT id, title, COALESCE(views, 0) as views, COALESCE(downloads, 0) as downloads FROM resources WHERE COALESCE(views, 0) > 0 OR COALESCE(downloads, 0) > 0 ORDER BY (COALESCE(views, 0) + COALESCE(downloads, 0)) DESC LIMIT 20'
+        );
+        topResources = resRows;
+        const [rSum] = await db.query('SELECT COALESCE(SUM(views), 0) as totalViews, COALESCE(SUM(downloads), 0) as totalDownloads FROM resources');
+        totalViews += parseInt(rSum[0].totalViews) || 0;
+        totalDownloads += parseInt(rSum[0].totalDownloads) || 0;
+      } catch (e) { /* downloads column may not exist yet */ }
 
       res.status(200).json({
         success: true,
@@ -1096,9 +1179,11 @@ const adminController = {
           announcementsCount: annRows[0].count,
           aiSessionsCount: aiStats.totalConversations,
           aiMessagesCount: aiStats.totalMessages,
-          // placeholder reviews/views count
-          viewsCount: 1540,
-          reviewsCount: 3
+          viewsCount: totalViews,
+          downloadsCount: totalDownloads,
+          topVideos,
+          topBooks,
+          topResources
         }
       });
     } catch (err) {
@@ -1598,6 +1683,14 @@ const adminController = {
         throw new Error('Resource file does not exist on server');
       }
 
+      // Increment downloads count in database
+      const db = require('../config/db');
+      await db.query('UPDATE resources SET downloads = downloads + 1 WHERE id = ?', [id]).catch(e => console.error('Failed to increment resource downloads:', e));
+      try {
+        const { broadcastToAdmins } = require('../socket');
+        broadcastToAdmins('admin:analytics:update', { type: 'resource_download', id });
+      } catch (socketErr) { }
+
       const originalFilename = resource.original_filename || path.basename(resource.file_url);
       res.download(filePath, originalFilename);
     } catch (err) {
@@ -1622,6 +1715,16 @@ const adminController = {
         return res.status(404).json({ message: 'File not found' });
       }
 
+      // Increment views count in database
+      const db = require('../config/db');
+      await db.query('UPDATE resources SET views = views + 1 WHERE id = ?', [id]).catch(e => console.error('Failed to increment resource views:', e));
+      try {
+        const { broadcastToAdmins } = require('../socket');
+        broadcastToAdmins('admin:analytics:update', { type: 'resource_view', id });
+      } catch (socketErr) { }
+
+      res.removeHeader('X-Frame-Options');
+      res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
         `inline; filename="${resource.original_filename}"`
@@ -1880,7 +1983,7 @@ Return ONLY a raw JSON array with no markdown, no code fences, no extra text. Fo
       const original_filename = fileObj.originalname || fileObj.filename;
       let thumbnail_url = null;
       if (thumbObj) {
-         thumbnail_url = '/uploads/resources/' + thumbObj.filename;
+        thumbnail_url = '/uploads/resources/' + thumbObj.filename;
       }
 
       const path = require('path');
@@ -2007,15 +2110,15 @@ Return ONLY a raw JSON array with no markdown, no code fences, no extra text. Fo
   async requestReview(req, res, next) {
     try {
       const { id } = req.params; // student_id
-      
+
       const { getIO } = require('../socket');
       const io = getIO();
-      
+
       io.to(`student-${id}`).emit('student:review-request', {
         title: 'Review Requested',
         message: 'Admin has requested you to share your feedback.'
       });
-      
+
       res.status(200).json({ success: true, message: 'Review request sent successfully' });
     } catch (err) {
       next(err);

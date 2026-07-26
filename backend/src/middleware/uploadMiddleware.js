@@ -21,7 +21,7 @@ const storage = multer.diskStorage({
 // Accept any file type — validation & messaging is handled on the frontend
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit to support all educational file types
+  limits: { fileSize: 1024 * 1024 * 1024 }, // 1GB limit to support all educational file types
 });
 
 module.exports = upload;

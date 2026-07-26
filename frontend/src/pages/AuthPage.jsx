@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Mail, User, Eye, EyeOff, Loader2, ArrowLeft, AlertCircle, Sparkles, CheckCircle2, KeyRound, GraduationCap } from 'lucide-react';
 import api from '../services/api';
 import { useSocket } from '../hooks/useSocket';
 import { useContent } from '../context/ContentContext';
+import { RESOURCE_CATEGORIES } from '../utils/categories';
 
 const MathNodesBackground = () => {
   const nodes = [
@@ -87,7 +88,7 @@ const AuthPage = () => {
     password: '',
     confirmPassword: '',
     otp: '',
-    courseId: ''
+    class: ''
   });
 
   // UI states
@@ -221,9 +222,8 @@ const AuthPage = () => {
           throw new Error('Authentication payload missing token or user data');
         }
       } else if (authMode === 'register') {
-        const visibility = content?.visibility || {};
-        if (visibility.courses !== false && !formData.courseId) {
-          setError('Please select a course to continue registration.');
+        if (!formData.class) {
+          setError('Please select your Class / Grade to continue registration.');
           setIsLoading(false);
           return;
         }
@@ -231,7 +231,7 @@ const AuthPage = () => {
           name: formData.name,
           email: formData.email,
           password: formData.password,
-          courseId: formData.courseId
+          class: formData.class
         });
 
         if (res.data.requireOTP) {
@@ -393,7 +393,7 @@ const AuthPage = () => {
               <img
                 src={getLogoSrc()}
                 alt="Calculus Corner Logo"
-                className="h-20 w-auto object-contain dark:invert"
+                className="h-20 w-auto object-contain"
                 onError={(e) => {
                   if (e.target.src !== window.location.origin + "/official.webp") {
                     e.target.src = "/official.webp";
@@ -411,39 +411,7 @@ const AuthPage = () => {
             </p>
           </div>
 
-          {/* Premium Tab Toggles (hidden in OTP/Forgot/Reset modes) */}
-          {(authMode === 'login' || authMode === 'register') && (
-            <div className="flex bg-bg-tertiary p-1.5 rounded-full border border-border-color">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('login');
-                  setError('');
-                  setSuccessMessage('');
-                }}
-                className={`flex-1 py-2 text-sm font-bold rounded-full transition-all duration-300 border-0 cursor-pointer ${authMode === 'login'
-                  ? 'bg-bg-color text-text-primary shadow-sm'
-                  : 'text-text-secondary hover:text-text-primary bg-transparent'
-                  }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode('register');
-                  setError('');
-                  setSuccessMessage('');
-                }}
-                className={`flex-1 py-2 text-sm font-bold rounded-full transition-all duration-300 border-0 cursor-pointer ${authMode === 'register'
-                  ? 'bg-bg-color text-text-primary shadow-sm'
-                  : 'text-text-secondary hover:text-text-primary bg-transparent'
-                  }`}
-              >
-                Create Account
-              </button>
-            </div>
-          )}
+
 
           {/* Form Content */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -478,31 +446,31 @@ const AuthPage = () => {
                       </div>
                     </motion.div>
                   )}
-                  {authMode === 'register' && (content?.visibility?.courses !== false) && (
+                  {authMode === 'register' && (
                     <motion.div
-                      key="course-field"
+                      key="class-field"
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.25, ease: 'easeInOut' }}
                       className="flex flex-col gap-1.5 overflow-hidden mt-3"
                     >
-                      <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest pl-4">Target Course</label>
+                      <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest pl-4">Class / Grade *</label>
                       <div className="relative mb-0.5">
                         <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-text-tertiary z-10">
                           <GraduationCap size={18} />
                         </span>
                         <select
-                          name="courseId"
-                          value={formData.courseId}
+                          name="class"
+                          value={formData.class}
                           onChange={handleInputChange}
                           required={authMode === 'register'}
                           className="w-full pl-12 pr-10 py-3 bg-transparent border border-border-color rounded-full font-sans text-sm text-text-primary focus:outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-300 appearance-none cursor-pointer"
                         >
-                          <option value="" className="text-text-primary dark:bg-slate-900 bg-white">-- Select Your Course --</option>
-                          {courses.map(course => (
-                            <option key={course.id} value={course.id} className="text-text-primary dark:bg-slate-900 bg-white">
-                              {course.grade} - {course.title}
+                          <option value="" className="text-text-primary dark:bg-slate-900 bg-white">-- Select Your Class / Grade --</option>
+                          {Object.keys(RESOURCE_CATEGORIES).map(cat => (
+                            <option key={cat} value={cat} className="text-text-primary dark:bg-slate-900 bg-white">
+                              {cat}
                             </option>
                           ))}
                         </select>
@@ -570,7 +538,7 @@ const AuthPage = () => {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#0B132B]/40 hover:text-text-primary/40 dark:hover:text-[#FDFBF7] bg-transparent border-0 cursor-pointer transition-colors"
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-text-tertiary hover:text-text-primary dark:text-white/70 dark:hover:text-white bg-transparent border-0 cursor-pointer transition-colors"
                       >
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
@@ -610,7 +578,8 @@ const AuthPage = () => {
                     />
                   </div>
                   <p className="text-xs text-text-secondary text-center mt-1">
-                    We sent a code to <span className="font-semibold text-text-primary">{formData.email}</span>
+                    We sent a code to <span className="font-semibold text-text-primary">{formData.email}</span>. <br />
+                    (Please also check your spam folder)
                   </p>
                 </div>
 
@@ -634,7 +603,7 @@ const AuthPage = () => {
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#0B132B]/40 hover:text-text-primary/40 dark:hover:text-[#FDFBF7] bg-transparent border-0 cursor-pointer transition-colors"
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-text-tertiary hover:text-text-primary dark:text-white/70 dark:hover:text-white bg-transparent border-0 cursor-pointer transition-colors"
                         >
                           {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -659,7 +628,7 @@ const AuthPage = () => {
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#0B132B]/40 hover:text-text-primary/40 dark:hover:text-[#FDFBF7] bg-transparent border-0 cursor-pointer transition-colors"
+                          className="absolute inset-y-0 right-0 pr-4 flex items-center text-text-tertiary hover:text-text-primary dark:text-white/70 dark:hover:text-white bg-transparent border-0 cursor-pointer transition-colors"
                         >
                           {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -718,13 +687,6 @@ const AuthPage = () => {
               ) : (
                 <span className="flex items-center gap-2">
                   {getSubmitButtonText()}
-                  {(authMode === 'login' || authMode === 'register') && (
-                    <motion.span
-                      className="inline-block transition-transform duration-300 group-hover:translate-x-1"
-                    >
-                      →
-                    </motion.span>
-                  )}
                 </span>
               )}
             </button>
@@ -742,6 +704,12 @@ const AuthPage = () => {
             )}
           </form>
 
+          {authMode === 'login' && (
+            <div className="mt-2 text-center">
+              <span className="text-xs text-text-secondary font-medium">Don't have an account? </span>
+              <Link to="/enroll" className="text-xs text-primary hover:underline font-bold transition-all">Enroll Now</Link>
+            </div>
+          )}
         </div>
       </div>
     </div>

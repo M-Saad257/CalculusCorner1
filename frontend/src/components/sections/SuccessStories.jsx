@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react';
 import { useSocket } from '../../hooks/useSocket';
+import Loader from '../ui/Loader';
 
 const bgColors = ["bg-blue-100 text-blue-800", "bg-emerald-100 text-emerald-800", "bg-purple-100 text-purple-800", "bg-amber-100 text-amber-800"];
 
@@ -108,7 +109,7 @@ const SuccessStories = () => {
       <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-bg-secondary to-transparent z-0 pointer-events-none" />
 
       <div className="container mx-auto px-4 md:px-8 relative z-10">
-        
+
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="inline-block text-xs uppercase font-extrabold tracking-widest text-primary mb-3">
             Testimonials
@@ -118,7 +119,7 @@ const SuccessStories = () => {
           </h2>
         </div>
 
-        <motion.div 
+        <motion.div
           className="relative w-full max-w-3xl mx-auto"
           initial={{ opacity: 0, y: 30 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -126,43 +127,56 @@ const SuccessStories = () => {
         >
           <div className="relative min-h-[380px] md:min-h-[320px] flex items-center justify-center">
             {loading ? (
-              <div className="text-center py-8 font-semibold text-text-secondary">Loading dynamic reviews...</div>
-            ) : testimonials.length > 0 ? (
-              <AnimatePresence initial={false} custom={direction} mode="wait">
-                <motion.div
-                  key={currentIndex}
-                  custom={direction}
-                  variants={slideVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
-                  className="w-full p-8 md:p-12 rounded-3xl bg-bg-color shadow-xl border border-border-color relative text-left glass"
-                >
-                  <Quote className="absolute top-6 right-8 text-slate-100/90 pointer-events-none" size={64} />
-                  
-                  <div className="flex gap-1 text-accent mb-6">
-                    {Array.from({ length: testimonials[currentIndex]?.rating || 5 }).map((_, i) => (
-                      <Star key={i} size={18} className="fill-accent text-accent" />
-                    ))}
-                  </div>
-                  
-                  <p className="font-display font-medium text-lg md:text-2xl text-text-primary leading-relaxed mb-8 relative z-10">
-                    "{testimonials[currentIndex]?.text}"
-                  </p>
-                  
-                  <div className="flex items-center gap-4 border-t border-border-color pt-6 mt-auto">
-                    <div className={`w-14 h-14 rounded-full flex items-center justify-center font-display font-extrabold text-xl shadow-sm shrink-0 ${bgColors[currentIndex % bgColors.length]}`}>
-                      {testimonials[currentIndex]?.name.charAt(0)}
+              <div className="col-span-full">
+                <Loader text="Loading dynamic testimonials..." />
+              </div>
+              ) : testimonials.length > 0 ? (
+                <AnimatePresence initial={false} custom={direction} mode="wait">
+                  <motion.div
+                    key={currentIndex}
+                    custom={direction}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{ x: { type: "spring", stiffness: 300, damping: 30 }, opacity: { duration: 0.2 } }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.6}
+                    onDragEnd={(e, { offset }) => {
+                      const swipeThreshold = 50;
+                      if (offset.x < -swipeThreshold) {
+                        paginate(1); // Swipe left -> next slide
+                      } else if (offset.x > swipeThreshold) {
+                        paginate(-1); // Swipe right -> previous slide
+                      }
+                    }}
+                    className="w-full p-8 md:p-12 rounded-3xl bg-bg-color shadow-xl border border-border-color relative text-left glass cursor-grab active:cursor-grabbing select-none"
+                  >
+                    <Quote className="absolute top-6 right-8 text-slate-100/90 pointer-events-none" size={64} />
+
+                    <div className="flex gap-1 text-accent mb-6">
+                      {Array.from({ length: testimonials[currentIndex]?.rating || 5 }).map((_, i) => (
+                        <Star key={i} size={18} className="fill-accent text-accent" />
+                      ))}
                     </div>
-                    <div>
-                      <h4 className="font-sans font-bold text-base md:text-lg text-text-primary mb-0.5">{testimonials[currentIndex]?.name}</h4>
-                      <p className="text-primary text-xs md:text-sm font-semibold">{testimonials[currentIndex]?.role}</p>
+
+                    <p className="font-display font-medium text-lg md:text-2xl text-text-primary leading-relaxed mb-8 relative z-10">
+                      "{testimonials[currentIndex]?.text}"
+                    </p>
+
+                    <div className="flex items-center gap-4 border-t border-border-color pt-6 mt-auto">
+                      <div className={`w-14 h-14 rounded-full flex items-center justify-center font-display font-extrabold text-xl shadow-sm shrink-0 ${bgColors[currentIndex % bgColors.length]}`}>
+                        {testimonials[currentIndex]?.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-sans font-bold text-base md:text-lg text-text-primary mb-0.5">{testimonials[currentIndex]?.name}</h4>
+                        <p className="text-primary text-xs md:text-sm font-semibold">{testimonials[currentIndex]?.role}</p>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            ) : (
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
               <div className="text-center py-8 font-semibold text-text-secondary">No reviews found.</div>
             )}
           </div>
@@ -170,21 +184,20 @@ const SuccessStories = () => {
           {/* Controls & Navigations */}
           {!loading && testimonials.length > 0 && (
             <div className="flex items-center justify-center gap-6 mt-8">
-              <button 
-                className="bg-bg-color border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm" 
+              <button
+                className="bg-bg-color border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm"
                 onClick={() => paginate(-1)}
                 aria-label="Previous review"
               >
                 <ChevronLeft size={20} />
               </button>
-              
+
               <div className="flex gap-2">
                 {testimonials.map((_, index) => (
-                  <button 
-                    key={index} 
-                    className={`w-2.5 h-2.5 rounded-full border-0 cursor-pointer transition-all duration-300 ${
-                      index === currentIndex ? 'bg-primary w-6' : 'bg-border-color'
-                    }`}
+                  <button
+                    key={index}
+                    className={`w-2.5 h-2.5 rounded-full border-0 cursor-pointer transition-all duration-300 ${index === currentIndex ? 'bg-primary w-6' : 'bg-border-color'
+                      }`}
                     onClick={() => {
                       setDirection(index > currentIndex ? 1 : -1);
                       setCurrentIndex(index);
@@ -193,9 +206,9 @@ const SuccessStories = () => {
                   />
                 ))}
               </div>
-              
-              <button 
-                className="bg-bg-color border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm" 
+
+              <button
+                className="bg-bg-color border border-border-color w-11 h-11 rounded-full flex items-center justify-center text-text-primary cursor-pointer hover:bg-bg-secondary hover:text-primary hover:border-primary hover:scale-105 active:scale-95 transition-all shadow-sm"
                 onClick={() => paginate(1)}
                 aria-label="Next review"
               >

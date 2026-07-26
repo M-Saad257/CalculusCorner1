@@ -453,7 +453,7 @@ const Practice = () => {
   };
 
   return (
-    <section id="practice" className="py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] relative" ref={containerRef}>
+    <section id="practice" className="scroll-mt-24 py-10 md:py-16 bg-bg-secondary/70 backdrop-blur-[2px] relative" ref={containerRef}>
       <div className="container mx-auto px-4 md:px-8">
 
         <div className="text-center max-w-2xl mx-auto mb-12">
@@ -741,7 +741,7 @@ const Practice = () => {
           <div className="bg-bg-color p-6 md:p-8 rounded-3xl border border-border-color shadow-2xl w-full max-w-md text-left animate-fadeIn">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-display font-bold text-lg text-text-primary m-0">Select Topic Test</h3>
-              <button onClick={() => setShowTopicModal(false)} className="p-1.5 bg-bg-secondary hover:bg-slate-200 text-text-secondary rounded-full transition-colors border-0 cursor-pointer">
+              <button onClick={() => setShowTopicModal(false)} className="p-1.5 bg-bg-secondary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white text-text-secondary rounded-full transition-colors border-0 cursor-pointer">
                 <X size={16} />
               </button>
             </div>
@@ -774,7 +774,7 @@ const Practice = () => {
                 <h3 className="font-display font-bold text-xl text-text-primary m-0">Select Timed Quiz Mode</h3>
                 <p className="text-xs text-text-secondary mt-1 m-0">Choose a format and challenge yourself against the clock.</p>
               </div>
-              <button onClick={() => setShowTimedModal(false)} className="p-2 bg-bg-secondary hover:bg-slate-200 text-text-secondary rounded-full transition-colors border-0 cursor-pointer flex-shrink-0 ml-4">
+              <button onClick={() => setShowTimedModal(false)} className="p-2 bg-bg-secondary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white text-text-secondary rounded-full transition-colors border-0 cursor-pointer flex-shrink-0 ml-4">
                 <X size={16} />
               </button>
             </div>

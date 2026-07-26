@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { CheckCircle2, Star, BookOpen, Loader2, CreditCard, Building, User, X } from 'lucide-react';
+import React, { useState, useRef, useCallback } from 'react';
+import { CheckCircle2, Star, BookOpen, Loader2, CreditCard, Building, User, X, Upload, Camera, ArrowRight, ArrowLeft, Clock, Shield, Bell, CheckCheck, Image, Copy, Check } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { useContent } from '../../context/ContentContext';
 import { useDialog } from '../../context/DialogContext';
 import api from '../../services/api';
 import Loader from '../../components/ui/Loader';
+
+// Step definitions for the enrollment flow
+const STEPS = [
+  { id: 1, label: 'Bank Transfer', icon: CreditCard, desc: 'Transfer payment to our bank account' },
+  { id: 2, label: 'Upload Receipt', icon: Upload, desc: 'Upload your payment screenshot' },
+  { id: 3, label: 'Confirmation', icon: Bell, desc: 'Submit and await approval' },
+];
 
 const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCourseForDetail, loading }) => {
   if (loading) {
@@ -25,9 +32,7 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
               Syllabus <span className="text-gradient">Courses</span>
             </h1>
           </div>
-          <p className="text-text-secondary text-sm mt-1">
-            Browse and enroll in available calculus courses below.
-          </p>
+          <p className="text-text-secondary text-sm mt-1">Browse and enroll in available calculus courses below.</p>
         </div>
         <div className="bg-white dark:bg-slate-900 p-12 rounded-3xl border border-border-color shadow-sm text-center">
           <BookOpen size={48} className="mx-auto text-text-secondary/40 mb-4" />
@@ -43,27 +48,80 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
   const bankDetails = content?.bank_details || {};
 
   const [enrollModalCourse, setEnrollModalCourse] = useState(null);
+  const [enrollStep, setEnrollStep] = useState(1);
   const [enrolling, setEnrolling] = useState(false);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleEnrollClick = (course) => {
     setEnrollModalCourse(course);
+    setEnrollStep(1);
+    setReceiptFile(null);
+    setReceiptPreview(null);
   };
+
+  const handleCloseModal = () => {
+    setEnrollModalCourse(null);
+    setEnrollStep(1);
+    setReceiptFile(null);
+    setReceiptPreview(null);
+  };
+
+  const handleFileChange = (file) => {
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+    if (!allowed.includes(file.type)) {
+      showToast('Please upload an image (JPG, PNG, WEBP) or PDF file.', 'error');
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      showToast('File size must be under 25MB.', 'error');
+      return;
+    }
+    setReceiptFile(file);
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => setReceiptPreview(e.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setReceiptPreview('pdf');
+    }
+  };
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    handleFileChange(file);
+  }, []);
+
+  const onDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const onDragLeave = () => setIsDragging(false);
 
   const handleConfirmPayment = async () => {
     if (!enrollModalCourse) return;
     try {
       setEnrolling(true);
-      const res = await api.post('/student/enroll', { courseId: enrollModalCourse.id });
+      const formData = new FormData();
+      formData.append('courseId', enrollModalCourse.id);
+      if (receiptFile) {
+        formData.append('receipt', receiptFile);
+      }
+      const res = await api.post('/student/enroll', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       if (res.data?.success) {
         if (res.data.alreadyEnrolled) {
           showToast(res.data.message || 'You are already enrolled in this course.', 'info');
+          handleCloseModal();
         } else {
-          showToast('Payment confirmed! Your enrollment is pending admin approval.', 'success');
+          setEnrollStep(4); // success state
         }
-        setEnrollModalCourse(null);
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to submit payment. Please try again.', 'error');
+      showToast(err.response?.data?.message || 'Failed to submit enrollment. Please try again.', 'error');
     } finally {
       setEnrolling(false);
     }
@@ -205,80 +263,312 @@ const CoursesTab = ({ courses, enrolledCourses = [], setActiveTab, setSelectedCo
         })}
       </div>
 
-      {/* Payment Modal */}
+      {/* Professional Multi-Step Enrollment Modal */}
       {enrollModalCourse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-md max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-y-auto cc-scroll text-left flex flex-col">
-            <div className="px-6 py-5 border-b border-border-color flex items-center justify-between bg-bg-secondary/30 sticky top-0 z-10 backdrop-blur-md">
-              <div className="flex items-center gap-2 text-primary">
+        <div className="fixed inset-0 z-[1001000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg mb-10 max-h-[75vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden text-left flex flex-col my-auto">
+
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-border-color flex items-center justify-between bg-gradient-to-r from-primary/5 to-transparent shrink-0">
+              <div className="flex items-center gap-2 txext-primary">
                 <CreditCard size={20} />
                 <h3 className="font-display font-bold text-lg m-0">Course Enrollment</h3>
               </div>
-              <button
-                onClick={() => setEnrollModalCourse(null)}
-                className="p-1.5 text-text-tertiary hover:bg-slate-200 hover:text-text-primary rounded-full border-0 cursor-pointer transition-colors bg-transparent"
-              >
-                <X size={18} />
-              </button>
+              {enrollStep !== 4 && (
+                <button
+                  onClick={handleCloseModal}
+                  className="p-1.5 text-text-tertiary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-text-primary rounded-full border-0 cursor-pointer transition-colors bg-transparent"
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
 
-            <div className="p-6 md:p-8 flex flex-col gap-6">
-              <div className="text-center">
-                <p className="text-sm font-semibold text-text-secondary uppercase tracking-wider mb-1">Total Amount</p>
-                <p className="font-display font-black text-3xl text-primary">{enrollModalCourse.price}</p>
-                <p className="text-xs text-text-tertiary mt-2">for {enrollModalCourse.title}</p>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex flex-col gap-4">
-                <p className="text-xs font-bold text-blue-800 uppercase tracking-wider m-0">Admin Bank Details</p>
-                <p className="text-sm text-blue-900 leading-relaxed m-0">Please transfer the amount to the following account to complete your enrollment.</p>
-
-                <div className="flex flex-col gap-3 bg-white dark:bg-slate-900/ p-4 rounded-xl border border-blue-200/50">
-                  <div className="flex items-start gap-3">
-                    <Building size={16} className="text-blue-500 mt-0.5 shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-blue-400">Bank Name</span>
-                      <span className="text-sm font-semibold text-blue-950">{bankDetails.bank_name || 'Not Configured'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <User size={16} className="text-blue-500 mt-0.5 shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-blue-400">Account Name</span>
-                      <span className="text-sm font-semibold text-blue-950">{bankDetails.account_name || 'Not Configured'}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CreditCard size={16} className="text-blue-500 mt-0.5 shrink-0" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-blue-400">Account Number</span>
-                      <span className="text-sm font-semibold text-blue-950 font-mono tracking-tight">{bankDetails.account_number || 'Not Configured'}</span>
-                    </div>
-                  </div>
+            {/* Step Progress Bar (only for steps 1-3) */}
+            {enrollStep <= 3 && (
+              <div className="px-6 py-3 bg-bg-secondary/50 border-b border-border-color shrink-0">
+                <div className="flex items-center justify-between">
+                  {STEPS.map((step, idx) => {
+                    const isActive = step.id === enrollStep;
+                    const isDone = step.id < enrollStep;
+                    return (
+                      <React.Fragment key={step.id}>
+                        <div className="flex flex-col items-center gap-1 flex-1">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${isDone ? 'bg-primary text-white' : isActive ? 'bg-primary text-white ring-4 ring-primary/20' : 'bg-slate-200 dark:bg-slate-700 text-text-tertiary'}`}>
+                            {isDone ? <CheckCheck size={14} /> : step.id}
+                          </div>
+                          <span className={`text-[10px] font-semibold text-center leading-tight ${isActive ? 'text-primary' : isDone ? 'text-primary/70' : 'text-text-tertiary'}`}>
+                            {step.label}
+                          </span>
+                        </div>
+                        {idx < STEPS.length - 1 && (
+                          <div className={`h-0.5 flex-1 mx-1 mb-4 rounded transition-all duration-500 ${enrollStep > step.id ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`} />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
               </div>
+            )}
 
-              <div className="flex flex-col gap-3 mt-2">
-                <Button
-                  variant="primary"
-                  fullWidth
-                  onClick={handleConfirmPayment}
-                  disabled={enrolling}
-                >
-                  {enrolling ? (
-                    <><Loader2 size={18} className="animate-spin mr-2" /> Processing...</>
-                  ) : 'I have paid'}
-                </Button>
-                <Button
-                  variant="outline"
-                  fullWidth
-                  onClick={() => setEnrollModalCourse(null)}
-                  disabled={enrolling}
-                  className="border-border-color text-text-secondary hover:bg-bg-secondary"
-                >
-                  Cancel
-                </Button>
-              </div>
+            <div className="p-6 md:p-8 flex-1 overflow-y-auto cc-scroll flex flex-col gap-6">
+              {/* Course Summary Always Visible */}
+              {enrollStep <= 3 && (
+                <div className="flex items-center gap-3 p-4 bg-primary/5 border border-primary/15 rounded-2xl">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <BookOpen size={18} className="text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">Enrolling In</p>
+                    <p className="font-display font-bold text-text-primary text-sm">{enrollModalCourse.title}</p>
+                    <p className="text-primary font-extrabold text-lg">{enrollModalCourse.price}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* ─── STEP 1: Bank Transfer Instructions ─── */}
+              {enrollStep === 1 && (
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <h4 className="font-bold text-text-primary text-base mb-1">Step 1: Transfer Payment</h4>
+                    <p className="text-text-secondary text-sm">Please send the exact amount to the bank account below. Keep your payment receipt handy — you'll need to upload it in the next step.</p>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/80 border border-border-color rounded-2xl p-4 md:p-5 flex flex-col gap-3">
+                    <p className="text-[11px] font-extrabold text-text-tertiary uppercase tracking-wider">Bank Account Details</p>
+                    <div className="flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between py-2 border-b border-border-color/50">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Building size={16} className="text-primary shrink-0" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] uppercase font-bold text-text-tertiary">Bank Name</span>
+                            <span className="text-sm font-semibold text-text-primary">{bankDetails.bank_name || 'Not Configured'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2 border-b border-border-color/50">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <User size={16} className="text-primary shrink-0" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] uppercase font-bold text-text-tertiary">Account Name</span>
+                            <span className="text-sm font-semibold text-text-primary">{bankDetails.account_name || 'Not Configured'}</span>
+                          </div>
+                        </div>
+                        {bankDetails.account_name && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(bankDetails.account_name);
+                              showToast('Account name copied!', 'success');
+                            }}
+                            className="p-1.5 text-text-tertiary hover:text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer border-0 bg-transparent"
+                            title="Copy Account Name"
+                          >
+                            <Copy size={15} />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between py-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CreditCard size={16} className="text-primary shrink-0" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-[10px] uppercase font-bold text-text-tertiary">Account Number / IBAN</span>
+                            <span className="text-sm font-extrabold text-primary font-mono tracking-tight select-all">{bankDetails.account_number || 'Not Configured'}</span>
+                          </div>
+                        </div>
+                        {bankDetails.account_number && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(bankDetails.account_number);
+                              showToast('Account number copied!', 'success');
+                            }}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-primary bg-primary/10 hover:bg-primary hover:text-white rounded-lg transition-colors cursor-pointer border-0"
+                            title="Copy Account Number"
+                          >
+                            <Copy size={13} /> Copy
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* What Happens Next */}
+                  <div className="flex flex-col gap-2.5">
+                    <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">What Happens Next?</p>
+                    {[
+                      { icon: Upload, text: 'Upload your payment screenshot as proof of transfer' },
+                      { icon: Clock, text: 'Admin reviews and approves your enrollment (usually within 24h)' },
+                      { icon: Shield, text: 'You receive full course access upon approval' },
+                    ].map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 text-sm text-text-secondary">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <item.icon size={12} className="text-primary" />
+                        </div>
+                        {item.text}
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button variant="primary" fullWidth onClick={() => setEnrollStep(2)} className="flex items-center justify-center gap-2">
+                    I've Paid — Upload Receipt <ArrowRight size={16} />
+                  </Button>
+                </div>
+              )}
+
+              {/* ─── STEP 2: Upload Receipt ─── */}
+              {enrollStep === 2 && (
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <h4 className="font-bold text-text-primary text-base mb-1">Step 2: Upload Payment Receipt</h4>
+                    <p className="text-text-secondary text-sm">Take a screenshot of your payment confirmation and upload it here. This helps us verify your payment quickly.</p>
+                  </div>
+
+                  {/* Drag & Drop Upload Area */}
+                  <div
+                    onDrop={onDrop}
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${isDragging ? 'border-primary bg-primary/5 scale-[1.01]' : receiptFile ? 'border-primary/40 bg-primary/3' : 'border-border-color hover:border-primary/50 hover:bg-primary/3'}`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
+                      className="hidden"
+                      onChange={(e) => handleFileChange(e.target.files[0])}
+                    />
+
+                    {receiptPreview && receiptPreview !== 'pdf' ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <img src={receiptPreview} alt="Receipt preview" className="max-h-40 rounded-xl object-contain border border-border-color shadow-sm" />
+                        <p className="text-xs text-text-secondary font-medium">{receiptFile?.name}</p>
+                        <p className="text-xs text-primary font-semibold">Click to change</p>
+                      </div>
+                    ) : receiptPreview === 'pdf' ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+                          <Image size={24} className="text-red-500" />
+                        </div>
+                        <p className="text-sm font-semibold text-text-primary">{receiptFile?.name}</p>
+                        <p className="text-xs text-primary font-semibold">Click to change</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${isDragging ? 'bg-primary text-white' : 'bg-primary/10'}`}>
+                          <Camera size={24} className={isDragging ? 'text-white' : 'text-primary'} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-text-primary text-sm">Drag & drop your receipt here</p>
+                          <p className="text-xs text-text-secondary mt-1">or click to browse files</p>
+                        </div>
+                        <p className="text-[11px] text-text-tertiary">Supports JPG, PNG, WEBP, PDF · Max 25MB</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button variant="outline" fullWidth onClick={() => setEnrollStep(1)} className="flex items-center justify-center gap-2 border-border-color text-text-secondary hover:bg-bg-secondary">
+                      <ArrowLeft size={16} /> Back
+                    </Button>
+                    <Button
+                      variant="primary"
+                      fullWidth
+                      onClick={() => setEnrollStep(3)}
+                      className="flex items-center justify-center gap-2"
+                    >
+                      Continue <ArrowRight size={16} />
+                    </Button>
+                  </div>
+                  <p className="text-center text-xs text-text-tertiary">Receipt is optional but helps speed up approval</p>
+                </div>
+              )}
+
+              {/* ─── STEP 3: Confirm & Submit ─── */}
+              {enrollStep === 3 && (
+                <div className="flex flex-col gap-5">
+                  <div>
+                    <h4 className="font-bold text-text-primary text-base mb-1">Step 3: Confirm Submission</h4>
+                    <p className="text-text-secondary text-sm">Please review your enrollment details before submitting. Our team will verify your payment and grant you access.</p>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl border border-border-color p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-text-secondary font-medium">Course</span>
+                      <span className="font-bold text-text-primary">{enrollModalCourse.title}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm border-t border-border-color pt-3">
+                      <span className="text-text-secondary font-medium">Amount</span>
+                      <span className="font-extrabold text-primary">{enrollModalCourse.price}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm border-t border-border-color pt-3">
+                      <span className="text-text-secondary font-medium">Receipt</span>
+                      <span className={`font-semibold text-xs px-2 py-0.5 rounded-full ${receiptFile ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {receiptFile ? `✓ ${receiptFile.name}` : 'No file attached'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-800">
+                    <Shield size={14} className="shrink-0 mt-0.5" />
+                    <span>Your enrollment is secure. Once approved by admin, you'll receive an instant in-app notification with full course access.</span>
+                  </div>
+
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    onClick={handleConfirmPayment}
+                    disabled={enrolling}
+                    className="flex items-center justify-center gap-2"
+                  >
+                    {enrolling ? (
+                      <><Loader2 size={18} className="animate-spin" /> Submitting...</>
+                    ) : (
+                      <><CheckCircle2 size={18} /> Submit Enrollment Request</>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    onClick={() => setEnrollStep(2)}
+                    disabled={enrolling}
+                    className="border-border-color text-text-secondary hover:bg-bg-secondary flex items-center justify-center gap-2"
+                  >
+                    <ArrowLeft size={16} /> Back
+                  </Button>
+                </div>
+              )}
+
+              {/* ─── STEP 4: Success State ─── */}
+              {enrollStep === 4 && (
+                <div className="flex flex-col items-center gap-5 py-4 text-center">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
+                      <CheckCircle2 size={40} className="text-emerald-500" />
+                    </div>
+                    <div className="absolute inset-0 rounded-full animate-ping bg-emerald-200 opacity-40" />
+                  </div>
+                  <div>
+                    <h4 className="font-display font-bold text-xl text-text-primary mb-2">Enrollment Submitted!</h4>
+                    <p className="text-text-secondary text-sm leading-relaxed max-w-xs mx-auto">
+                      Your enrollment request for <strong>{enrollModalCourse.title}</strong> has been submitted successfully. Our admin team will review your payment and notify you once approved.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 w-full text-left p-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-border-color">
+                    {[
+                      '✓ Payment receipt received',
+                      '⏳ Admin review in progress (usually within 24h)',
+                      '🔔 You\'ll get an instant notification when approved',
+                    ].map((item, i) => (
+                      <p key={i} className="text-xs text-text-secondary">{item}</p>
+                    ))}
+                  </div>
+                  <Button variant="primary" fullWidth onClick={handleCloseModal}>
+                    Done
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>

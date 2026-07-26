@@ -3,19 +3,33 @@ const db = require('../config/db');
 const EnrollmentModel = {
   /**
    * Enroll a student in a course.
-   * Uses INSERT IGNORE to prevent duplicate enrollments (requires UNIQUE KEY uq_enrollment on (userId, courseId)).
    * Returns { enrolled: true } on success, { alreadyEnrolled: true } if duplicate.
    */
-  async enrollWithCheck(userId, courseId) {
-    // First check if already enrolled
-    const already = await this.isEnrolled(userId, courseId);
-    if (already) {
-      return { alreadyEnrolled: true };
+  async enrollWithCheck(userId, courseId, paymentScreenshot = null) {
+    // Check if already approved or pending
+    const [existing] = await db.query(
+      'SELECT id, status FROM enrollments WHERE student_id = ? AND course_id = ? ORDER BY id DESC LIMIT 1',
+      [userId, courseId]
+    );
+
+    if (existing.length > 0) {
+      if (existing[0].status === 'approved') {
+        return { alreadyEnrolled: true };
+      }
+      if (existing[0].status === 'pending_payment') {
+        return { alreadyEnrolled: true, pending: true };
+      }
+      // If status === 'rejected', update the existing row to pending_payment with new screenshot
+      await db.query(
+        `UPDATE enrollments SET status = 'pending_payment', payment_screenshot = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [paymentScreenshot, existing[0].id]
+      );
+      return { enrolled: true, enrollmentId: existing[0].id };
     }
 
     const [result] = await db.query(
-      `INSERT INTO enrollments (student_id, course_id, status, created_at) VALUES (?, ?, 'pending_payment', CURRENT_TIMESTAMP)`,
-      [userId, courseId]
+      `INSERT INTO enrollments (student_id, course_id, status, payment_screenshot, created_at) VALUES (?, ?, 'pending_payment', ?, CURRENT_TIMESTAMP)`,
+      [userId, courseId, paymentScreenshot]
     );
 
     if (result.insertId) {
@@ -49,7 +63,6 @@ const EnrollmentModel = {
        ORDER BY e.created_at DESC`,
       [userId]
     );
-    // Parse features JSON if stored as string
     return rows.map(row => {
       if (row.features && typeof row.features === 'string') {
         try { row.features = JSON.parse(row.features); } catch (e) { row.features = []; }
@@ -62,33 +75,33 @@ const EnrollmentModel = {
   },
 
   /**
-   * Check whether a specific student-course enrollment exists.
+   * Check whether an approved student-course enrollment exists.
    */
   async isEnrolled(userId, courseId) {
     const [rows] = await db.query(
-      'SELECT COUNT(*) as count FROM enrollments WHERE student_id = ? AND course_id = ?',
+      "SELECT COUNT(*) as count FROM enrollments WHERE student_id = ? AND course_id = ? AND status = 'approved'",
       [userId, courseId]
     );
     return rows[0].count > 0;
   },
 
   /**
-   * Get all course IDs a student is enrolled in (lightweight check).
+   * Get all course IDs a student is approved in (lightweight check).
    */
   async getEnrolledCourseIds(userId) {
     const [rows] = await db.query(
-      'SELECT course_id AS courseId FROM enrollments WHERE student_id = ?',
+      "SELECT course_id AS courseId FROM enrollments WHERE student_id = ? AND status = 'approved'",
       [userId]
     );
     return rows.map(r => r.courseId);
   },
 
   /**
-   * Get all pending enrollments (for admin)
+   * Get all pending enrollments for admin, includes payment screenshot.
    */
   async getPendingEnrollments() {
     const [rows] = await db.query(
-      `SELECT e.id as enrollmentId, e.student_id, e.course_id, e.created_at, e.status,
+      `SELECT e.id as enrollmentId, e.student_id, e.course_id, e.created_at, e.status, e.payment_screenshot,
               u.name as studentName, u.email as studentEmail,
               c.title as courseTitle, c.price as coursePrice
        FROM enrollments e

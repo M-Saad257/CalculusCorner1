@@ -8,27 +8,6 @@ import ThemeToggle from '../ui/ThemeToggle';
 import { useSocket } from '../../hooks/useSocket';
 import { useContent } from '../../context/ContentContext';
 
-const ConnectionIndicator = ({ status }) => {
-  const statusConfig = {
-    connected: { label: 'Connected', dotColor: 'bg-emerald-500 shadow-emerald-500/50', textColor: 'text-emerald-600', bgColor: 'bg-emerald-500/10 border-emerald-500/20' },
-    reconnecting: { label: 'Reconnecting', dotColor: 'bg-amber-500 shadow-amber-500/50', textColor: 'text-amber-600', bgColor: 'bg-amber-500/10 border-amber-500/20 animate-pulse' },
-    offline: { label: 'Offline', dotColor: 'bg-rose-500 shadow-rose-500/50', textColor: 'text-rose-600', bgColor: 'bg-rose-500/10 border-rose-500/20' },
-  };
-
-  const current = statusConfig[status] || statusConfig.offline;
-
-  return (
-    <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-full border shadow-sm transition-all duration-300 select-none ${current.bgColor} ${current.textColor}`}>
-      <span className="relative flex h-1.5 w-1.5">
-        {status === 'reconnecting' && (
-          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${current.dotColor}`}></span>
-        )}
-        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${current.dotColor}`}></span>
-      </span>
-      <span>{current.label}</span>
-    </div>
-  );
-};
 
 const Navbar = () => {
   const { content } = useContent();
@@ -104,6 +83,7 @@ const Navbar = () => {
 
   const visibility = content?.visibility || {};
   const navLinks = [
+    { name: 'Home', href: '/' },
     ...(visibility.about !== false ? [{ name: 'About', href: '/about' }] : []),
     ...(visibility.notes !== false ? [{ name: 'Notes', href: '/notes' }] : []),
     ...(visibility.lectures !== false ? [{ name: 'Lectures', href: '/lectures' }] : []),
@@ -148,7 +128,7 @@ const Navbar = () => {
               }
             }}
           />
-          <span className="font-display font-extrabold text-xl md:text-2xl text-gradient bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
+          <span className="hidden md:block font-display font-extrabold text-xl md:text-2xl text-gradient bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
             Calculus Corner
           </span>
         </div>
@@ -178,32 +158,41 @@ const Navbar = () => {
 
               <Button
                 variant="outline"
-                className="hidden md:inline-flex px-5 py-2 text-sm"
+                size="sm"
+                className="inline-flex relative transition-all duration-300"
+                style={{
+                  borderColor: status === 'connected' ? '#10B981' : status === 'reconnecting' ? '#F59E0B' : '#EF4444',
+                  boxShadow: status === 'connected' ? '0 0 8px rgba(16,185,129,0.25)' : status === 'reconnecting' ? '0 0 8px rgba(245,158,11,0.25)' : '0 0 8px rgba(239,68,68,0.25)'
+                }}
                 onClick={() => navigate(isAdmin ? '/admin' : '/dashboard')}
               >
-                {isAdmin ? 'Admin Panel' : 'Dashboard'}
+                {/* Dot placed at the top-right of the button */}
+                <span className="absolute -top-1 -right-[1px] flex h-3 w-3 z-30 cursor-pointer" title={`Status: ${status === 'connected' ? 'Connected' : status === 'reconnecting' ? 'Reconnecting' : 'Offline'}`}>
+                  {status === 'reconnecting' && (
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${status === 'connected' ? 'bg-emerald-500' : status === 'reconnecting' ? 'bg-amber-500' : 'bg-rose-500'
+                      }`}></span>
+                  )}
+                  <span className={`relative inline-flex rounded-full h-3 w-3 border-2 border-white dark:border-slate-900 ${status === 'connected' ? 'bg-emerald-500' : status === 'reconnecting' ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}></span>
+                </span>
+                <span>{isAdmin ? 'AP' : 'DS'}</span>
               </Button>
               <button
                 onClick={handleLogout}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-text-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl border border-border-color transition-all duration-200 cursor-pointer bg-transparent"
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-text-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl border border-border-color transition-all duration-200 cursor-pointer bg-transparent"
               >
-                Log Out
+                ❌
               </button>
             </>
           ) : (
             <>
               <Button
                 variant="outline"
-                className="hidden md:inline-flex px-5 py-2 text-sm"
+                size="sm"
+                className="md:inline-flex"
                 onClick={() => navigate('/auth')}
               >
-                Log In
-              </Button>
-              <Button
-                className="hidden sm:inline-flex px-5 py-2 text-sm !bg-none !bg-[#FF0000] !border-[#FF0000] hover:!bg-[#CC0000] text-white"
-                onClick={() => { window.location.href = "https://www.youtube.com/@Calculus.Corner"; }}
-              >
-                Subscribe
+                Sign In
               </Button>
             </>
           )}
@@ -241,55 +230,6 @@ const Navbar = () => {
                   </a>
                 </li>
               ))}
-              <li className="mt-4 pt-4 border-t border-border-color flex flex-col gap-3">
-                {token ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      fullWidth
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        navigate(isAdmin ? '/admin' : '/dashboard');
-                      }}
-                    >
-                      {isAdmin ? 'Admin Panel' : 'Dashboard'}
-                    </Button>
-                    <Button
-                      variant="primary"
-                      fullWidth
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        handleLogout();
-                      }}
-                    >
-                      Log Out
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      fullWidth
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        navigate('/auth');
-                      }}
-                    >
-                      Log In
-                    </Button>
-                    <Button
-                      variant="primary"
-                      fullWidth
-                      onClick={() => {
-                        setIsMobileMenuOpen(false);
-                        navigate('/courses');
-                      }}
-                    >
-                      Start Learning
-                    </Button>
-                  </>
-                )}
-              </li>
             </ul>
           </motion.div>
         )}

@@ -1,79 +1,151 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   BookOpen, Search, Download, Eye, X, LayoutGrid, FileText,
-  Archive, Book, FileSpreadsheet, File, ChevronRight
+  Archive, Book, FileSpreadsheet, File, ChevronRight, Maximize
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
+import Loader from '../../components/ui/Loader';
 
 const styleOptions = [
-  { icon: FileText, bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/20' },
-  { icon: Archive, bg: 'bg-violet-500/10', text: 'text-violet-500', border: 'border-violet-500/20' },
-  { icon: Book, bg: 'bg-pink-500/10', text: 'text-pink-500', border: 'border-pink-500/20' },
-  { icon: FileSpreadsheet, bg: 'bg-emerald-500/10', text: 'text-emerald-500', border: 'border-emerald-500/20' },
-  { icon: File, bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/20' },
-  { icon: BookOpen, bg: 'bg-rose-500/10', text: 'text-rose-500', border: 'border-rose-500/20' },
+  { icon: FileText, bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/20' }
 ];
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 
-const BooksTab = () => {
+const BooksTab = ({ studentClass }) => {
+  const [allBooksList, setAllBooksList] = useState([]);
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
   const [activeSubcategory, setActiveSubcategory] = useState('All');
   const [selectedBook, setSelectedBook] = useState(null);
+  
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  
   const { socket } = useSocket();
 
-  const loadBooks = async () => {
+  // Filter books strictly by student class if student is logged in
+  const classFilteredBooks = useMemo(() => {
+    if (!studentClass || studentClass === 'All') return allBooksList;
+    const target = studentClass.trim().toLowerCase();
+    const matched = allBooksList.filter(b => {
+      if (!b.category) return false;
+      const cat = b.category.trim().toLowerCase();
+      return cat === target || cat.includes(target) || target.includes(cat);
+    });
+    return matched;
+  }, [allBooksList, studentClass]);
+
+  const categories = useMemo(() => {
+    if (studentClass && studentClass !== 'All') {
+      return [studentClass];
+    }
+    const cats = new Set(classFilteredBooks.map(b => b.category).filter(Boolean));
+    return ['All', ...Array.from(cats).sort()];
+  }, [classFilteredBooks, studentClass]);
+
+  const initialCategory = React.useMemo(() => {
+    if (studentClass && studentClass !== 'All') {
+      return studentClass;
+    }
+    if (studentClass && categories.length > 0) {
+      const found = categories.find(c => c.toLowerCase() === studentClass.toLowerCase() || c.toLowerCase().includes(studentClass.toLowerCase()));
+      if (found) return found;
+    }
+    return 'All';
+  }, [studentClass, categories]);
+
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
+
+  React.useEffect(() => {
+    if (initialCategory) {
+      setActiveCategory(initialCategory);
+    }
+  }, [initialCategory]);
+
+  const handleViewBook = (book) => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+    if (isMobile) {
+      window.open(`${BACKEND_URL}/api/books/${book.id}/view`, '_blank');
+    } else {
+      setSelectedBook(book);
+    }
+    api.post('/content/track', { type: 'book', id: book.id }).catch(() => {});
+  };
+
+  // Load all metadata once for filters
+  const loadBooksMetadata = async () => {
     try {
       const res = await api.get('/books');
-      if (res.data?.data) setBooks(res.data.data);
+      if (res.data?.data) setAllBooksList(res.data.data);
+    } catch (_) {}
+  };
+
+  // Load paginated data
+  const loadPaginatedBooks = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/books', {
+        params: {
+          page: currentPage,
+          limit: 6,
+          category: activeCategory,
+          subcategory: activeSubcategory,
+          search: search
+        }
+      });
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        setBooks(res.data.data);
+        setCurrentPage(res.data.page || 1);
+        setTotalPages(res.data.totalPages || 1);
+        setTotalItems(res.data.totalItems || 0);
+      }
     } catch (_) {}
     finally { setLoading(false); }
   };
 
-  useEffect(() => { loadBooks(); }, []);
+  useEffect(() => {
+    loadBooksMetadata();
+  }, []);
+
+  useEffect(() => {
+    loadPaginatedBooks();
+  }, [activeCategory, activeSubcategory, search, currentPage]);
 
   useEffect(() => {
     if (!socket) return;
-    socket.on('book:create', loadBooks);
-    socket.on('book:update', loadBooks);
-    socket.on('book:delete', loadBooks);
-    return () => {
-      socket.off('book:create', loadBooks);
-      socket.off('book:update', loadBooks);
-      socket.off('book:delete', loadBooks);
+    const refresh = () => {
+      loadBooksMetadata();
+      loadPaginatedBooks();
     };
-  }, [socket]);
+    socket.on('book:create', refresh);
+    socket.on('book:update', refresh);
+    socket.on('book:delete', refresh);
+    return () => {
+      socket.off('book:create', refresh);
+      socket.off('book:update', refresh);
+      socket.off('book:delete', refresh);
+    };
+  }, [socket, activeCategory, activeSubcategory, search, currentPage]);
 
   // Reset subcategory when category changes
-  useEffect(() => { setActiveSubcategory('All'); }, [activeCategory]);
-
-  const categories = useMemo(() => {
-    const cats = new Set(books.map(b => b.category).filter(Boolean));
-    return ['All', ...Array.from(cats).sort()];
-  }, [books]);
+  useEffect(() => {
+    setActiveSubcategory('All');
+    setCurrentPage(1);
+  }, [activeCategory]);
 
   const subcategories = useMemo(() => {
-    if (activeCategory === 'All') return [];
-    const subs = new Set(
-      books.filter(b => b.category === activeCategory && b.subcategory).map(b => b.subcategory)
-    );
+    const targetBooks = activeCategory === 'All'
+      ? classFilteredBooks
+      : classFilteredBooks.filter(b => (b.category || '').toLowerCase() === activeCategory.toLowerCase());
+    const subs = new Set(targetBooks.filter(b => b.subcategory).map(b => b.subcategory));
     return subs.size > 0 ? ['All', ...Array.from(subs).sort()] : [];
-  }, [books, activeCategory]);
-
-  const filtered = useMemo(() => {
-    return books.filter(b => {
-      const matchCat = activeCategory === 'All' || b.category === activeCategory;
-      const matchSub = activeSubcategory === 'All' || b.subcategory === activeSubcategory;
-      const matchSearch = !search.trim() || b.title.toLowerCase().includes(search.toLowerCase());
-      return matchCat && matchSub && matchSearch;
-    });
-  }, [books, activeCategory, activeSubcategory, search]);
+  }, [classFilteredBooks, activeCategory]);
 
   return (
     <div className="max-w-5xl mx-auto animate-fadeIn text-left">
@@ -86,16 +158,16 @@ const BooksTab = () => {
             Browse, view and download premium reference books and study materials.
           </p>
         </div>
-        {!loading && books.length > 0 && (
+        {!loading && allBooksList.length > 0 && (
           <span className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-bg-color border border-border-color rounded-full text-xs font-bold text-text-secondary shadow-sm">
             <BookOpen size={13} className="text-primary" />
-            {books.length} {books.length === 1 ? 'Book' : 'Books'} Available
+            {totalItems} {totalItems === 1 ? 'Book' : 'Books'} Available
           </span>
         )}
       </div>
 
       {/* Search + Filters */}
-      {!loading && books.length > 0 && (
+      {allBooksList.length > 0 && (
         <div className="flex flex-col gap-3 mb-6">
           {/* Search Bar */}
           <div className="relative">
@@ -103,7 +175,7 @@ const BooksTab = () => {
             <input
               type="text"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
               placeholder="Search books by title..."
               className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-bg-color border border-border-color text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
             />
@@ -117,7 +189,7 @@ const BooksTab = () => {
             {categories.map(cat => (
               <button
                 key={cat}
-                onClick={() => setActiveCategory(cat)}
+                onClick={() => { setActiveCategory(cat); setCurrentPage(1); }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   activeCategory === cat
                     ? 'bg-primary text-white border-primary shadow-sm'
@@ -138,7 +210,7 @@ const BooksTab = () => {
               {subcategories.map(sub => (
                 <button
                   key={sub}
-                  onClick={() => setActiveSubcategory(sub)}
+                  onClick={() => { setActiveSubcategory(sub); setCurrentPage(1); }}
                   className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                     activeSubcategory === sub
                       ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-sm'
@@ -155,10 +227,10 @@ const BooksTab = () => {
 
       {/* Loading */}
       {loading ? (
-        <div className="flex items-center justify-center py-24">
-          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="col-span-full">
+          <Loader text="Loading premium books catalog..." />
         </div>
-      ) : books.length === 0 ? (
+      ) : allBooksList.length === 0 ? (
         /* Empty state — no books at all */
         <div className="flex flex-col items-center justify-center py-20 gap-4 bg-bg-color border border-dashed border-border-color rounded-3xl">
           <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -169,7 +241,7 @@ const BooksTab = () => {
             <p className="text-text-secondary text-sm mt-1">Books will appear here once uploaded by the admin.</p>
           </div>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : books.length === 0 ? (
         /* Empty state — filters/search returned nothing */
         <div className="flex flex-col items-center justify-center py-20 gap-4 bg-bg-color border border-dashed border-border-color rounded-3xl">
           <Search size={32} className="text-text-tertiary" />
@@ -185,68 +257,115 @@ const BooksTab = () => {
         </div>
       ) : (
         /* Books Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filtered.map((book, idx) => {
-            const style = styleOptions[idx % styleOptions.length];
-            const Icon = style.icon;
-            return (
-              <motion.div
-                key={book.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: idx * 0.04 }}
-                className="group relative bg-bg-color border border-border-color rounded-3xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200 flex flex-col overflow-hidden"
-              >
-                {/* Category badge */}
-                <div className="absolute top-3 right-3 z-10">
-                  <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>
-                    {book.subcategory || book.category || 'Book'}
-                  </span>
-                </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {books.map((book, idx) => {
+              return (
+                <motion.div
+                  key={book.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: idx * 0.04 }}
+                  onClick={() => handleViewBook(book)}
+                  className="group cursor-pointer rounded-3xl bg-bg-color border border-border-color p-4 hover:shadow-md hover:border-primary/30 transition-all flex flex-col gap-3 text-left justify-between"
+                >
+                  <div className="flex flex-col gap-3">
+                    {/* Thumbnail / Card Top */}
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-bg-secondary border border-border-color/40">
+                      {book.thumbnail_url ? (
+                        <img
+                          src={`${BACKEND_URL}${book.thumbnail_url}`}
+                          alt={book.title}
+                          className="w-full h-full object-contain p-1 rounded-lg bg-slate-900 transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => { e.target.onerror = null; }}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-slate-900 flex items-center justify-center text-primary/40">
+                          <BookOpen size={40} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/35 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-12 h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
+                          <BookOpen size={20} className="ml-0.5" />
+                        </div>
+                      </div>
+                      <span className="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center justify-center backdrop-blur-sm z-20">
+                        BOOK
+                      </span>
+                    </div>
 
-                {/* Thumbnail / Icon */}
-                <div className={`w-full h-36 overflow-hidden ${style.bg} flex items-center justify-center relative`}>
-                  {book.thumbnail_url ? (
-                    <img
-                      src={`${BACKEND_URL}${book.thumbnail_url}`}
-                      alt={book.title}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                  ) : (
-                    <Icon size={40} className={`${style.text} opacity-40`} />
-                  )}
-                </div>
+                    <div>
+                      {/* Tags Row */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full">
+                          {book.category || 'General'}
+                        </span>
+                        {book.subcategory && (
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-text-secondary border border-border-color rounded-full">
+                            {book.subcategory}
+                          </span>
+                        )}
+                      </div>
 
-                {/* Info */}
-                <div className="p-4 flex flex-col gap-3 grow">
-                  <h3 className="font-display font-bold text-sm text-text-primary line-clamp-2 leading-snug group-hover:text-primary transition-colors">
-                    {book.title}
-                  </h3>
-
-                  {/* Actions */}
-                  <div className="mt-auto flex gap-2">
-                    <button
-                      onClick={() => setSelectedBook(book)}
-                      className={`flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${style.bg} ${style.text} ${style.border} hover:opacity-80 bg-transparent`}
-                    >
-                      <Eye size={13} />
-                      View
-                    </button>
-                    <a
-                      href={`${BACKEND_URL}/api/books/${book.id}/download`}
-                      download
-                      className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-xl text-xs font-bold border border-border-color text-text-secondary hover:text-emerald-600 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all dark:bg-bg-secondary"
-                    >
-                      <Download size={13} />
-                      Download
-                    </a>
+                      {/* Title */}
+                      <h3 className="font-display font-bold text-sm text-text-primary line-clamp-2 mt-2 leading-snug group-hover:text-primary transition-colors" title={book.title}>
+                        {book.title}
+                      </h3>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+
+                  {/* Footer Action Bar */}
+                  <div className="flex items-center justify-between text-xxs font-extrabold mt-4 pt-3 border-t border-border-color/65">
+                    <span className="text-text-tertiary flex items-center gap-1">
+                      <BookOpen size={11} className="fill-current" />
+                      <span>READ BOOK</span>
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewBook(book);
+                        }}
+                        className="p-1.5 rounded-lg bg-bg-secondary hover:bg-primary/10 hover:text-primary text-text-secondary border border-border-color transition-colors cursor-pointer"
+                        title="Read Book"
+                      >
+                        <Eye size={13} />
+                      </button>
+                      <a
+                        href={`${BACKEND_URL}/api/books/${book.id}/download`}
+                        onClick={(e) => e.stopPropagation()}
+                        download
+                        className="p-1.5 rounded-lg bg-bg-secondary hover:bg-primary/10 hover:text-primary text-text-secondary border border-border-color transition-colors cursor-pointer"
+                        title="Download Book"
+                      >
+                        <Download size={13} />
+                      </a>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8 bg-bg-color p-3 rounded-2xl border border-border-color shadow-sm w-fit mx-auto flex-wrap">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                    currentPage === pageNum
+                      ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
+                      : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Book Viewer Modal */}
@@ -282,11 +401,22 @@ const BooksTab = () => {
                     <a
                       href={`${BACKEND_URL}/api/books/${selectedBook.id}/download`}
                       download
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 hover:text-emerald-700 border border-emerald-500/30 hover:bg-emerald-500/10 rounded-xl transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-xl transition-colors"
                     >
                       <Download size={13} />
                       Download
                     </a>
+                    <button
+                      onClick={() => {
+                        window.open(`/viewer/book/${selectedBook.id}`, '_blank');
+                        setSelectedBook(null);
+                      }}
+                      title="Open in Fullscreen Viewer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary hover:text-primary-dark border border-primary/30 hover:bg-primary/10 rounded-xl transition-colors cursor-pointer bg-transparent"
+                    >
+                      <Maximize size={13} />
+                      <span>Fullscreen</span>
+                    </button>
                     <button
                       onClick={() => setSelectedBook(null)}
                       className="p-2 text-text-secondary hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"

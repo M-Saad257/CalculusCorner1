@@ -27,14 +27,17 @@ router.post('/progress/video/:videoId', progressController.updateVideoProgress);
 router.get('/progress/recent', progressController.getRecentlyWatched);
 router.get('/progress/summary', progressController.getProgressSummary);
 
+const enrollmentUpload = require('../middleware/enrollmentUploadMiddleware');
+
 // Course Enrollment
-router.post('/enroll', studentController.enrollCourse);
+router.post('/enroll', enrollmentUpload.single('receipt'), studentController.enrollCourse);
 
 // Course specific routes
 router.get('/courses/:id/quiz', studentController.getCourseQuiz);
 router.post('/courses/:id/quiz/submit', studentController.submitCourseQuiz);
 router.post('/courses/:id/certificate/pay', studentController.payForCertificate);
 router.get('/courses/:id/certificate', studentController.downloadCertificate);
+router.get('/certificate/milestone/:milestone', studentController.downloadMilestoneCertificate);
 
 // Notifications
 router.get('/notifications', studentController.getNotifications);

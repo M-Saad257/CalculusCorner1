@@ -4,6 +4,7 @@ import { UserMinus, Search, AlertCircle, ShieldAlert, CheckCircle, MessageSquare
 import { useSocket } from '../../hooks/useSocket';
 import { useDialog } from '../../context/DialogContext';
 import api from '../../services/api';
+import Loader from '../../components/ui/Loader';
 
 const ManageStudents = () => {
   const [students, setStudents] = useState([]);
@@ -321,9 +322,22 @@ const ManageStudents = () => {
     }
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 4;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const filteredStudents = students.filter(s =>
     (s.name && s.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const totalPages = Math.ceil(filteredStudents.length / pageSize);
+  const paginatedStudents = filteredStudents.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
   );
 
   return (
@@ -437,9 +451,8 @@ const ManageStudents = () => {
                 {/* Messages Area */}
                 <div className="grow p-6 overflow-y-auto flex flex-col gap-4 bg-bg-secondary/40 text-left">
                   {chatLoading ? (
-                    <div className="my-auto text-center p-6 text-xs text-text-secondary">
-                      <Loader2 className="animate-spin mx-auto text-primary" size={20} />
-                      <p className="mt-1">Loading history...</p>
+                    <div className="col-span-full">
+                      <Loader text="Loading Messages..." />
                     </div>
                   ) : chatMessages.length === 0 ? (
                     <div className="my-auto text-center p-6 text-xs text-text-tertiary">
@@ -546,8 +559,8 @@ const ManageStudents = () => {
           )}
 
           {loading ? (
-            <div className="flex justify-center items-center h-48 text-primary font-semibold text-sm">
-              Loading student registers...
+            <div className="col-span-full">
+              <Loader text="Loading Students..." />
             </div>
           ) : filteredStudents.length === 0 ? (
             <div className="p-8 text-center bg-bg-color border border-border-color rounded-2xl text-text-secondary text-sm">
@@ -555,7 +568,8 @@ const ManageStudents = () => {
             </div>
           ) : (
             <div className="bg-bg-color border border-border-color rounded-2xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto min-h-[350px] pb-32">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto min-h-[310px]">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-bg-secondary border-b border-border-color text-left">
@@ -566,13 +580,13 @@ const ManageStudents = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-color/60">
-                    {filteredStudents.map(student => (
+                    {paginatedStudents.map(student => (
                       <tr key={student.id} className="hover:bg-bg-secondary/40 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-indigo-50 text-primary flex items-center justify-center font-bold text-xs">
                               {student.avatar ? (
-                                <img src={student.avatar.startsWith('http') ? student.avatar : `${student.avatar}`} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                                <img src={student.avatar.startsWith('http') || student.avatar.startsWith('data:') ? student.avatar : `${import.meta.env.VITE_BACKEND_URL || ''}${student.avatar}`} alt="Avatar" className="w-full h-full rounded-full object-cover" />
                               ) : (
                                 student.name ? student.name.charAt(0).toUpperCase() : 'S'
                               )}
@@ -647,6 +661,110 @@ const ManageStudents = () => {
                   </tbody>
                 </table>
               </div>
+
+              {/* Mobile Card List View */}
+              <div className="block md:hidden divide-y divide-border-color/60">
+                {paginatedStudents.map(student => (
+                  <div key={student.id} className="p-4 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-indigo-50 text-primary flex items-center justify-center font-bold text-xs">
+                          {student.avatar ? (
+                            <img src={student.avatar.startsWith('http') || student.avatar.startsWith('data:') ? student.avatar : `${import.meta.env.VITE_BACKEND_URL || ''}${student.avatar}`} alt="Avatar" className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            student.name ? student.name.charAt(0).toUpperCase() : 'S'
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-text-primary">{student.name}</span>
+                          <span className="text-xs text-text-tertiary font-medium">{student.email}</span>
+                        </div>
+                      </div>
+
+                      <div className="relative">
+                        <button
+                          onClick={() => setActionMenuOpenId(actionMenuOpenId === student.id ? null : student.id)}
+                          className="p-1.5 rounded-lg hover:bg-bg-secondary text-text-secondary transition-colors"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+
+                        {actionMenuOpenId === student.id && (
+                          <div className="absolute right-0 top-8 w-48 bg-bg-color border border-border-color shadow-lg rounded-xl overflow-hidden z-[999] py-1">
+                            {student.status === 'banned' ? (
+                              <button
+                                onClick={() => { setActionMenuOpenId(null); handleUnban(student); }}
+                                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-primary hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
+                              >
+                                <CheckCircle size={14} /> Unban Student
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => { setActionMenuOpenId(null); handleBan(student); }}
+                                className="w-full text-left px-4 py-2.5 text-xs font-semibold text-amber-600 hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
+                              >
+                                <ShieldAlert size={14} /> Ban Student
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleRequestReview(student.id)}
+                              className="w-full text-left px-4 py-2.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
+                            >
+                              <Star size={14} /> Request Review
+                            </button>
+                            <div className="h-px bg-border-color my-1"></div>
+                            <button
+                              onClick={() => { setActionMenuOpenId(null); handleDelete(student); }}
+                              className="w-full text-left px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-bg-tertiary transition-colors flex items-center gap-2 border-0 bg-transparent cursor-pointer"
+                            >
+                              <UserMinus size={14} /> Delete Student
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between border-t border-border-color/40 pt-2 text-xxs font-bold">
+                      <span className="text-text-tertiary">STATUS</span>
+                      {student.status === 'banned' ? (
+                        <div className="flex flex-col items-end gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xxs font-extrabold bg-red-50 text-red-600 border border-red-100">
+                            <ShieldAlert size={10} /> Banned
+                          </span>
+                          {student.hasPendingUnbanRequest ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xxs font-extrabold bg-amber-50 text-amber-700 border border-amber-100">
+                              <Bell size={10} /> Pending Unban
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xxs font-extrabold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                          <CheckCircle size={10} /> Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 border-t border-border-color/60 p-4 bg-bg-secondary/20 flex-wrap">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        currentPage === pageNum
+                          ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
+                          : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>
@@ -677,7 +795,7 @@ const ManageStudents = () => {
               </button>
               <button
                 onClick={() => { setDeleteConfirmId(null); setDeleteConfirmName(''); }}
-                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary hover:bg-slate-200 text-text-secondary font-bold text-sm rounded-lg border-0 grow cursor-pointer transition-all"
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-bg-secondary hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white text-text-secondary font-bold text-sm rounded-lg border-0 grow cursor-pointer transition-all"
               >
                 Cancel
               </button>

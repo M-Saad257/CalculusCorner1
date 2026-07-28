@@ -19,6 +19,8 @@ const Hero = () => {
 
   const [announcements, setAnnouncements] = useState([]);
 
+  const token = localStorage.getItem("token");
+
   const formatLink = (url) => {
     if (!url) return '#';
     if (!/^https?:\/\//i.test(url)) {
@@ -246,15 +248,18 @@ const Hero = () => {
 
           {/* Call to Actions */}
           <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-start items-stretch sm:items-center gap-3.5 w-full sm:w-auto px-0 xl:px-0">
-            <button
-              onClick={() => {
-                navigate('/enroll');
-              }}
-              className="flex items-center justify-center gap-2.5 px-6 py-3 bg-white/90 dark:bg-slate-800/90 text-primary dark:text-primary-light font-bold text-sm sm:text-base rounded-full border border-blue-200 dark:border-slate-700 shadow-xs hover:bg-blue-50/60 dark:hover:bg-slate-800 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer backdrop-blur-sm"
-            >
-              <User size={25} className="fill-primary text-primary dark:fill-primary-light dark:text-primary-light" />
-              <span>Enroll Now</span>
-            </button>
+            {!token && (
+              <button
+                onClick={() => navigate('/enroll')}
+                className="flex items-center justify-center gap-2.5 px-6 py-3 bg-white/90 dark:bg-slate-800/90 text-primary dark:text-primary-light font-bold text-sm sm:text-base rounded-full border border-blue-200 dark:border-slate-700 shadow-xs hover:bg-blue-50/60 dark:hover:bg-slate-800 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer backdrop-blur-sm"
+              >
+                <User
+                  size={25}
+                  className="fill-primary text-primary dark:fill-primary-light dark:text-primary-light"
+                />
+                <span>Enroll Now</span>
+              </button>
+            )}
             <button
               onClick={() => { window.open("https://www.youtube.com/@Calculus.Corner", "_blank"); }}
               className="group relative flex items-center justify-center gap-2.5 px-8 py-3.5 bg-[#FF0000] hover:bg-[#CC0000] text-white font-bold text-sm sm:text-base rounded-full overflow-hidden shadow-[0_10px_25px_-5px_rgba(255,0,0,0.4)] hover:shadow-[0_14px_30px_-5px_rgba(255,0,0,0.5)] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer border-0"

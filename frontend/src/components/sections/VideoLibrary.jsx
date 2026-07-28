@@ -155,11 +155,14 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
     };
   }, [socket]);
 
-  const categoriesList = [
-    'All',
-    ...Array.from(new Set(allVideosList.map(v => v.category).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-  ];
+  const categoriesList = isHomePage
+    ? ['All']
+    : [
+      'All',
+      ...Array.from(
+        new Set(allVideosList.map(v => v.category).filter(Boolean))
+      ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    ];
 
   const subcategoriesList = [
     'All',
@@ -246,30 +249,31 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
         </div>
 
         <div className="flex flex-col gap-4 mb-6">
-          <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
-            {categoriesList.map((category) => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${activeCategory === category
-                  ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
-                  }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-
-          {activeCategory !== 'All' && subcategoriesList.length > 1 && (
+          {!isHomePage && (
+            <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
+              {categoriesList.map((category) => (
+                <button
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${activeCategory === category
+                    ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
+                    }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          )}
+          {!isHomePage && activeCategory !== 'All' && subcategoriesList.length > 1 && (
             <div className="flex flex-wrap gap-2 md:gap-3 justify-start mt-2">
               {subcategoriesList.map((subcat) => (
                 <button
                   key={subcat}
                   onClick={() => setActiveSubcategory(subcat)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${activeSubcategory === subcat
-                    ? 'bg-slate-800 text-white border-slate-800'
-                    : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
+                      ? 'bg-slate-800 text-white border-slate-800'
+                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
                     }`}
                 >
                   {subcat}
@@ -396,11 +400,10 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
-                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                      currentPage === pageNum
+                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${currentPage === pageNum
                         ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
                         : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
-                    }`}
+                      }`}
                   >
                     {pageNum}
                   </button>
@@ -411,7 +414,7 @@ const VideoLibrary = ({ hideHeader = false, isHomePage = false }) => {
             {isHomePage && (
               <div className="flex justify-center mt-10">
                 <button
-                  onClick={() => navigate('/lectures')}
+                  onClick={() => navigate('/enroll')}
                   className="inline-flex items-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-full shadow-lg shadow-primary/25 hover:shadow-primary/45 hover:scale-105 transition-all duration-300 cursor-pointer border-0 text-sm"
                 >
                   <span>More Lectures</span>

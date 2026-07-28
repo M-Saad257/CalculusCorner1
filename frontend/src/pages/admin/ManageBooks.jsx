@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Plus, Edit2, Trash2, Save, X, FileText, Upload, AlertCircle, Loader2, Eye, Download,
-  FileCode2, FileSpreadsheet, FileArchive, Image as ImageIcon, Film, Music, FileJson, File, Book
+  FileCode2, FileSpreadsheet, FileArchive, Image as ImageIcon, Film, Music, FileJson, File, Book as BookIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
@@ -339,31 +339,39 @@ const ManageBooks = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-fadeIn">
-            {Books.map(Book => (
-              <div key={Book.id} className="p-4 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative text-left">
-                <div className="flex flex-col gap-3">
-                  <div className="relative w-full aspect-video rounded-xl overflow-hidden bg-bg-secondary flex items-center justify-center">
-                    {Book.thumbnail_url ? (
-                      <img src={`${import.meta.env.VITE_BACKEND_URL || ''}${Book.thumbnail_url}`} alt={Book.title} className="w-full h-full object-contain" />
+            {Books.map(book => (
+              <div key={book.id} className="p-4 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative text-left">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative w-44 aspect-[3/4] rounded-xl overflow-hidden bg-bg-secondary border border-border-color shadow-md flex items-center justify-center">
+                    {book.thumbnail_url ? (
+                      <img
+                        src={`${import.meta.env.VITE_BACKEND_URL || ''}${book.thumbnail_url}`}
+                        alt={book.title}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="flex flex-col items-center justify-center text-text-tertiary gap-2">
-                        <Book size={32} />
+                        <BookIcon size={36} />
                         <span className="text-xs font-medium">No Thumbnail</span>
                       </div>
                     )}
                   </div>
 
-                  <h3 className="font-display font-bold text-base text-text-primary m-0 line-clamp-2">{Book.title}</h3>
-                  <div className="flex gap-4 items-center mt-1">
+                  <h3 className="font-display font-bold text-base text-center text-text-primary line-clamp-2">
+                    {book.title}
+                  </h3>
+
+                  <div className="flex gap-4 items-center">
                     <button
-                      onClick={() => handleViewBook(Book)}
+                      onClick={() => handleViewBook(book)}
                       className="text-xs text-primary hover:text-primary-dark hover:underline font-semibold flex items-center gap-1 border-0 bg-transparent cursor-pointer p-0"
                     >
                       <Eye size={12} />
                       <span>View</span>
                     </button>
+
                     <a
-                      href={`${import.meta.env.VITE_BACKEND_URL || ''}/api/admin/books/${Book.id}/download?token=${localStorage.getItem('token')}`}
+                      href={`${import.meta.env.VITE_BACKEND_URL || ''}/api/admin/books/${book.id}/download?token=${localStorage.getItem('token')}`}
                       className="text-xs text-emerald-600 hover:text-emerald-700 hover:underline font-semibold flex items-center gap-1"
                     >
                       <Download size={12} />
@@ -373,13 +381,13 @@ const ManageBooks = () => {
                 </div>
                 <div className="flex justify-between items-center mt-5 pt-4 border-t border-border-color/60">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary bg-bg-secondary px-2 py-1 rounded-md">
-                    {Book.category} {Book.subcategory ? `> ${Book.subcategory}` : ''}
+                    {book.category} {book.subcategory ? `> ${book.subcategory}` : ''}
                   </span>
                   <div className="flex gap-1">
-                    <button onClick={() => handleEdit(Book)} className="p-1.5 text-text-tertiary hover:text-primary hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
+                    <button onClick={() => handleEdit(book)} className="p-1.5 text-text-tertiary hover:text-primary hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => handleDelete(Book)} className="p-1.5 text-text-tertiary hover:text-red-500 hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
+                    <button onClick={() => handleDelete(book)} className="p-1.5 text-text-tertiary hover:text-red-500 hover:bg-bg-tertiary rounded-md transition-colors cursor-pointer border-0 bg-transparent">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -401,11 +409,10 @@ const ManageBooks = () => {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                    currentPage === pageNum
+                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${currentPage === pageNum
                       ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
                       : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
-                  }`}
+                    }`}
                 >
                   {pageNum}
                 </button>

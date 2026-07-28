@@ -7,7 +7,7 @@ import { useSocket } from '../../hooks/useSocket';
 const ManageUpdates = () => {
   const { showToast } = useDialog();
   const [activeSubTab, setActiveSubTab] = useState('news_updates'); // 'news_updates' | 'ticker_announcements'
-  
+
   // --- NEWS & UPDATES CMS STATE ---
   const [updates, setUpdates] = useState([]);
   const [updatesLoading, setUpdatesLoading] = useState(true);
@@ -16,7 +16,8 @@ const ManageUpdates = () => {
     title: '',
     content: '',
     category: 'General',
-    link: ''
+    link: '',
+    image: null
   });
   const [updateDeleteId, setUpdateDeleteId] = useState(null);
   const [updateDeleteName, setUpdateDeleteName] = useState('');
@@ -37,6 +38,7 @@ const ManageUpdates = () => {
   });
   const [annDeleteId, setAnnDeleteId] = useState(null);
   const [annDeleteName, setAnnDeleteName] = useState('');
+
 
   // --- LOAD DATA HELPERS ---
   const fetchUpdates = async () => {
@@ -80,7 +82,7 @@ const ManageUpdates = () => {
 
   useEffect(() => {
     if (!socket) return;
-    
+
     socket.on('update:create', fetchUpdates);
     socket.on('update:update', fetchUpdates);
     socket.on('update:delete', fetchUpdates);
@@ -129,15 +131,56 @@ const ManageUpdates = () => {
     }
 
     try {
-      const payload = {
-        ...updateFormData,
-        link: updateFormData.link?.trim() || null
-      };
+      const payload = new FormData();
+
+      payload.append(
+        'title',
+        updateFormData.title
+      );
+
+      payload.append(
+        'content',
+        updateFormData.content
+      );
+
+      payload.append(
+        'category',
+        updateFormData.category
+      );
+
+      payload.append(
+        'link',
+        updateFormData.link
+      );
+
+
+      if (updateFormData.image) {
+        payload.append(
+          'image',
+          updateFormData.image
+        );
+      }
       if (updateEditingId === 'new') {
-        await api.post('/updates/admin', payload);
+        await api.post(
+          '/updates/admin',
+          payload,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
         showToast('Update published successfully!', 'success');
       } else {
-        await api.put(`/updates/admin/${updateEditingId}`, payload);
+        await api.put(
+          `/updates/admin/${updateEditingId}`,
+          payload,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
         showToast('Update modified successfully.', 'success');
       }
       setUpdateEditingId(null);
@@ -285,18 +328,18 @@ const ManageUpdates = () => {
 
   return (
     <div className="flex flex-col gap-6 text-left">
-      
+
       {/* Header Container */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center bg-bg-color p-6 rounded-2xl shadow-sm border border-border-color gap-4">
         <div>
           <h2 className="text-2xl font-bold text-text-primary">Updates & Announcements</h2>
           <p className="text-text-secondary text-sm mt-1">
-            {activeSubTab === 'news_updates' 
-              ? 'Publish rich news feeds, board exam guides, and academic result sheets.' 
+            {activeSubTab === 'news_updates'
+              ? 'Publish rich news feeds, board exam guides, and academic result sheets.'
               : 'Configure home-page alert banner notices and scheduled ticker messages.'}
           </p>
         </div>
-        <button 
+        <button
           onClick={activeSubTab === 'news_updates' ? handleAddNewUpdate : handleAddNewAnnouncement}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white border-0 font-semibold text-sm rounded-lg hover:bg-primary-dark cursor-pointer shadow-sm transition-all shrink-0 self-start sm:self-auto"
         >
@@ -308,21 +351,19 @@ const ManageUpdates = () => {
       <div className="flex gap-2 border-b border-border-color pb-3">
         <button
           onClick={() => setActiveSubTab('news_updates')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-            activeSubTab === 'news_updates'
-              ? 'bg-primary text-white border-primary shadow-sm'
-              : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${activeSubTab === 'news_updates'
+            ? 'bg-primary text-white border-primary shadow-sm'
+            : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
+            }`}
         >
           News & Board Feed
         </button>
         <button
           onClick={() => setActiveSubTab('ticker_announcements')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-            activeSubTab === 'ticker_announcements'
-              ? 'bg-primary text-white border-primary shadow-sm'
-              : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
-          }`}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${activeSubTab === 'ticker_announcements'
+            ? 'bg-primary text-white border-primary shadow-sm'
+            : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
+            }`}
         >
           Ticker Banner Announcements
         </button>
@@ -338,6 +379,18 @@ const ManageUpdates = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {updates.map(item => (
               <div key={item.id} className="p-5 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative text-left">
+
+                {/* Update Image */}
+                {item.image && (
+                  <div className="mb-4 overflow-hidden rounded-xl border border-border-color h-48 bg-bg-secondary">
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-3">
                   <div className="flex justify-between items-start gap-4">
                     <span className={`inline-block px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide border ${getCategoryColor(item.category)}`}>
@@ -351,19 +404,19 @@ const ManageUpdates = () => {
                   <p className="text-text-secondary text-xs line-clamp-3 leading-relaxed whitespace-pre-line">{item.content}</p>
                   {item.link && (
                     <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline font-semibold flex items-center gap-1 mt-1">
-                       {item.link.length > 40 ? item.link.substring(0, 40) + '...' : item.link}
+                      {item.link.length > 40 ? item.link.substring(0, 40) + '...' : item.link}
                     </a>
                   )}
                 </div>
                 <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-border-color/60">
-                  <button 
-                    onClick={() => handleEditUpdate(item)} 
+                  <button
+                    onClick={() => handleEditUpdate(item)}
                     className="p-2 text-text-tertiary hover:text-primary hover:bg-bg-tertiary rounded-xl transition-colors cursor-pointer border-0 bg-transparent flex items-center gap-1.5 text-xs font-semibold"
                   >
                     <Edit2 size={14} /> Edit
                   </button>
-                  <button 
-                    onClick={() => handleDeleteUpdate(item)} 
+                  <button
+                    onClick={() => handleDeleteUpdate(item)}
                     className="p-2 text-text-tertiary hover:text-red-500 hover:bg-bg-tertiary rounded-xl transition-colors cursor-pointer border-0 bg-transparent flex items-center gap-1.5 text-xs font-semibold"
                   >
                     <Trash2 size={14} /> Delete
@@ -484,7 +537,7 @@ const ManageUpdates = () => {
               <h3 className="font-display font-bold text-lg text-text-primary m-0">
                 {updateEditingId === 'new' ? 'Publish New Board Update' : 'Edit Update Details'}
               </h3>
-              <button 
+              <button
                 onClick={() => setUpdateEditingId(null)}
                 className="text-text-tertiary hover:text-text-primary p-1.5 rounded-full hover:bg-bg-tertiary transition-all cursor-pointer border-0 bg-transparent shadow-sm"
               >
@@ -531,6 +584,52 @@ const ManageUpdates = () => {
                 />
               </div>
 
+              <div className="flex flex-col gap-2">
+
+                <label className="text-sm font-semibold text-text-secondary">
+                  Upload Cover Image
+                </label>
+
+                <label className="flex flex-col items-center justify-center gap-2 px-5 py-6 border-2 border-dashed border-border-color rounded-xl cursor-pointer bg-bg-secondary hover:border-primary hover:bg-primary/5 transition-all">
+
+                  <span className="text-sm font-semibold text-text-primary">
+                    {updateFormData.image
+                      ? updateFormData.image.name
+                      : "Choose update image"}
+                  </span>
+
+                  <span className="text-xs text-text-tertiary">
+                    PNG, JPG, WEBP (Max recommended 10MB)
+                  </span>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+
+                      if (file.size > 10 * 1024 * 1024) {
+                        showToast("Image must be less than 10MB", "error");
+                        return;
+                      }
+
+                      setUpdateFormData({
+                        ...updateFormData,
+                        image: file
+                      })
+                    }}
+                  />
+                </label>
+
+              </div>
+              {updateFormData.image && (
+                <img
+                  src={URL.createObjectURL(updateFormData.image)}
+                  className="mt-3 h-40 w-full object-cover rounded-xl border border-border-color"
+                  alt="preview"
+                />
+              )}
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-text-secondary">Notification Body Content</label>
                 <textarea
@@ -544,15 +643,15 @@ const ManageUpdates = () => {
               </div>
 
               <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border-color">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setUpdateEditingId(null)}
                   className="px-5 py-2.5 rounded-xl border border-border-color text-text-secondary font-semibold text-sm hover:bg-bg-secondary transition-colors cursor-pointer bg-bg-color"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white border-0 font-semibold text-sm hover:bg-primary-dark transition-colors cursor-pointer shadow-sm shadow-primary/20"
                 >
                   <Save size={16} /> Save Update
@@ -571,7 +670,7 @@ const ManageUpdates = () => {
               <h3 className="font-display font-bold text-lg text-text-primary m-0">
                 {annEditingId === 'new' ? 'Add Notice Announcement' : 'Edit Announcement Banner'}
               </h3>
-              <button 
+              <button
                 onClick={() => setAnnEditingId(null)}
                 className="text-text-tertiary hover:text-text-primary p-1.5 rounded-full hover:bg-bg-tertiary transition-all cursor-pointer border-0 bg-transparent shadow-sm"
               >
@@ -657,7 +756,7 @@ const ManageUpdates = () => {
                 <span className="text-xs font-extrabold text-primary flex items-center gap-1.5">
                   <Calendar size={13} /> OPTIONAL SCHEDULING (GMT/UTC)
                 </span>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xxs font-bold text-text-secondary uppercase">Start Date/Time</label>
@@ -682,15 +781,15 @@ const ManageUpdates = () => {
               </div>
 
               <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border-color">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setAnnEditingId(null)}
                   className="px-5 py-2.5 rounded-xl border border-border-color text-text-secondary font-semibold text-sm hover:bg-bg-secondary transition-colors cursor-pointer bg-bg-color"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-white border-0 font-semibold text-sm hover:bg-primary-dark transition-colors cursor-pointer shadow-sm shadow-primary/20"
                 >
                   <Save size={16} /> Save Announcement
@@ -717,13 +816,13 @@ const ManageUpdates = () => {
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-2">
-              <button 
+              <button
                 onClick={() => setUpdateDeleteId(null)}
                 className="px-4 py-2 rounded-xl border border-border-color text-text-secondary font-semibold text-sm hover:bg-bg-secondary transition-colors cursor-pointer bg-bg-color"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleConfirmDeleteUpdate}
                 className="px-4 py-2 rounded-xl bg-red-600 text-white border-0 font-semibold text-sm hover:bg-red-700 transition-colors cursor-pointer shadow-sm shadow-red-600/20"
               >
@@ -750,13 +849,13 @@ const ManageUpdates = () => {
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-2">
-              <button 
+              <button
                 onClick={() => setAnnDeleteId(null)}
                 className="px-4 py-2 rounded-xl border border-border-color text-text-secondary font-semibold text-sm hover:bg-bg-secondary transition-colors cursor-pointer bg-bg-color"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={handleConfirmDeleteAnnouncement}
                 className="px-4 py-2 rounded-xl bg-red-600 text-white border-0 font-semibold text-sm hover:bg-red-700 transition-colors cursor-pointer shadow-sm shadow-red-600/20"
               >

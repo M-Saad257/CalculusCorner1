@@ -4,9 +4,11 @@ import Footer from '../components/layout/Footer';
 import api from '../services/api';
 import { useSocket } from '../hooks/useSocket';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Film, Play, Search, Download, FileText, X } from 'lucide-react';
+import { Film, Play, Search, Download, FileText, X, Eye } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import Loader from '../components/ui/Loader';
+import { useNavigate } from "react-router-dom";
+
 
 const PastPapersPage = () => {
   const [videos, setVideos] = useState([]);
@@ -14,7 +16,10 @@ const PastPapersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [selectedResource, setSelectedResource] = useState(null);
   const [activeTab, setActiveTab] = useState('videos'); // 'videos' | 'pdfs'
+  const navigate = useNavigate();
+
 
   const getEmbedUrl = (url) => {
     if (!url) return '';
@@ -30,7 +35,7 @@ const PastPapersPage = () => {
   const fetchPastPaperData = async () => {
     try {
       setLoading(true);
-      
+
       // 1. Fetch solved videos
       const resVids = await api.get('/content/videos');
       if (resVids.data && Array.isArray(resVids.data.data)) {
@@ -41,12 +46,12 @@ const PastPapersPage = () => {
       try {
         const resBooks = await api.get('/books');
         const books = resBooks.data?.data || [];
-        
+
         const resResources = await api.get('/resources');
         const resources = resResources.data?.data || [];
-        
+
         const combined = [...books, ...resources];
-        const filteredPdfs = combined.filter(item => 
+        const filteredPdfs = combined.filter(item =>
           item.is_past_paper === 1
         );
         setDbPdfs(filteredPdfs);
@@ -95,12 +100,12 @@ const PastPapersPage = () => {
   }, [socket]);
 
   // Filter dynamic database videos that are past papers
-  const filteredVideos = videos.filter(vid => 
+  const filteredVideos = videos.filter(vid =>
     vid.is_past_paper === 1
   ).filter(vid => vid.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // Filter database PDFs that are past papers
-  const filteredPdfs = dbPdfs.filter(pdf => 
+  const filteredPdfs = dbPdfs.filter(pdf =>
     pdf.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -109,11 +114,11 @@ const PastPapersPage = () => {
       window.open(pdf.downloadUrl, '_blank');
       return;
     }
-    
+
     const fileUrl = pdf.file_url || pdf.url;
     if (fileUrl) {
-      const fullUrl = fileUrl.startsWith('http') 
-        ? fileUrl 
+      const fullUrl = fileUrl.startsWith('http')
+        ? fileUrl
         : `${import.meta.env.VITE_BACKEND_URL || ''}${fileUrl}`;
       window.open(fullUrl, '_blank');
     } else {
@@ -125,7 +130,7 @@ const PastPapersPage = () => {
     <>
       <Navbar />
       <main className="flex-grow pt-28 pb-16 bg-transparent relative z-10 w-full text-left">
-        
+
         {/* Hero Section */}
         <div className="container mx-auto px-4 md:px-8 max-w-6xl mb-12">
           <div className="text-center md:text-left">
@@ -145,26 +150,24 @@ const PastPapersPage = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setActiveTab('videos')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                  activeTab === 'videos'
-                    ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${activeTab === 'videos'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
+                  }`}
               >
                 Solved Video Papers
               </button>
               <button
                 onClick={() => setActiveTab('pdfs')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                  activeTab === 'pdfs'
-                    ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${activeTab === 'pdfs'
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-tertiary'
+                  }`}
               >
                 Solved PDFs & Documents
               </button>
             </div>
-            
+
             <div className="relative w-full md:max-w-xs">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-tertiary" size={16} />
               <input
@@ -193,7 +196,9 @@ const PastPapersPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.3, delay: idx * 0.03 }}
-                        onClick={() => setSelectedVideo(video)}
+                        onClick={() => {
+                          navigate(`/viewer/video/${video.id}`);
+                        }}
                         className="p-4 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative text-left group cursor-pointer"
                       >
                         <div className="flex flex-col gap-3">
@@ -216,7 +221,7 @@ const PastPapersPage = () => {
                               </span>
                             </div>
                           </div>
-                          
+
                           <h3 className="font-display font-bold text-sm text-text-primary m-0 line-clamp-2" title={video.title}>
                             {video.title}
                           </h3>
@@ -240,7 +245,7 @@ const PastPapersPage = () => {
                   )}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   <AnimatePresence mode="popLayout">
                     {filteredPdfs.map((pdf, idx) => (
                       <motion.div
@@ -249,29 +254,60 @@ const PastPapersPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.3, delay: idx * 0.03 }}
-                        className="p-5 rounded-2xl bg-bg-color border border-border-color shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow relative text-left group"
-                      >
-                        <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                            <FileText size={24} />
+                        className="group relative p-4 rounded-2xl bg-bg-color border border-border-color shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col justify-between text-left h-full"                      >
+                        <>
+                          <div className="absolute top-4 right-4 z-10">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-primary/10 text-primary">
+                              {pdf.subcategory || pdf.category || "Past Paper"}
+                            </span>
                           </div>
-                          <div className="space-y-1">
-                            <div className="flex gap-2 items-center">
-                              <span className="text-[9px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded bg-bg-secondary text-text-primary border border-border-color/60">
-                                {pdf.subcategory || pdf.category || 'Past Paper'}
-                              </span>
-                            </div>
-                            <h3 className="font-display font-bold text-sm text-text-primary m-0 line-clamp-2">{pdf.title}</h3>
-                          </div>
-                        </div>
 
-                        <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-border-color/60">
+                          <div className="relative w-full aspect-video mb-4 rounded-xl overflow-hidden bg-slate-100/50">
+
+                            <img
+                              src={
+                                pdf.thumbnail_url
+                                  ? `${import.meta.env.VITE_BACKEND_URL}${pdf.thumbnail_url}`
+                                  : pdf.image_url
+                                    ? `${import.meta.env.VITE_BACKEND_URL}${pdf.image_url}`
+                                    : "/official.webp"
+                              }
+                              alt={pdf.title}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.target.src = "/official.webp";
+                              }}
+                            />
+
+                          </div>
+
+                          <h3 className="font-display font-bold text-lg text-text-primary mb-2 line-clamp-2">
+                            {pdf.title}
+                          </h3>
+                        </>
+
+                        <div className="mt-4 pt-4 border-t border-border-color flex justify-between items-center gap-2">
+
                           <button
-                            onClick={() => handleDownload(pdf)}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white border-0 text-xs font-bold hover:bg-primary-dark transition-all cursor-pointer shadow-sm shadow-primary/20"
+                            onClick={() => {
+                              window.open(`/viewer/resource/${pdf.id}`, "_blank");
+                              setSelectedResource(null);
+                            }}
+                            className="flex items-center gap-1.5 text-primary hover:text-primary-dark font-bold text-xs transition-colors py-2 px-3 rounded-lg hover:bg-primary/5 cursor-pointer border border-primary/20 bg-transparent"
                           >
-                            <Download size={14} /> Download PDF
+                            <Eye size={14} />
+                            <span>View PDF</span>
                           </button>
+
+                          <a
+                            href={`${import.meta.env.VITE_BACKEND_URL || ""}/api/resources/${pdf.id}/download`}
+                            download
+                            className="flex items-center gap-1.5 text-emerald-600 hover:text-emerald-700 font-bold text-xs transition-colors py-2 px-3 rounded-lg hover:bg-emerald-500/10 border border-emerald-600/20"
+                          >
+                            <span>Download</span>
+                            <Download size={14} />
+                          </a>
+
                         </div>
                       </motion.div>
                     ))}
@@ -292,50 +328,7 @@ const PastPapersPage = () => {
       </main>
 
       {/* Embedded Iframe Player Modal */}
-      {createPortal(
-        <AnimatePresence>
-          {selectedVideo && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-              onClick={() => setSelectedVideo(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, y: 15 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 15 }}
-                transition={{ type: "spring", duration: 0.5 }}
-                className="bg-bg-color rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl border border-border-color relative text-left"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-4 md:p-6 border-b border-border-color flex justify-between items-center bg-bg-secondary">
-                  <h3 className="font-display font-bold text-base md:text-lg text-text-primary line-clamp-1 pr-6">
-                    {selectedVideo.title}
-                  </h3>
-                  <button
-                    onClick={() => setSelectedVideo(null)}
-                    className="p-2 text-text-secondary hover:text-red-500 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="relative w-full aspect-video bg-black flex items-center justify-center">
-                  <iframe
-                    src={getEmbedUrl(selectedVideo.url)}
-                    title={selectedVideo.title}
-                    className="absolute inset-0 w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+
 
       <Footer />
     </>

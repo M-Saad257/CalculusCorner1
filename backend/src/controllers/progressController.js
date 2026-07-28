@@ -6,6 +6,12 @@ const progressController = {
   // Update Video Progress
   async updateVideoProgress(req, res) {
     try {
+      console.log("🔥 PROGRESS HIT", {
+        user: req.user,
+        params: req.params,
+        body: req.body
+      });
+
       const { videoId } = req.params;
       const { progressPercent, lastPosition, duration } = req.body;
       const userId = req.user.id;
@@ -31,7 +37,7 @@ const progressController = {
       try {
         const { broadcastToAdmins } = require('../socket');
         broadcastToAdmins('admin:analytics:update', { type: 'video_progress', videoId });
-      } catch (socketErr) {}
+      } catch (socketErr) { }
 
       // Check and award video milestone badges if video completed
       let newlyAwarded = [];
@@ -40,8 +46,8 @@ const progressController = {
         newlyAwarded = await BadgeModel.checkAndAwardVideoBadges(userId);
       }
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: 'Video progress updated successfully.',
         newlyAwarded
       });
@@ -79,14 +85,14 @@ const progressController = {
       res.status(500).json({ success: false, message: 'Server error fetching course progress.' });
     }
   },
-  
+
   // Get All User Progress Summary
   async getProgressSummary(req, res) {
     try {
       const userId = req.user.id;
       const courseProgress = await ProgressModel.getAllCourseProgress(userId);
       const recentVideos = await ProgressModel.getRecentlyWatchedVideos(userId, 6);
-      
+
       res.json({
         success: true,
         data: {

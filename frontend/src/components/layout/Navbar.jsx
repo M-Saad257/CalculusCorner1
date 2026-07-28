@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Bell, CheckCheck } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import { LayoutDashboard, LogOut } from 'lucide-react';
 import Button from '../ui/Button';
 import NotificationBell from '../ui/NotificationBell';
 import ThemeToggle from '../ui/ThemeToggle';
@@ -48,6 +49,14 @@ const Navbar = () => {
   const handleNavLinkClick = (e, href) => {
     e.preventDefault();
     setIsMobileMenuOpen(false);
+
+    // Protected routes
+    const protectedRoutes = ['/notes', '/books', '/lectures'];
+
+    if (!token && protectedRoutes.includes(href)) {
+      navigate('/enroll');
+      return;
+    }
 
     // Delay scroll slightly so the mobile menu animation finishes first,
     // preventing the layout shift from cancelling scrollIntoView.
@@ -128,7 +137,7 @@ const Navbar = () => {
               }
             }}
           />
-          <span className="hidden md:block font-display font-extrabold text-xl md:text-2xl text-gradient bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
+          <span className="hidden xl:block font-display font-extrabold text-xl md:text-2xl text-gradient bg-gradient-to-r from-primary to-primary-dark bg-clip-text text-transparent">
             Calculus Corner
           </span>
         </div>
@@ -159,29 +168,50 @@ const Navbar = () => {
               <Button
                 variant="outline"
                 size="sm"
-                className="inline-flex relative transition-all duration-300"
-                style={{
-                  borderColor: status === 'connected' ? '#10B981' : status === 'reconnecting' ? '#F59E0B' : '#EF4444',
-                  boxShadow: status === 'connected' ? '0 0 8px rgba(16,185,129,0.25)' : status === 'reconnecting' ? '0 0 8px rgba(245,158,11,0.25)' : '0 0 8px rgba(239,68,68,0.25)'
-                }}
+                className="inline-flex items-center gap-2 relative"
                 onClick={() => navigate(isAdmin ? '/admin' : '/dashboard')}
               >
-                {/* Dot placed at the top-right of the button */}
-                <span className="absolute -top-1 -right-[1px] flex h-3 w-3 z-30 cursor-pointer" title={`Status: ${status === 'connected' ? 'Connected' : status === 'reconnecting' ? 'Reconnecting' : 'Offline'}`}>
+                {/* Status Dot */}
+                <span
+                  className="absolute -top-1 -right-1 flex h-3 w-3 z-30 cursor-pointer"
+                  title={`Status: ${status === 'connected'
+                    ? 'Connected'
+                    : status === 'reconnecting'
+                      ? 'Reconnecting'
+                      : 'Offline'
+                    }`}
+                >
                   {status === 'reconnecting' && (
-                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${status === 'connected' ? 'bg-emerald-500' : status === 'reconnecting' ? 'bg-amber-500' : 'bg-rose-500'
-                      }`}></span>
+                    <span
+                      className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${status === 'connected'
+                        ? 'bg-emerald-500'
+                        : status === 'reconnecting'
+                          ? 'bg-amber-500'
+                          : 'bg-rose-500'
+                        }`}
+                    />
                   )}
-                  <span className={`relative inline-flex rounded-full h-3 w-3 border-2 border-white dark:border-slate-900 ${status === 'connected' ? 'bg-emerald-500' : status === 'reconnecting' ? 'bg-amber-500' : 'bg-rose-500'
-                    }`}></span>
+
+                  <span
+                    className={`relative inline-flex rounded-full h-3 w-3 border-2 border-white dark:border-slate-900 ${status === 'connected'
+                      ? 'bg-emerald-500'
+                      : status === 'reconnecting'
+                        ? 'bg-amber-500'
+                        : 'bg-rose-500'
+                      }`}
+                  />
                 </span>
-                <span>{isAdmin ? 'AP' : 'DS'}</span>
+
+                <LayoutDashboard size={16} />
               </Button>
               <button
                 onClick={handleLogout}
-                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-text-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl border border-border-color transition-all duration-200 cursor-pointer bg-transparent"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-semibold rounded-xl
+             border border-red-200 text-red-600 hover:bg-red-50
+             dark:border-red-500/30 dark:hover:bg-red-500/10
+             transition-all cursor-pointer"
               >
-                ❌
+                <LogOut size={16} />
               </button>
             </>
           ) : (

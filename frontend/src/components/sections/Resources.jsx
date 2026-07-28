@@ -35,7 +35,7 @@ const Resources = ({ isTab = false, hideHeader = false, homeOnly = false, isHome
     } else {
       setSelectedResource(resource);
     }
-    api.post('/content/track', { type: 'resource', id: resource.id }).catch(() => {});
+    api.post('/content/track', { type: 'resource', id: resource.id }).catch(() => { });
   };
 
   const loadResources = async () => {
@@ -167,39 +167,41 @@ const Resources = ({ isTab = false, hideHeader = false, homeOnly = false, isHome
           )}
         </div>
 
-        <div className="flex flex-col gap-4 mb-8">
-          <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
-            {categoriesList.map((category) => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${activeCategory === category
-                    ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
-                  }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-
-          {activeCategory !== 'All' && subcategoriesList.length > 1 && (
-            <div className="flex flex-wrap gap-2 md:gap-3 justify-start mt-2">
-              {subcategoriesList.map((subcat) => (
+        {!isHomeOrNotes && (
+          <div className="flex flex-col gap-4 mb-8">
+            <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
+              {categoriesList.map((category) => (
                 <button
-                  key={subcat}
-                  onClick={() => setActiveSubcategory(subcat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${activeSubcategory === subcat
-                      ? 'bg-slate-800 text-white border-slate-800'
-                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${activeCategory === category
+                      ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
                     }`}
                 >
-                  {subcat}
+                  {category}
                 </button>
               ))}
             </div>
-          )}
-        </div>
+
+            {activeCategory !== 'All' && subcategoriesList.length > 1 && (
+              <div className="flex flex-wrap gap-2 md:gap-3 justify-start mt-2">
+                {subcategoriesList.map((subcat) => (
+                  <button
+                    key={subcat}
+                    onClick={() => setActiveSubcategory(subcat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${activeSubcategory === subcat
+                        ? 'bg-slate-800 text-white border-slate-800'
+                        : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
+                      }`}
+                  >
+                    {subcat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <motion.div
           variants={containerVariants}
@@ -275,7 +277,7 @@ const Resources = ({ isTab = false, hideHeader = false, homeOnly = false, isHome
         {isHomeOrNotes && (
           <div className="flex justify-center mt-10">
             <button
-              onClick={() => navigate('/notes')}
+              onClick={() => navigate('/enroll')}
               className="inline-flex items-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-full shadow-lg shadow-primary/25 hover:shadow-primary/45 hover:scale-105 transition-all duration-300 cursor-pointer border-0 text-sm"
             >
               <span>More Notes</span>
@@ -315,7 +317,7 @@ const Resources = ({ isTab = false, hideHeader = false, homeOnly = false, isHome
                       href={`${import.meta.env.VITE_BACKEND_URL || ''}/api/resources/${selectedResource.id}/download`}
                       download
                       style={{
-                        color:'white'
+                        color: 'white'
                       }}
                       className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-colors border-0 shadow-md decoration-none hover:no-underline"
                     >

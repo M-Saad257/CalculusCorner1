@@ -59,11 +59,11 @@ const AchievementTab = ({
     try {
       const shortName = milestoneName.split(' ')[0]; // 'Bronze', 'Silver', 'Gold', 'Master'
       setDownloadingBadge(milestoneName);
-      
+
       const response = await api.get(`/student/certificate/milestone/${shortName}`, {
         responseType: 'blob'
       });
-      
+
       const blob = new Blob([response.data], { type: 'image/png' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -112,9 +112,10 @@ const AchievementTab = ({
   const inProgressOrCompletedClassVideos = classVideos.filter(v => v.isCompleted === 1 || v.is_completed === 1 || parseFloat(v.progressPercent || v.progress_percent || v.progress || 0) > 0 || (v.last_position && parseFloat(v.last_position) > 0));
   const watchedClassVideosCount = inProgressOrCompletedClassVideos.length;
 
-  const classVideosProgressPercent = totalClassVideosCount > 0
-    ? (classVideos.reduce((acc, v) => acc + Math.min(100, parseFloat(v.progressPercent || v.progress_percent || v.progress || (v.is_completed || v.isCompleted ? 100 : 0)) || 0), 0) / totalClassVideosCount)
-    : 0;
+  const classVideosProgressPercent =
+    totalClassVideosCount > 0
+      ? (watchedClassVideosCount / totalClassVideosCount) * 100
+      : 0;
 
   // Milestone Progression (Bronze, Silver, Gold, Master) based on total watched/in-progress videos
   const completedCount = Array.isArray(videos) && videos.length > 0
@@ -185,7 +186,7 @@ const AchievementTab = ({
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            
+
             {/* 1. Class Video Lectures Progress Card */}
             <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-border-color shadow-sm flex flex-col gap-6 text-left transition-all">
               <div className="flex items-center gap-3">
@@ -197,7 +198,7 @@ const AchievementTab = ({
                     {hasMatchedVideos ? `${studentClass} Syllabus Progression` : 'Syllabus Progression'}
                   </h3>
                   <p className="text-text-tertiary text-xs mt-0.5">
-                    {hasMatchedVideos 
+                    {hasMatchedVideos
                       ? 'Watch and complete all recommended video lessons to master your syllabus.'
                       : 'No specific videos found for your class yet. Displaying progress across all lessons.'
                     }
@@ -250,7 +251,7 @@ const AchievementTab = ({
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                   <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 text-xs font-extrabold flex items-center gap-1.5">
                     <Sparkles size={13} />
@@ -269,9 +270,8 @@ const AchievementTab = ({
                 ].map(m => {
                   const isEarned = completedCount >= m.target;
                   return (
-                    <div key={m.name} className={`p-3 rounded-2xl border flex flex-col items-center gap-1 transition-all ${
-                      isEarned ? 'bg-primary/5 border-primary/30 text-primary' : 'bg-bg-secondary border-border-color/60 text-text-tertiary opacity-70'
-                    }`}>
+                    <div key={m.name} className={`p-3 rounded-2xl border flex flex-col items-center gap-1 transition-all ${isEarned ? 'bg-primary/5 border-primary/30 text-primary' : 'bg-bg-secondary border-border-color/60 text-text-tertiary opacity-70'
+                      }`}>
                       {isEarned ? <CheckCircle2 size={16} className="text-emerald-500" /> : <Award size={16} />}
                       <span className="truncate font-bold">{m.name} ({m.target})</span>
                     </div>
@@ -405,7 +405,7 @@ const AchievementTab = ({
               ].map(badge => {
                 const shortName = badge.name.split(' ')[0];
                 console.log("earnedBadges:", earnedBadges);
-                const earned = earnedBadges.find(b => 
+                const earned = earnedBadges.find(b =>
                   (b.badgeName || '').toLowerCase().includes(shortName.toLowerCase()) ||
                   (b.badgeName || '').toLowerCase() === badge.name.toLowerCase()
                 );

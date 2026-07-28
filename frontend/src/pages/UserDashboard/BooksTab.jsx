@@ -3,7 +3,6 @@ import {
   BookOpen, Search, Download, Eye, X, LayoutGrid, FileText,
   Archive, Book, FileSpreadsheet, File, ChevronRight, Maximize
 } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
@@ -22,11 +21,11 @@ const BooksTab = ({ studentClass }) => {
   const [search, setSearch] = useState('');
   const [activeSubcategory, setActiveSubcategory] = useState('All');
   const [selectedBook, setSelectedBook] = useState(null);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  
+
   const { socket } = useSocket();
 
   // Filter books strictly by student class if student is logged in
@@ -68,22 +67,13 @@ const BooksTab = ({ studentClass }) => {
     }
   }, [initialCategory]);
 
-  const handleViewBook = (book) => {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
-    if (isMobile) {
-      window.open(`${BACKEND_URL}/api/books/${book.id}/view`, '_blank');
-    } else {
-      setSelectedBook(book);
-    }
-    api.post('/content/track', { type: 'book', id: book.id }).catch(() => {});
-  };
 
   // Load all metadata once for filters
   const loadBooksMetadata = async () => {
     try {
       const res = await api.get('/books');
       if (res.data?.data) setAllBooksList(res.data.data);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   // Load paginated data
@@ -105,7 +95,7 @@ const BooksTab = ({ studentClass }) => {
         setTotalPages(res.data.totalPages || 1);
         setTotalItems(res.data.totalItems || 0);
       }
-    } catch (_) {}
+    } catch (_) { }
     finally { setLoading(false); }
   };
 
@@ -190,11 +180,10 @@ const BooksTab = ({ studentClass }) => {
               <button
                 key={cat}
                 onClick={() => { setActiveCategory(cat); setCurrentPage(1); }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-                  activeCategory === cat
-                    ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'bg-bg-color text-text-secondary border-border-color hover:border-primary/40 hover:text-primary'
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${activeCategory === cat
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-bg-color text-text-secondary border-border-color hover:border-primary/40 hover:text-primary'
+                  }`}
               >
                 {cat}
               </button>
@@ -211,11 +200,10 @@ const BooksTab = ({ studentClass }) => {
                 <button
                   key={sub}
                   onClick={() => { setActiveSubcategory(sub); setCurrentPage(1); }}
-                  className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                    activeSubcategory === sub
-                      ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-sm'
-                      : 'bg-bg-secondary text-text-secondary border-border-color hover:border-slate-400 hover:text-text-primary'
-                  }`}
+                  className={`px-3 py-1 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${activeSubcategory === sub
+                    ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-700 dark:border-slate-300 shadow-sm'
+                    : 'bg-bg-secondary text-text-secondary border-border-color hover:border-slate-400 hover:text-text-primary'
+                    }`}
                 >
                   {sub}
                 </button>
@@ -266,40 +254,52 @@ const BooksTab = ({ studentClass }) => {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, delay: idx * 0.04 }}
-                  onClick={() => handleViewBook(book)}
+                  onClick={() => {
+                    api.post('/content/track', {
+                      type: 'book',
+                      id: book.id
+                    }).catch(() => { });
+
+                    window.open(`/viewer/book/${book.id}`, '_blank');
+                  }}
                   className="group cursor-pointer rounded-3xl bg-bg-color border border-border-color p-4 hover:shadow-md hover:border-primary/30 transition-all flex flex-col gap-3 text-left justify-between"
                 >
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col items-center gap-3">
                     {/* Thumbnail / Card Top */}
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-bg-secondary border border-border-color/40">
+                    <div className="relative w-44 aspect-[3/4] rounded-xl overflow-hidden bg-bg-secondary border border-border-color/40 shadow-md">
                       {book.thumbnail_url ? (
                         <img
                           src={`${BACKEND_URL}${book.thumbnail_url}`}
                           alt={book.title}
-                          className="w-full h-full object-contain p-1 rounded-lg bg-slate-900 transition-transform duration-300 group-hover:scale-105"
-                          onError={(e) => { e.target.onerror = null; }}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full bg-slate-900 flex items-center justify-center text-primary/40">
                           <BookOpen size={40} />
                         </div>
                       )}
+
                       <div className="absolute inset-0 bg-black/35 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="w-12 h-12 rounded-full bg-white text-primary flex items-center justify-center shadow-lg transform scale-90 group-hover:scale-100 transition-transform">
-                          <BookOpen size={20} className="ml-0.5" />
+                          <BookOpen size={20} />
                         </div>
                       </div>
-                      <span className="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center justify-center backdrop-blur-sm z-20">
+
+                      <span className="absolute bottom-2 right-2 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-sm z-20">
                         BOOK
                       </span>
                     </div>
 
-                    <div>
+                    <div className="w-full">
                       {/* Tags Row */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
                         <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full">
-                          {book.category || 'General'}
+                          {book.category || "General"}
                         </span>
+
                         {book.subcategory && (
                           <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-text-secondary border border-border-color rounded-full">
                             {book.subcategory}
@@ -308,7 +308,10 @@ const BooksTab = ({ studentClass }) => {
                       </div>
 
                       {/* Title */}
-                      <h3 className="font-display font-bold text-sm text-text-primary line-clamp-2 mt-2 leading-snug group-hover:text-primary transition-colors" title={book.title}>
+                      <h3
+                        className="font-display font-bold text-sm text-center text-text-primary line-clamp-2 mt-3 leading-snug group-hover:text-primary transition-colors"
+                        title={book.title}
+                      >
                         {book.title}
                       </h3>
                     </div>
@@ -324,7 +327,13 @@ const BooksTab = ({ studentClass }) => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleViewBook(book);
+
+                          api.post('/content/track', {
+                            type: 'book',
+                            id: book.id
+                          }).catch(() => { });
+
+                          window.open(`/viewer/book/${book.id}`, '_blank');
                         }}
                         className="p-1.5 rounded-lg bg-bg-secondary hover:bg-primary/10 hover:text-primary text-text-secondary border border-border-color transition-colors cursor-pointer"
                         title="Read Book"
@@ -354,11 +363,10 @@ const BooksTab = ({ studentClass }) => {
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
-                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                    currentPage === pageNum
-                      ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
-                      : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
-                  }`}
+                  className={`w-9 h-9 rounded-xl text-xs font-bold transition-all border cursor-pointer ${currentPage === pageNum
+                    ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-105'
+                    : 'bg-bg-color text-text-secondary border-border-color hover:bg-bg-secondary hover:text-text-primary'
+                    }`}
                 >
                   {pageNum}
                 </button>
@@ -369,77 +377,6 @@ const BooksTab = ({ studentClass }) => {
       )}
 
       {/* Book Viewer Modal */}
-      {createPortal(
-        <AnimatePresence>
-          {selectedBook && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
-              onClick={() => setSelectedBook(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, y: 15 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 15 }}
-                transition={{ type: 'spring', duration: 0.45 }}
-                className="bg-bg-color rounded-3xl w-full max-w-4xl h-[88vh] flex flex-col overflow-hidden shadow-2xl border border-border-color relative text-left"
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Modal Header */}
-                <div className="px-6 py-4 border-b border-border-color flex justify-between items-center bg-bg-secondary shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                      <BookOpen size={15} className="text-primary" />
-                    </div>
-                    <h3 className="font-display font-bold text-base text-text-primary line-clamp-1 pr-4">
-                      {selectedBook.title}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={`${BACKEND_URL}/api/books/${selectedBook.id}/download`}
-                      download
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 rounded-xl transition-colors"
-                    >
-                      <Download size={13} />
-                      Download
-                    </a>
-                    <button
-                      onClick={() => {
-                        window.open(`/viewer/book/${selectedBook.id}`, '_blank');
-                        setSelectedBook(null);
-                      }}
-                      title="Open in Fullscreen Viewer"
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-primary hover:text-primary-dark border border-primary/30 hover:bg-primary/10 rounded-xl transition-colors cursor-pointer bg-transparent"
-                    >
-                      <Maximize size={13} />
-                      <span>Fullscreen</span>
-                    </button>
-                    <button
-                      onClick={() => setSelectedBook(null)}
-                      className="p-2 text-text-secondary hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* PDF Iframe */}
-                <div className="flex-grow bg-bg-secondary flex items-center justify-center relative">
-                  <iframe
-                    src={`/api/books/${selectedBook.id}/view`}
-                    title={selectedBook.title}
-                    className="w-full h-full border-0"
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
     </div>
   );
 };

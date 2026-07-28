@@ -37,7 +37,7 @@ const UpdatesPage = () => {
 
   useEffect(() => {
     if (!socket) return;
-    
+
     socket.on('update:create', loadUpdates);
     socket.on('update:update', loadUpdates);
     socket.on('update:delete', loadUpdates);
@@ -51,8 +51,8 @@ const UpdatesPage = () => {
 
   const filteredUpdates = updates.filter(item => {
     const matchesCat = activeCategory === 'All' || item.category === activeCategory;
-    const matchesSearch = 
-      item.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch =
+      item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.content.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCat && matchesSearch;
   });
@@ -92,11 +92,10 @@ const UpdatesPage = () => {
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all border cursor-pointer ${
-                      activeCategory === cat
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all border cursor-pointer ${activeCategory === cat
                         ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
                         : 'bg-bg-secondary text-text-secondary border-border-color hover:bg-bg-tertiary hover:text-text-primary'
-                    }`}
+                      }`}
                   >
                     {cat}
                   </button>
@@ -134,6 +133,17 @@ const UpdatesPage = () => {
                       {/* Decorative element on hover */}
                       <div className="absolute top-0 left-0 w-1.5 h-full bg-primary transform scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-top"></div>
 
+                      {/* Update Image */}
+                      {item.image && (
+                        <div className="w-full md:w-72 h-48 rounded-2xl overflow-hidden border border-border-color shrink-0">
+                          <img
+                            src={item.image}
+                            alt={item.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        </div>
+                      )}
                       <div className="flex-grow space-y-3">
                         <div className="flex flex-wrap items-center gap-2.5">
                           <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-wide border ${getCategoryColor(item.category)}`}>
@@ -151,13 +161,13 @@ const UpdatesPage = () => {
                           {item.content}
                         </p>
                         {item.link && (
-                          <a 
-                            href={item.link} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
+                          <a
+                            href={item.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 mt-2 text-sm text-primary hover:text-primary-dark font-semibold hover:underline transition-colors"
                           >
-                             View Related Link ↗
+                            View Related Link ↗
                           </a>
                         )}
                       </div>

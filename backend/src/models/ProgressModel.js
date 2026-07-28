@@ -2,10 +2,10 @@ const db = require('../config/db');
 
 const ProgressModel = {
   // --- Video Progress ---
-  
+
   async upsertVideoProgress(userId, videoId, progressPercent, lastPosition = 0) {
     const isCompleted = progressPercent >= 90.0 ? 1 : 0;
-    
+
     // UPSERT (Insert or Update)
     const [result] = await db.query(
       `INSERT INTO video_progress (user_id, video_id, progress_percent, is_completed, last_position)
@@ -46,7 +46,7 @@ const ProgressModel = {
 
   async upsertCourseProgress(userId, courseId, progressPercent) {
     const isCompleted = progressPercent >= 100.0 ? 1 : 0;
-    
+
     const [result] = await db.query(
       `INSERT INTO course_progress (user_id, course_id, progress_percent, is_completed)
        VALUES (?, ?, ?, ?)
@@ -65,6 +65,39 @@ const ProgressModel = {
       [userId, courseId]
     );
     return rows[0] || null;
+  },
+
+  async getSyllabusProgress(userId, category) {
+
+    const [totalRows] = await db.query(
+      `SELECT COUNT(*) total
+         FROM videos
+         WHERE category = ?`,
+      [category]
+    );
+
+    const totalLectures = totalRows[0].total;
+
+    const [completedRows] = await db.query(
+      `SELECT COUNT(*) completed
+         FROM video_progress vp
+         JOIN videos v ON vp.video_id = v.id
+         WHERE vp.user_id = ?
+         AND vp.progress_percent >= 10
+         AND v.category = ?`,
+      [userId, category]
+    );
+
+    const completedLectures = completedRows[0].completed;
+
+    return {
+      completedLectures,
+      totalLectures,
+      progressPercent:
+        totalLectures === 0
+          ? 0
+          : Math.round((completedLectures / totalLectures) * 100)
+    };
   },
 
   async getAllCourseProgress(userId) {

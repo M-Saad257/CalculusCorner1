@@ -564,7 +564,8 @@ const studentController = {
 
       // Recent watched videos
       const recentVideos = await ProgressModel.getRecentlyWatchedVideos(userId, 6);
-
+      const syllabusProgress =
+    await ProgressModel.getSyllabusProgress(userId, profile.class);
       const dashboardData = {
         profile,
         enrolled,
@@ -572,7 +573,8 @@ const studentController = {
           analytics,
           topicBreakdown,
           weeklyActivity,
-          scoreTrend
+          scoreTrend,
+          syllabusProgress
         },
         badges,
         timeline,

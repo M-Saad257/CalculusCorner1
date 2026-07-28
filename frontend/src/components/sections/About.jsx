@@ -259,8 +259,7 @@ const About = () => {
           <div className="lg:col-span-4 flex flex-col gap-6 w-full">
 
             {/* Elegant Portrait Box */}
-            <div className="relative rounded-[32px] overflow-hidden border border-border-color/80 bg-bg-secondary dark:bg-bg-tertiary p-3 shadow-[0_20px_50px_rgba(0,0,0,0.05)] hover:border-primary/30 transition-all duration-500 group/portrait animate-fadeIn">
-              <div className="relative aspect-[3/4] rounded-[24px] overflow-hidden bg-[#1E293B]">
+          <div className="relative w-full max-w-[390px] rounded-[20px] bg-gradient-to-b from-blue-50/80 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 border border-slate-200/60 dark:border-slate-800 mb-20 flex justify-center items-end h-[440px] shadow-lg">
                 <img
                   src={getImageUrl(data.image_url)}
                   alt={data.heading}
@@ -279,7 +278,6 @@ const About = () => {
                   <h4 className="font-display font-black text-base !text-white leading-tight mb-0.5" style={{ color: '#ffffff' }}>{data.heading}</h4>
                   <p className="text-[11px] text-slate-300 font-semibold">{data.heading_gradient}</p>
                 </div>
-              </div>
             </div>
 
             {/* Instructor Details Card */}

@@ -26,6 +26,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   }
 }));
 
+app.use('/uploads', express.static('uploads'));
+
 // --- GLOBAL MIDDLEWARES ---
 
 // Security headers (configured to allow inline document iframe viewer)

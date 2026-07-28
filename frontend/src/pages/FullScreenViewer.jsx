@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ExternalLink, FileText, Play, Sparkles, Loader2, BookOpen, Download, CheckCircle2, Eye, Search, X } from 'lucide-react';
+import { ArrowLeft, FileText, Play, Sparkles, BookOpen, Download, CheckCircle2, Eye, Search, X } from 'lucide-react';
 import api from '../services/api';
 import Button from '../components/ui/Button';
 import Loader from '../components/ui/Loader';
@@ -41,6 +41,24 @@ const FullScreenViewer = () => {
   // Sidebar state
   const [sidebarTab, setSidebarTab] = useState(type === 'video' ? 'lectures' : type === 'book' ? 'books' : 'notes');
   const [sidebarSearch, setSidebarSearch] = useState('');
+
+  const searchParams = useMemo(
+    () => new URLSearchParams(window.location.search),
+    []
+  ); const timeFromQuery = parseInt(searchParams.get('t')) || 0;
+
+  const startPosition = useMemo(() => {
+
+    if (timeFromQuery > 0)
+      return timeFromQuery;
+
+    return Math.round(
+      item?.last_position ||
+      item?.lastPosition ||
+      0
+    );
+
+  }, [timeFromQuery, item]);
 
   useEffect(() => {
     setSidebarTab(type === 'video' ? 'lectures' : type === 'book' ? 'books' : 'notes');
@@ -149,65 +167,333 @@ const FullScreenViewer = () => {
     }, 4000);
   };
 
+  const startVideoTracking = (player) => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    intervalRef.current = setInterval(async () => {
+
+      if (!player || typeof player.getCurrentTime !== "function") {
+        return;
+      }
+
+      const currentTime = Math.floor(player.getCurrentTime());
+      const duration = timeTrackingRef.current.duration || player.getDuration();
+
+      if (!duration) return;
+
+      timeTrackingRef.current.duration = duration;
+
+
+      // watched seconds save
+      const last = Math.floor(timeTrackingRef.current.lastTime);
+
+      for (let i = last; i <= currentTime; i++) {
+        timeTrackingRef.current.watchedSeconds.add(i);
+      }
+
+
+      timeTrackingRef.current.lastTime = currentTime;
+
+
+      const watched =
+        timeTrackingRef.current.watchedSeconds.size;
+
+
+      const progressPercent = Math.min(
+        100,
+        Math.round((watched / duration) * 100)
+      );
+
+
+      timeTrackingRef.current.tick++;
+
+
+      const completed = progressPercent >= 90;
+
+
+      if (
+        timeTrackingRef.current.tick % 5 === 0 ||
+        completed
+      ) {
+        try {
+          await api.post(
+            `/student/progress/video/${item.id}`,
+            {
+              progressPercent,
+              lastPosition: currentTime,
+              duration: Math.floor(duration)
+            }
+          );
+
+          if (completed) {
+            timeTrackingRef.current.isCompleted = true;
+          }
+
+        } catch (err) {
+          console.error(
+            "Progress save failed",
+            err
+          );
+        }
+      }
+
+
+    }, 1000);
+  };
+
+  const initYoutubePlayer = () => {
+
+    if (!item || type !== "video") return;
+
+    const ytId = item.videoId || item.video_id;
+
+    if (!ytId) return;
+
+
+    playerRef.current = new window.YT.Player("yt-player", {
+      videoId: ytId,
+      playerVars: {
+        autoplay: 0,
+        controls: 1,
+        rel: 0,
+        modestbranding: 1,
+        start: startPosition || 0
+      },
+      events: {
+
+        onReady: (event) => {
+
+          const player = event.target;
+
+          const duration = player.getDuration();
+
+          timeTrackingRef.current.duration = duration;
+
+
+          const start = startPosition || 0;
+
+
+          timeTrackingRef.current.watchedSeconds = new Set(
+            Array.from({ length: start }, (_, i) => i)
+          );
+
+
+          timeTrackingRef.current.lastTime = start;
+
+
+          if (start) {
+            player.seekTo(start, true);
+          }
+
+
+          startVideoTracking(player);
+
+        },
+
+
+        onStateChange: (event) => {
+
+          if (
+            event.data ===
+            window.YT.PlayerState.PLAYING
+          ) {
+
+            startVideoTracking(event.target);
+
+          }
+
+        }
+
+      }
+
+    }
+    );
+  };
+  useEffect(() => {
+    if (type !== "video" || !item) return;
+
+    const init = () => {
+      if (window.YT && window.YT.Player) {
+        initYoutubePlayer();
+      }
+    };
+
+    if (!window.YT) {
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+
+      window.onYouTubeIframeAPIReady = init;
+
+      document.body.appendChild(script);
+    } else {
+      init();
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+
+      if (playerRef.current) {
+        try {
+          playerRef.current.destroy();
+        } catch { }
+      }
+    };
+
+  }, [item, type]);
   // Detect board from current item (subcategory or title keywords)
   const detectBoard = (it) => {
-    if (!it) return null;
-    const sub = (it.subcategory || '').toLowerCase();
-    const title = (it.title || '').toLowerCase();
-    const combined = sub + ' ' + title;
-    if (combined.includes('kpk') || combined.includes('bise kp')) return 'kpk';
-    if (combined.includes('punjab') || combined.includes('bise punjab') || combined.includes('ptcb')) return 'punjab';
-    if (combined.includes('fbise') || combined.includes('federal')) return 'fbise';
-    if (combined.includes('nbf') || combined.includes('national book')) return 'nbf';
-    if (combined.includes('sindh')) return 'sindh';
-    if (combined.includes('balochistan')) return 'balochistan';
-    if (sub) return sub; // use raw subcategory as fallback board key
-    return null;
+    if (!it) return "";
+
+    const text = `${it.title || ""} ${it.subcategory || ""}`.toLowerCase();
+
+    // NBF first
+    if (
+      text.includes("national book foundation") ||
+      /\bnbf\b/.test(text)
+    ) {
+      return "nbf";
+    }
+
+    // KPK
+    if (
+      /\bkpk\b/.test(text) ||
+      text.includes("bise kp")
+    ) {
+      return "kpk";
+    }
+
+    // FBISE
+    if (
+      /\bfbise\b/.test(text) ||
+      text.includes("federal")
+    ) {
+      return "fbise";
+    }
+
+    if (text.includes("punjab")) return "punjab";
+    if (text.includes("sindh")) return "sindh";
+    if (text.includes("balochistan")) return "balochistan";
+
+    return "";
   };
 
   const itemBoard = useMemo(() => detectBoard(item), [item]);
 
-  // Sort: same-board first, then same-category, then rest
-  const boardAwareSort = (list, curItem) => {
-    const board = detectBoard(curItem);
-    const cat = (curItem?.category || '').toLowerCase();
-    return [...list].sort((a, b) => {
-      const aBoard = detectBoard(a);
-      const bBoard = detectBoard(b);
-      const aMatch = board && aBoard === board ? 2 : 0;
-      const bMatch = board && bBoard === board ? 2 : 0;
-      const aCat = (a.category || '').toLowerCase() === cat ? 1 : 0;
-      const bCat = (b.category || '').toLowerCase() === cat ? 1 : 0;
-      return (bMatch + bCat) - (aMatch + aCat);
-    });
-  };
+
 
   // Sorted recommendations per tab
   const recommendations = useMemo(() => {
-    const filteredLectures = allVideos.filter(v => !(type === 'video' && String(v.id) === String(id)));
-    const filteredNotes = allResources.filter(r => !(type === 'resource' && String(r.id) === String(id)));
-    const filteredBooks = allBooks.filter(b => !(type === 'book' && String(b.id) === String(id)));
+    // Current title
+    const currentTitle = (item?.title || "").toLowerCase();
+
+    // Ex 5.2 -> unit = "5"
+    const currentMatch = currentTitle.match(/(\d+)\.(\d+)/);
+    const currentUnit = currentMatch ? currentMatch[1] : null;
+
+    const getExerciseNumber = (title = "") => {
+
+      let match = title.match(/(?:exercise)\s*(\d+)\.(\d+)/i);
+
+      // Agar Exercise na mile to Ex check karo
+      if (!match) {
+        match = title.match(/\bEx\s*(\d+)\.(\d+)/i);
+      }
+
+      if (!match) return null;
+
+      return {
+        chapter: match[1],
+        exercise: match[2]
+      };
+    };
+
+
+
+    const sameChapter = (videoTitle, currentTitle) => {
+      const a = getExerciseNumber(videoTitle);
+      const b = getExerciseNumber(currentTitle);
+
+      if (!a || !b) return false;
+
+      return a.chapter === b.chapter;
+    };
+
+
+
+    const filteredLectures = allVideos.filter(v => {
+
+      if (String(v.id) === String(id)) return false;
+
+      // Same board only
+      if (detectBoard(v) !== detectBoard(item)) return false;
+
+      // Same chapter/unit (4.1, 4.2, 4.3 all allowed)
+      return (
+        sameChapter(v.title, item.title) ||
+        v.title?.toLowerCase().includes(currentUnit)
+      );
+    });
+    const filteredNotes = allResources.filter(r => {
+
+      if (type === "resource" && String(r.id) === String(id)) return false;
+
+      if (detectBoard(r) !== detectBoard(item)) return false;
+
+      return sameChapter(r.title, item.title);
+
+    });
+
+    const filteredBooks = allBooks.filter(b => {
+
+      if (String(b.id) === String(id)) return false;
+
+      const bookBoard = detectBoard(b);
+      const currentBoard = detectBoard(item);
+
+      return !currentBoard ||
+        !bookBoard ||
+        bookBoard === currentBoard;
+
+    });
 
     return {
-      lectures: boardAwareSort(filteredLectures, item),
-      notes: boardAwareSort(filteredNotes, item),
-      books: boardAwareSort(filteredBooks, item),
+      lectures: [...filteredLectures].sort(sortLecturesNaturally),
+      notes: filteredNotes,
+      books: filteredBooks,
     };
   }, [item, allVideos, allResources, allBooks, id, type]);
 
-  const activeRawList = sidebarTab === 'lectures'
-    ? recommendations.lectures
-    : sidebarTab === 'books'
-      ? recommendations.books
-      : recommendations.notes;
+
+  const activeRawList = sidebarSearch.trim()
+    ? (
+      sidebarTab === 'lectures'
+        ? allVideos
+        : sidebarTab === 'books'
+          ? allBooks
+          : allResources
+    )
+    : (
+      sidebarTab === 'lectures'
+        ? recommendations.lectures
+        : sidebarTab === 'books'
+          ? recommendations.books
+          : recommendations.notes
+    );
+
 
   const activeFilteredList = useMemo(() => {
     if (!sidebarSearch.trim()) return activeRawList;
-    const q = sidebarSearch.toLowerCase().trim();
-    return activeRawList.filter(i =>
-      (i.title && i.title.toLowerCase().includes(q)) ||
-      (i.category && i.category.toLowerCase().includes(q)) ||
-      (i.subcategory && i.subcategory.toLowerCase().includes(q))
+
+    const q = sidebarSearch.toLowerCase();
+
+    return activeRawList.filter(item =>
+      item.title?.toLowerCase().includes(q) ||
+      item.category?.toLowerCase().includes(q) ||
+      item.subcategory?.toLowerCase().includes(q)
     );
   }, [activeRawList, sidebarSearch]);
 
@@ -231,6 +517,7 @@ const FullScreenViewer = () => {
     }
     return null;
   };
+
 
   const handleDownloadFile = () => {
     if (!item) return;
@@ -287,9 +574,6 @@ const FullScreenViewer = () => {
     );
   }
 
-  const searchParams = new URLSearchParams(location.search);
-  const timeFromQuery = parseInt(searchParams.get('t')) || 0;
-  const startPosition = timeFromQuery || Math.round(item?.last_position || item?.lastPosition || 0);
 
   const viewerUrl = type === 'book'
     ? `/api/books/${id}/view`
@@ -345,21 +629,21 @@ const FullScreenViewer = () => {
     w-full
     lg:flex-1
     bg-black
+    py-0.5
     flex
     items-center
     justify-center
     overflow-hidden
     relative
-    h-[45vh]
+    h-[25vh]
     lg:h-full
   "
         >
           <div className="fs-main w-full h-full flex items-center justify-center relative">
             {type === 'video' ? (
               <div className="w-full h-full relative flex items-center justify-center">
-                <iframe
+                <div
                   id="yt-player"
-                  src={`https://www.youtube.com/embed/${item.videoId || item.id}?autoplay=1&start=${startPosition}&rel=0&modestbranding=1&enablejsapi=1`}
                   title={item.title}
                   className="w-full h-full rounded-xl overflow-hidden shadow-2xl border border-border-color bg-black"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -368,24 +652,24 @@ const FullScreenViewer = () => {
               </div>
             ) : /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? (
               <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-bg-secondary border border-border-color rounded-2xl max-w-lg mx-auto my-auto gap-5 shadow-sm">
-                <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shadow-inner">
+                <div className="w-24 h-16 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shadow-inner">
                   <FileText size={32} />
                 </div>
                 <div className="px-4">
                   <h3 className="font-display font-bold text-base text-text-primary leading-snug">
                     {item?.title}
                   </h3>
-                  <p className="text-text-secondary text-xs mt-2 leading-relaxed">
-                    Mobile web browsers require documents and PDF files to be opened directly for a high-performance native reading experience.
+                  <p className="text-text-secondary text-xs mt-1 leading-relaxed">
+                    Open PDF directly for the best reading experience.
                   </p>
                 </div>
                 <a
                   href={viewerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full max-w-xs py-3.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 hover:no-underline border-0 cursor-pointer text-center"
+                  className="w-full max-w-xs py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 hover:no-underline border-0 cursor-pointer text-center"
                 >
-                  <Eye size={14} /> Open & Read PDF Document
+                  <Eye size={14} /> Open PDF Document
                 </a>
               </div>
             ) : (
@@ -431,29 +715,29 @@ const FullScreenViewer = () => {
               <button
                 onClick={() => setSidebarTab('lectures')}
                 className={`py-1.5 px-1.5 rounded-lg transition-all border-0 cursor-pointer text-center text-[11px] truncate ${sidebarTab === 'lectures'
-                    ? 'bg-primary text-white shadow-sm font-extrabold'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary font-semibold'
+                  ? 'bg-primary text-white shadow-sm font-extrabold'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary font-semibold'
                   }`}
               >
-                Lectures ({recommendations.lectures.length})
+                Lectures ({allVideos.length})
               </button>
               <button
                 onClick={() => setSidebarTab('notes')}
                 className={`py-1.5 px-1.5 rounded-lg transition-all border-0 cursor-pointer text-center text-[11px] truncate ${sidebarTab === 'notes'
-                    ? 'bg-primary text-white shadow-sm font-extrabold'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary font-semibold'
+                  ? 'bg-primary text-white shadow-sm font-extrabold'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary font-semibold'
                   }`}
               >
-                Notes ({recommendations.notes.length})
+                Notes ({allResources.length})
               </button>
               <button
                 onClick={() => setSidebarTab('books')}
                 className={`py-1.5 px-1.5 rounded-lg transition-all border-0 cursor-pointer text-center text-[11px] truncate ${sidebarTab === 'books'
-                    ? 'bg-primary text-white shadow-sm font-extrabold'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary font-semibold'
+                  ? 'bg-primary text-white shadow-sm font-extrabold'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary font-semibold'
                   }`}
               >
-                Books ({recommendations.books.length})
+                Books ({allBooks.length})
               </button>
             </div>
 
@@ -492,8 +776,8 @@ const FullScreenViewer = () => {
                     key={`${itemType}-${rec.id}`}
                     to={`/viewer/${itemType}/${rec.id}`}
                     className={`p-2.5 rounded-xl border transition-all flex gap-3 group shadow-sm hover:no-underline ${isCurrent
-                        ? 'bg-primary/10 border-primary/80 ring-1 ring-primary/50 text-text-primary'
-                        : 'bg-bg-secondary/60 hover:bg-bg-secondary border-border-color/80 hover:border-primary/50 text-text-primary'
+                      ? 'bg-primary/10 border-primary/80 ring-1 ring-primary/50 text-text-primary'
+                      : 'bg-bg-secondary/60 hover:bg-bg-secondary border-border-color/80 hover:border-primary/50 text-text-primary'
                       }`}
                   >
                     {/* Thumbnail Card */}
@@ -516,13 +800,6 @@ const FullScreenViewer = () => {
                         {sidebarTab === 'lectures' ? <Play size={18} className="fill-current" /> : sidebarTab === 'books' ? <BookOpen size={18} /> : <FileText size={18} />}
                       </div>
 
-                      {sidebarTab === 'lectures' && (
-                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 flex items-center justify-center transition-colors">
-                          <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center shadow">
-                            <Play size={10} className="fill-current ml-0.5" />
-                          </div>
-                        </div>
-                      )}
                     </div>
 
                     {/* Card Information */}

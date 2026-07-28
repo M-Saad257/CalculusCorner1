@@ -2,7 +2,6 @@ import { useRef, useState, useEffect, useMemo } from 'react';
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { FileText, Download, FileSpreadsheet, Book, Archive, File, Search, Image as ImageIcon, Eye, X, ArrowRight, ExternalLink } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import Button from '../ui/Button';
 import api from '../../services/api';
 import { useSocket } from '../../hooks/useSocket';
@@ -163,39 +162,42 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
           )}
         </div>
 
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
-            {categoriesList.map((category) => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${activeCategory === category
-                    ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
-                  }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-
-          {activeCategory !== 'All' && subcategoriesList.length > 1 && (
-            <div className="flex flex-wrap gap-2 md:gap-3 justify-start mt-2">
-              {subcategoriesList.map((subcat) => (
+        {/* Show category filters only on /books page */}
+        {!homeOnly && (
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex flex-wrap gap-2 md:gap-3 justify-start">
+              {categoriesList.map((category) => (
                 <button
-                  key={subcat}
-                  onClick={() => setActiveSubcategory(subcat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${activeSubcategory === subcat
-                      ? 'bg-slate-800 text-white border-slate-800'
-                      : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
+                  key={category}
+                  onClick={() => setActiveCategory(category)}
+                  className={`px-4 md:px-5 py-2 md:py-2.5 rounded-full text-xs md:text-sm font-semibold transition-all border ${activeCategory === category
+                      ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
+                      : 'bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary hover:bg-primary/5 shadow-sm'
                     }`}
                 >
-                  {subcat}
+                  {category}
                 </button>
               ))}
             </div>
-          )}
-        </div>
+
+            {activeCategory !== 'All' && subcategoriesList.length > 1 && (
+              <div className="flex flex-wrap gap-2 md:gap-3 justify-start mt-2">
+                {subcategoriesList.map((subcat) => (
+                  <button
+                    key={subcat}
+                    onClick={() => setActiveSubcategory(subcat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all border ${activeSubcategory === subcat
+                        ? 'bg-slate-800 text-white border-slate-800'
+                        : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 dark:hover:text-white hover:text-slate-800'
+                      }`}
+                  >
+                    {subcat}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <motion.div
           variants={containerVariants}
@@ -210,7 +212,7 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
               <motion.div
                 key={Book.id}
                 variants={itemVariants}
-                className="group relative p-4 rounded-2xl bg-bg-color border border-border-color shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col justify-between text-left h-full"
+                className="group relative p-4 w-60 overflow-hidden rounded-2xl bg-bg-color border border-border-color shadow-sm hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col justify-between text-left h-full"
               >
                 <div className="absolute top-4 right-4 z-10">
                   <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${option.bgColor}`}>
@@ -218,10 +220,14 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
                   </span>
                 </div>
 
-                <div className="flex flex-col flex-grow">
-                  <div className="relative w-full aspect-video mb-4 rounded-xl overflow-hidden bg-slate-100/50 group-hover:bg-primary/5 transition-colors">
+                <div className="flex flex-col items-center">
+                  <div className="relative w-36 aspect-[3/4] mb-1 rounded-xl overflow-hidden bg-slate-100/50 group-hover:bg-primary/5 transition-colors shadow-md">
                     {Book.thumbnail_url ? (
-                      <img src={`${import.meta.env.VITE_BACKEND_URL || ''}${Book.thumbnail_url}`} alt={Book.title} className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105" />
+                      <img
+                        src={`${import.meta.env.VITE_BACKEND_URL || ''}${Book.thumbnail_url}`}
+                        alt={Book.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center">
                         <Icon className={`w-12 h-12 opacity-50 ${option.bgColor.split(' ')[1]}`} />
@@ -229,18 +235,20 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
                     )}
                   </div>
 
-                  <h3 className="font-display font-bold text-lg text-text-primary mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                  <h3 className="font-display font-bold text-lg text-center text-text-primary line-clamp-2 group-hover:text-primary transition-colors">
                     {Book.title}
                   </h3>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-border-color flex justify-between items-center w-full gap-2">
+                <div className="mt-2 pt-4 border-t border-border-color flex justify-between items-center w-full gap-1">
                   <button
-                    onClick={() => handleViewBook(Book)}
+                    onClick={() => {
+                      window.open(`/viewer/book/${Book.id}`, '_blank');
+                    }}
                     className="flex items-center gap-1.5 text-primary hover:text-primary-dark font-bold text-xs transition-colors py-2 px-3 rounded-lg hover:bg-primary/5 cursor-pointer border border-primary/20 bg-transparent"
                   >
                     <Eye size={14} />
-                    <span>View Book</span>
+                    <span>View</span>
                   </button>
                   <a
                     href={`${import.meta.env.VITE_BACKEND_URL || ''}/api/books/${Book.id}/download`}
@@ -280,69 +288,6 @@ const Books = ({ isTab = false, hideHeader = false, homeOnly = false }) => {
           </div>
         )}
 
-        {createPortal(
-        <AnimatePresence>
-          {selectedBook && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-              onClick={() => setSelectedBook(null)}
-            >
-              <motion.div
-                initial={{ scale: 0.95, y: 15 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.95, y: 15 }}
-                transition={{ type: "spring", duration: 0.5 }}
-                className="bg-bg-color rounded-3xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden shadow-2xl border border-border-color relative text-left"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="p-4 md:p-6 border-b border-border-color flex justify-between items-left bg-bg-secondary">
-                  <h3 className="font-display font-bold text-lg md:text-xl text-text-primary line-clamp-1 pr-6">
-                    {selectedBook.title}
-                  </h3>
-                  <div className="flex items-left gap-2 pr-6">
-                    <a
-                      href={`${import.meta.env.VITE_BACKEND_URL || ''}/api/books/${selectedBook.id}/download`}
-                      download
-                      style={{
-                        color:'white'
-                      }}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-colors border-0 shadow-md decoration-none hover:no-underline"
-                    >
-                      <Download size={13} /> Download
-                    </a>
-                    <button
-                      onClick={() => {
-                        window.open(`/viewer/book/${selectedBook.id}`, '_blank');
-                        setSelectedBook(null);
-                      }}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer transition-colors border-0 shadow-md"
-                    >
-                      <ExternalLink size={13} /> Full Screen
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setSelectedBook(null)}
-                    className="p-2 text-text-secondary hover:text-red-500 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border-0 bg-transparent flex items-center justify-center"
-                  >
-                    <X size={20} />
-                  </button>
-                </div>
-                <div className="flex-1 w-full bg-slate-900 relative">
-                  <iframe
-                    src={`${import.meta.env.VITE_BACKEND_URL || ''}/api/books/${selectedBook.id}/view`}
-                    className="w-full h-full border-0"
-                    title={selectedBook.title}
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
 
       </div>
     </section>

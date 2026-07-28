@@ -9,7 +9,7 @@ const formatDuration = (seconds) => {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
-  
+
   if (hrs > 0) {
     return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   } else {
@@ -36,7 +36,7 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
 
   useEffect(() => {
     let active = true;
-    
+
     const checkAndInit = () => {
       if (!active) return;
       if (window.YT && window.YT.Player) {
@@ -57,12 +57,12 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
         document.head.appendChild(tag);
       }
     }
-    
+
     checkAndInit();
 
     return () => {
       active = false;
-      
+
       if (playerInstanceRef.current && typeof playerInstanceRef.current.getCurrentTime === 'function') {
         try {
           const currentTime = Math.floor(playerInstanceRef.current.getCurrentTime());
@@ -75,15 +75,15 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
               progressPercent,
               lastPosition: currentTime,
               duration: formattedDuration
-            }).catch(() => {});
+            }).catch(() => { });
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       if (playerInstanceRef.current) {
         try {
           playerInstanceRef.current.destroy();
-        } catch (e) {}
+        } catch (e) { }
       }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -107,23 +107,47 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
         onReady: (event) => {
           setLoading(false);
           const player = event.target;
-          
+
           // Get duration
-          const duration = player.getDuration();
-          timeTrackingRef.current.duration = duration;
-          
+          let duration = player.getDuration();
+
+          const waitDuration = setInterval(() => {
+            duration = player.getDuration();
+
+            if (duration > 0) {
+              clearInterval(waitDuration);
+
+              timeTrackingRef.current.duration = duration;
+
+              const startPos = Math.min(initialPosition, duration);
+
+              for (let i = 0; i < startPos; i++) {
+                timeTrackingRef.current.watchedSeconds.add(i);
+              }
+
+              timeTrackingRef.current.lastTime = startPos;
+
+              if (initialPosition > 0 && initialPosition < duration - 10) {
+                player.seekTo(initialPosition, true);
+              }
+
+              startTrackingLoop(player);
+            }
+
+          }, 500);
+
           // Pre-populate watched seconds up to initialPosition for accurate progress accumulation
           const startPos = Math.min(initialPosition, duration);
           for (let i = 0; i < startPos; i++) {
             timeTrackingRef.current.watchedSeconds.add(i);
           }
           timeTrackingRef.current.lastTime = startPos;
-          
+
           // Seek to last watched position
           if (initialPosition > 0 && initialPosition < duration - 10) {
             player.seekTo(initialPosition, true);
           }
-          
+
           // Start tracking progress loop
           startTrackingLoop(player);
         },
@@ -145,23 +169,28 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
 
   const startTrackingLoop = (player) => {
     if (intervalRef.current) clearInterval(intervalRef.current);
-    
+
     intervalRef.current = setInterval(async () => {
       if (!player || typeof player.getCurrentTime !== 'function') return;
 
       const currentTime = player.getCurrentTime();
       const duration = timeTrackingRef.current.duration || player.getDuration();
       timeTrackingRef.current.duration = duration;
-      
+
       const lastTime = timeTrackingRef.current.lastTime;
-      
+
       // Enable smooth seeking & skipping forward:
       const startSec = Math.floor(Math.min(lastTime, currentTime));
       const endSec = Math.floor(currentTime);
       for (let s = 0; s <= endSec; s++) {
-        timeTrackingRef.current.watchedSeconds.add(s);
+        const startSec = Math.floor(lastTime);
+        const endSec = Math.floor(currentTime);
+
+        for (let s = startSec; s <= endSec; s++) {
+          timeTrackingRef.current.watchedSeconds.add(s);
+        }
       }
-      
+
       timeTrackingRef.current.lastTime = currentTime;
 
       // Calculate progress percent based on genuine seconds watched
@@ -171,13 +200,13 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
 
         // Save progress to backend every 5 seconds, or if completed (>= 90%)
         timeTrackingRef.current.tick = (timeTrackingRef.current.tick || 0) + 1;
-        
+
         const isCompleted = progressPercent >= 90;
         const justCompleted = isCompleted && !timeTrackingRef.current.isCompleted;
-        
+
         if (timeTrackingRef.current.tick % 5 === 0 || justCompleted || currentTime === duration) {
           timeTrackingRef.current.isCompleted = isCompleted || timeTrackingRef.current.isCompleted;
-          
+
           const token = localStorage.getItem('token');
           if (token) {
             try {
@@ -187,7 +216,7 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
                 lastPosition: Math.round(currentTime),
                 duration: formattedDuration
               });
-              
+
               // Check for new badges
               if (res.data && res.data.newlyAwarded && res.data.newlyAwarded.length > 0) {
                 res.data.newlyAwarded.forEach(badge => {
@@ -227,7 +256,7 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
       )}
 
       <div className="bg-bg-color rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl border border-border-color relative text-left flex flex-col max-h-[90vh]">
-        
+
         {/* Modal Header */}
         <div className="p-4 md:p-5 border-b border-border-color flex justify-between items-center bg-bg-secondary shrink-0">
           <div className="flex items-center gap-3 pr-4">
@@ -246,7 +275,7 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
                 if (playerInstanceRef.current && typeof playerInstanceRef.current.getCurrentTime === 'function') {
                   try {
                     currentTime = Math.floor(playerInstanceRef.current.getCurrentTime() || 0);
-                  } catch (err) {}
+                  } catch (err) { }
                 }
                 const pos = currentTime || Math.round(video.last_position || video.lastPosition || 0);
                 window.open(`/viewer/video/${video.id}?t=${pos}`, '_blank');
@@ -274,10 +303,10 @@ const VideoPlayerModal = ({ video, onClose, onProgressSaved }) => {
               <Loader text="Loading Lecture Player..." />
             </div>
           )}
-          
+
           <div id="youtube-player-element" className="absolute inset-0 w-full h-full border-0" />
         </div>
-        
+
         {/* Footer info */}
         <div className="p-4 bg-bg-secondary border-t border-border-color text-xxs font-extrabold tracking-wide text-text-tertiary flex items-center justify-between shrink-0">
           <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 font-bold">

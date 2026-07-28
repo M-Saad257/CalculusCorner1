@@ -21,12 +21,22 @@ const updateController = {
   async createUpdate(req, res, next) {
     try {
       const { title, content, category, link } = req.body;
+
+      const image = req.file
+        ? `/uploads/updates/${req.file.filename}`
+        : null;
       if (!title || !content) {
         res.status(400);
         throw new Error('Title and content are required');
       }
 
-      const insertId = await UpdateModel.create(title, content, category || 'General', link || null);
+      const insertId = await UpdateModel.create(
+        title,
+        content,
+        category || 'General',
+        link || null,
+        image
+      );
       const newUpdate = await UpdateModel.getById(insertId);
 
       // --- REAL TIME NOTIFICATIONS BROADCAST ---
@@ -36,10 +46,10 @@ const updateController = {
       let notificationId = null;
       try {
         notificationId = await NotificationModel.create(
-          null, 
-          `New Update: ${title}`, 
-          content.substring(0, 150) + (content.length > 150 ? '...' : ''), 
-          'update', 
+          null,
+          `New Update: ${title}`,
+          content.substring(0, 150) + (content.length > 150 ? '...' : ''),
+          'update',
           'student'
         );
       } catch (err) {
@@ -91,6 +101,9 @@ const updateController = {
     try {
       const { id } = req.params;
       const { title, content, category, link } = req.body;
+      const image = req.file
+        ? `/uploads/updates/${req.file.filename}`
+        : existing.image;
       if (!title || !content) {
         res.status(400);
         throw new Error('Title and content are required');
@@ -102,7 +115,14 @@ const updateController = {
         throw new Error('Update not found');
       }
 
-      await UpdateModel.update(id, title, content, category || 'General', link || null);
+      await UpdateModel.update(
+        id,
+        title,
+        content,
+        category,
+        link,
+        image
+      );
       const updated = await UpdateModel.getById(id);
 
       // Real-time broadcast

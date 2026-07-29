@@ -565,7 +565,7 @@ const studentController = {
       // Recent watched videos
       const recentVideos = await ProgressModel.getRecentlyWatchedVideos(userId, 6);
       const syllabusProgress =
-    await ProgressModel.getSyllabusProgress(userId, profile.class);
+        await ProgressModel.getSyllabusProgress(userId, profile.class);
       const dashboardData = {
         profile,
         enrolled,
@@ -645,6 +645,9 @@ const studentController = {
   },
 
   async getVideos(req, res, next) {
+    console.log("===== GET VIDEOS HIT =====");
+    console.log(req.user);
+
     try {
       const studentId = req.user.id;
       const page = parseInt(req.query.page);
@@ -720,7 +723,7 @@ const studentController = {
           queryParams.push(is_past_paper === 'past_papers' || is_past_paper === '1' || is_past_paper === 1 || is_past_paper === true ? 1 : 0);
         }
 
-        let whereSql = '';
+        whereSql = '';
         if (whereClauses.length > 0) {
           whereSql = 'WHERE ' + whereClauses.join(' AND ');
         }
@@ -734,17 +737,28 @@ const studentController = {
         const totalPages = Math.ceil(totalItems / limit);
 
         if (sort === 'lecture_asc' || sort === 'title_az' || sort === 'category' || !sort) {
+
           const [rows] = await db.query(
-            `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail, v.category, v.subcategory, v.is_past_paper, v.created_at AS createdAt,
-                    COALESCE(vp.progress_percent, 0.00) AS progressPercent,
-                    COALESCE(vp.is_completed, 0) AS isCompleted,
-                    COALESCE(vp.last_position, 0) AS lastPosition
-             FROM videos v
-             LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.user_id = ?
-             ${whereSql}`,
+            `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail,
+            v.category, v.subcategory, v.is_past_paper,
+            v.created_at AS createdAt,
+            COALESCE(vp.progress_percent, 0.00) AS progressPercent,
+            COALESCE(vp.is_completed, 0) AS isCompleted,
+            COALESCE(vp.last_position, 0) AS lastPosition
+     FROM videos v
+     LEFT JOIN video_progress vp
+     ON v.id = vp.video_id AND vp.user_id = ?
+     ${whereSql}`,
             [studentId, ...queryParams]
           );
-          rows.sort(sortLecturesNaturally);
+
+
+          // Sirf All category pe natural sorting
+          if (!category || category === 'All') {
+            rows.sort(sortLecturesNaturally);
+          }
+
+
           const paginatedData = rows.slice(offset, offset + limit);
 
           return res.status(200).json({
@@ -756,59 +770,39 @@ const studentController = {
             totalItems
           });
         }
+        // Fallback non-paginated
+        // Fallback non-paginated
+        let fallbackWhereSql = '';
+        let fallbackQueryParams = [studentId];
 
-        // Sorting mapping
-        let orderSql = 'ORDER BY v.category ASC, v.subcategory ASC, v.id ASC';
-        if (sort === 'newest') orderSql = 'ORDER BY v.created_at DESC';
-        else if (sort === 'oldest') orderSql = 'ORDER BY v.created_at ASC';
-        else if (sort === 'title_za') orderSql = 'ORDER BY v.title DESC';
-        else if (sort === 'completed') orderSql = 'ORDER BY COALESCE(vp.is_completed, 0) DESC, v.id ASC';
-        else if (sort === 'in_progress') orderSql = 'ORDER BY COALESCE(vp.progress_percent, 0) DESC, v.id ASC';
+        if (studentClass && studentClass !== 'All') {
+          fallbackWhereSql = 'WHERE v.category = ?';
+          fallbackQueryParams.push(studentClass);
+        }
 
-        // Fetch query
         const [rows] = await db.query(
-          `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail, v.category, v.subcategory, v.is_past_paper, v.created_at AS createdAt,
-                  COALESCE(vp.progress_percent, 0.00) AS progressPercent,
-                  COALESCE(vp.is_completed, 0) AS isCompleted,
-                  COALESCE(vp.last_position, 0) AS lastPosition
-           FROM videos v
-           LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.user_id = ?
-           ${whereSql}
-           ${orderSql}
-           LIMIT ? OFFSET ?`,
-          [studentId, ...queryParams, limit, offset]
+          `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail,
+          v.category, v.subcategory, v.is_past_paper,
+          v.created_at AS createdAt,
+          COALESCE(vp.progress_percent, 0.00) AS progressPercent,
+          COALESCE(vp.is_completed, 0) AS isCompleted,
+          COALESCE(vp.last_position, 0) AS lastPosition
+   FROM videos v
+   LEFT JOIN video_progress vp
+   ON v.id = vp.video_id AND vp.user_id = ?
+   ${fallbackWhereSql}`,
+          fallbackQueryParams
         );
 
-        return res.status(200).json({
+        rows.sort(sortLecturesNaturally);
+
+        res.status(200).json({
           success: true,
-          data: rows,
-          page,
-          limit,
-          totalPages,
-          totalItems
+          data: rows
         });
-      }
 
-      // Fallback non-paginated
-      let whereSql = '';
-      let queryParams = [studentId];
-      if (studentClass && studentClass !== 'All') {
-        whereSql = 'WHERE v.category = ?';
-        queryParams.push(studentClass);
-      }
+      } // close if(page && limit)
 
-      const [rows] = await db.query(
-        `SELECT v.id, v.title, v.url, v.video_id AS videoId, v.duration, v.thumbnail, v.category, v.subcategory, v.is_past_paper, v.created_at AS createdAt,
-                COALESCE(vp.progress_percent, 0.00) AS progressPercent,
-                COALESCE(vp.is_completed, 0) AS isCompleted,
-                COALESCE(vp.last_position, 0) AS lastPosition
-         FROM videos v
-         LEFT JOIN video_progress vp ON v.id = vp.video_id AND vp.user_id = ?
-         ${whereSql}`,
-        queryParams
-      );
-      rows.sort(sortLecturesNaturally);
-      res.status(200).json({ success: true, data: rows });
     } catch (err) {
       next(err);
     }
@@ -1399,15 +1393,15 @@ const studentController = {
 
       const image = await Jimp.read(templatePath);
       const fontLarge = await Jimp.loadFont(Jimp.FONT_SANS_64_BLACK);
-      const fontMed   = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
+      const fontMed = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
 
-      const width  = image.bitmap.width;   // 2000
+      const width = image.bitmap.width;   // 2000
       const height = image.bitmap.height;  // 1414
 
       // Transparent layers for each colored text section
-      const nameLayer   = new Jimp(width, height, 0x00000000); // Student Name   → blue
+      const nameLayer = new Jimp(width, height, 0x00000000); // Student Name   → blue
       const prefixLayer = new Jimp(width, height, 0x00000000); // prefix text    → dark navy
-      const badgeLayer  = new Jimp(width, height, 0x00000000); // Badge Name     → gold
+      const badgeLayer = new Jimp(width, height, 0x00000000); // Badge Name     → gold
       const suffixLayer = new Jimp(width, height, 0x00000000); // achievement desc → dark navy
 
       const printBold = (targetLayer, font, x, y, textOptions, boxWidth) => {
@@ -1451,7 +1445,7 @@ const studentController = {
       // Student Name → vibrant blue #2761f0 (39, 97, 240)
       nameLayer.scan(0, 0, nameLayer.bitmap.width, nameLayer.bitmap.height, function (x, y, idx) {
         if (this.bitmap.data[idx + 3] > 10) {
-          this.bitmap.data[idx]     = 39;
+          this.bitmap.data[idx] = 39;
           this.bitmap.data[idx + 1] = 97;
           this.bitmap.data[idx + 2] = 240;
         }
@@ -1460,7 +1454,7 @@ const studentController = {
       // Prefix text → dark navy #1e293b (30, 41, 59)
       prefixLayer.scan(0, 0, prefixLayer.bitmap.width, prefixLayer.bitmap.height, function (x, y, idx) {
         if (this.bitmap.data[idx + 3] > 10) {
-          this.bitmap.data[idx]     = 30;
+          this.bitmap.data[idx] = 30;
           this.bitmap.data[idx + 1] = 41;
           this.bitmap.data[idx + 2] = 59;
         }
@@ -1469,7 +1463,7 @@ const studentController = {
       // Badge Name → gold #D4981A (212, 152, 26)
       badgeLayer.scan(0, 0, badgeLayer.bitmap.width, badgeLayer.bitmap.height, function (x, y, idx) {
         if (this.bitmap.data[idx + 3] > 10) {
-          this.bitmap.data[idx]     = 212;
+          this.bitmap.data[idx] = 212;
           this.bitmap.data[idx + 1] = 152;
           this.bitmap.data[idx + 2] = 26;
         }
@@ -1478,7 +1472,7 @@ const studentController = {
       // Achievement description → dark navy #1e293b (30, 41, 59)
       suffixLayer.scan(0, 0, suffixLayer.bitmap.width, suffixLayer.bitmap.height, function (x, y, idx) {
         if (this.bitmap.data[idx + 3] > 10) {
-          this.bitmap.data[idx]     = 30;
+          this.bitmap.data[idx] = 30;
           this.bitmap.data[idx + 1] = 41;
           this.bitmap.data[idx + 2] = 59;
         }
@@ -1508,7 +1502,7 @@ const studentController = {
       /*
       const studentId = req.user.id;
       const db = require('../config/db');
-
+ 
       const [dailyLogs] = await db.query(
         'SELECT COUNT(*) as count FROM ai_tutor_logs WHERE student_id = ? AND created_at >= NOW() - INTERVAL 1 DAY',
         [studentId]
@@ -1516,25 +1510,25 @@ const studentController = {
       const creditsUsed = dailyLogs[0].count;
       const totalCredits = 2;
       const creditsLeft = Math.max(0, totalCredits - creditsUsed);
-
+ 
       const [lastLog] = await db.query(
         'SELECT created_at FROM ai_tutor_logs WHERE student_id = ? ORDER BY created_at DESC LIMIT 1',
         [studentId]
       );
-
+ 
       let isLocked = false;
       let lockoutRemainingMs = 0;
       if (lastLog.length > 0) {
         const lastLogTime = new Date(lastLog[0].created_at).getTime();
         const now = Date.now();
         const hoursSinceLast = (now - lastLogTime) / (1000 * 60 * 60);
-
+ 
         if (hoursSinceLast < 6) {
           isLocked = true;
           lockoutRemainingMs = Math.floor((6 * 60 * 60 * 1000) - (now - lastLogTime));
         }
       }
-
+ 
       res.status(200).json({ success: true, data: { creditsLeft, totalCredits, isLocked, lockoutRemainingMs } });
       */
 
@@ -1558,14 +1552,14 @@ const studentController = {
       // --- AI FEATURES DISABLED ---
       /*
       const studentId = req.user.id;
-
+ 
       if (!req.file) {
         return res.status(400).json({ success: false, message: 'Equation image is required.' });
       }
-
+ 
       const fs = require('fs');
       const db = require('../config/db');
-
+ 
       // Helper function to get stats
       const getStats = async () => {
         const [dailyLogs] = await db.query(
@@ -1575,19 +1569,19 @@ const studentController = {
         const creditsUsed = dailyLogs[0].count;
         const totalCredits = 2;
         const creditsLeft = Math.max(0, totalCredits - creditsUsed);
-
+ 
         const [lastLog] = await db.query(
           'SELECT created_at FROM ai_tutor_logs WHERE student_id = ? ORDER BY created_at DESC LIMIT 1',
           [studentId]
         );
-
+ 
         let isLocked = false;
         let lockoutRemainingMs = 0;
         if (lastLog.length > 0) {
           const lastLogTime = new Date(lastLog[0].created_at).getTime();
           const now = Date.now();
           const hoursSinceLast = (now - lastLogTime) / (1000 * 60 * 60);
-
+ 
           if (hoursSinceLast < 6) {
             isLocked = true;
             lockoutRemainingMs = Math.floor((6 * 60 * 60 * 1000) - (now - lastLogTime));
@@ -1595,34 +1589,34 @@ const studentController = {
         }
         return { creditsLeft, totalCredits, isLocked, lockoutRemainingMs };
       };
-
+ 
       // 1. Check max 2 queries in the last 24 hours
       let currentStats = await getStats();
       if (currentStats.creditsLeft <= 0) {
         if (req.file) fs.unlinkSync(req.file.path);
         return res.status(429).json({ success: false, message: 'You have reached the daily limit of 2 AI Tutor queries.', aiTutorStats: currentStats });
       }
-
+ 
       // 2. Check 6-hour gap between queries
       if (currentStats.isLocked) {
         const remainingHours = Math.ceil(currentStats.lockoutRemainingMs / (1000 * 60 * 60));
         if (req.file) fs.unlinkSync(req.file.path);
         return res.status(429).json({ success: false, message: `Please wait ${remainingHours} more hour(s) before using the AI Tutor again.`, aiTutorStats: currentStats });
       }
-
-
-
+ 
+ 
+ 
       // 3. Call Gemini
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       if (!process.env.GEMINI_API_KEY_STD) {
         if (req.file) fs.unlinkSync(req.file.path);
         return res.status(500).json({ success: false, message: 'GEMINI_API_KEY_STD is not configured on the server.' });
       }
-
+ 
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_STD);
       // Gemini 2.5 flash is multimodal and recommended
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
+ 
       const fileBuffer = fs.readFileSync(req.file.path);
       const base64Image = fileBuffer.toString('base64');
       const imagePart = {
@@ -1631,35 +1625,35 @@ const studentController = {
           mimeType: req.file.mimetype
         }
       };
-
+ 
       const prompt = `
-       Analyze this image WITH EXTREME ACCURACY and high visual precision. Pay absolute attention to math notation: strictly differentiate between standard multiplication (e.g., 2x) and exponents/superscripts (e.g., 2ˣ). 
-
+       Analyze this image WITH EXTREME ACCURACY and high visual precision. Pay absolute attention to math notation: strictly differentiate between standard multiplication (e.g., 2x) and exponents/superscripts (e.g., 2ˣ).
+ 
 CRITICAL VISUAL CHECK:
-1. First, perform a strict visual parsing of the math problem. Check if any variable or number is written as an exponent/superscript (raised power) versus sitting on the baseline. 
+1. First, perform a strict visual parsing of the math problem. Check if any variable or number is written as an exponent/superscript (raised power) versus sitting on the baseline.
 2. Specifically check terms like '2^x' vs '2x' or 'x^2' vs '2x'. Do NOT misinterpret a superscript exponent as a standard coefficient or multiplier.
 3. Count how many SEPARATE, independent mathematical problems (equations or expressions to simplify/integrate) are present in the image. A single fraction within an integral sign represents ONE single problem. Do NOT count the numerator and denominator as separate entities.
 4. If the image contains zero mathematical problems OR multiple separate/independent problems, stop immediately and return EXACTLY this JSON array: ["Error: Please upload an image containing exactly ONE math equation."]
-
+ 
 If it contains EXACTLY ONE valid mathematical equation, expression, or integral, act as an AI Math Tutor. Solve or evaluate it step-by-step, and return a strict JSON array of strings where each element is a step.
-
-IMPORTANT FORMATTING RULES: 
-- Do NOT use the caret (^) symbol for exponents in the final output steps. 
+ 
+IMPORTANT FORMATTING RULES:
+- Do NOT use the caret (^) symbol for exponents in the final output steps.
 - Use standard Unicode superscripts (e.g., x², x³, 2ˣ, eˣ) for a proper mathematical presentation.
 - Use Unicode for fractions and integrals where possible.
 Wrap any important formulas or key concepts in double asterisks (e.g. **Power Rule**) so they can be highlighted.
 The final element in the array MUST start with exactly "Final Result: ". Do NOT output any markdown blocks like \`\`\`json, only raw valid JSON array.
       `;
-
+ 
       const result = await model.generateContent([prompt, imagePart]);
       const response = await result.response;
       let text = response.text();
-
+ 
       if (req.file) fs.unlinkSync(req.file.path);
-
+ 
       // Clean up markdown wrapping if present
       text = text.replace(/```(json)?/gi, '').trim();
-
+ 
       let steps = [];
       try {
         let parsed = JSON.parse(text);
@@ -1674,21 +1668,21 @@ The final element in the array MUST start with exactly "Final Result: ". Do NOT 
         console.error("Gemini Parse Error:", parseErr, "\\nRaw output:", text);
         return res.status(500).json({ success: false, message: 'Failed to parse AI response. Please try again later.' });
       }
-
+ 
       // Check if Gemini returned our instructed error message (which was valid JSON)
       if (steps.length > 0 && typeof steps[0] === 'string' && steps[0].startsWith("Error:")) {
         return res.status(400).json({ success: false, message: steps[0].replace("Error: ", "") });
       }
-
+ 
       // 4. Log the query
       await db.query(
         'INSERT INTO ai_tutor_logs (student_id) VALUES (?)',
         [studentId]
       );
-
+ 
       // Re-fetch stats after insert
       const newStats = await getStats();
-
+ 
       res.status(200).json({ success: true, data: { steps }, aiTutorStats: newStats });
       */
 

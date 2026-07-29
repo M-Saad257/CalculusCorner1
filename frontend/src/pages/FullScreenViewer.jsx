@@ -348,35 +348,59 @@ const FullScreenViewer = () => {
   const detectBoard = (it) => {
     if (!it) return "";
 
-    const text = `${it.title || ""} ${it.subcategory || ""}`.toLowerCase();
+    // Sirf category fields se board detect hoga
+    const text = `${it.category || ""} ${it.subcategory || ""}`.toLowerCase().trim();
 
-    // NBF first
+
+    // Punjab
     if (
-      text.includes("national book foundation") ||
-      /\bnbf\b/.test(text)
+      text.includes("punjab") ||
+      text.includes("pb")
     ) {
-      return "nbf";
+      return "punjab";
     }
 
-    // KPK
-    if (
-      /\bkpk\b/.test(text) ||
-      text.includes("bise kp")
-    ) {
-      return "kpk";
-    }
 
-    // FBISE
+    // FBISE / Federal
     if (
-      /\bfbise\b/.test(text) ||
-      text.includes("federal")
+      text.includes("fbise") ||
+      text.includes("federal") ||
+      text.includes("federal board")
     ) {
       return "fbise";
     }
 
-    if (text.includes("punjab")) return "punjab";
-    if (text.includes("sindh")) return "sindh";
-    if (text.includes("balochistan")) return "balochistan";
+
+    // KPK
+    if (
+      text.includes("kpk") ||
+      text.includes("kp") ||
+      text.includes("khyber")
+    ) {
+      return "kpk";
+    }
+
+
+    // Sindh
+    if (text.includes("sindh")) {
+      return "sindh";
+    }
+
+
+    // Balochistan
+    if (text.includes("balochistan")) {
+      return "balochistan";
+    }
+
+
+    // NBF
+    if (
+      text.includes("nbf") ||
+      text.includes("national book foundation")
+    ) {
+      return "nbf";
+    }
+
 
     return "";
   };
@@ -423,47 +447,116 @@ const FullScreenViewer = () => {
     };
 
 
+    const getLectureNumber = (title = "") => {
 
-    const filteredLectures = allVideos.filter(v => {
+      const matches = title.match(/(\d+)\.(\d+)/g);
 
-      if (String(v.id) === String(id)) return false;
+      if (!matches || matches.length === 0)
+        return null;
 
-      // Same board only
-      if (detectBoard(v) !== detectBoard(item)) return false;
 
-      // Same chapter/unit (4.1, 4.2, 4.3 all allowed)
-      return (
-        sameChapter(v.title, item.title) ||
-        v.title?.toLowerCase().includes(currentUnit)
-      );
-    });
-    const filteredNotes = allResources.filter(r => {
+      const last = matches[matches.length - 1];
 
-      if (type === "resource" && String(r.id) === String(id)) return false;
+      const [chapter, number] = last.split(".");
 
-      if (detectBoard(r) !== detectBoard(item)) return false;
 
-      return sameChapter(r.title, item.title);
+      return {
+        chapter: Number(chapter),
+        number: Number(number)
+      };
+    };
 
-    });
+
+
+    const getNearbyItems = (list) => {
+
+      if (!item || !item.title) return [];
+
+      const current = getLectureNumber(item.title);
+
+      if (!current) return [];
+
+
+      return list
+        .filter(v => {
+
+          // same board
+          const currentBoard = detectBoard(item);
+          const itemBoard = detectBoard(v);
+
+          // Agar current item ka board mila hai
+          // to related ka board exact same hona chahiye
+          if (currentBoard && currentBoard !== itemBoard) {
+            return false;
+          }
+
+
+          const pos = getLectureNumber(v.title);
+
+          if (!pos) return false;
+
+
+          /*
+            Allow:
+            current chapter
+            + next chapter beginning
+    
+            Example:
+            1.5 -> 1.3 1.4 2.1 2.2
+          */
+
+          const currentIndex =
+            current.chapter * 100 + current.number;
+
+
+          const itemIndex =
+            pos.chapter * 100 + pos.number;
+
+
+          return Math.abs(itemIndex - currentIndex) <= 2;
+
+        })
+        .sort((a, b) => {
+
+          const A = getLectureNumber(a.title);
+          const B = getLectureNumber(b.title);
+
+          return (
+            (A.chapter * 100 + A.number)
+            -
+            (B.chapter * 100 + B.number)
+          );
+
+        })
+        .slice(0, 5);
+
+    };
+    const filteredLectures = getNearbyItems(allVideos);
+    const filteredNotes = getNearbyItems(allResources);
 
     const filteredBooks = allBooks.filter(b => {
 
-      if (String(b.id) === String(id)) return false;
+      if (String(b.id) === String(id))
+        return false;
 
-      const bookBoard = detectBoard(b);
+
       const currentBoard = detectBoard(item);
+      const bookBoard = detectBoard(b);
 
-      return !currentBoard ||
+
+      return (
+        !currentBoard ||
         !bookBoard ||
-        bookBoard === currentBoard;
+        currentBoard === bookBoard
+      );
 
-    });
+    })
+      .slice(0, 5);
 
     return {
-      lectures: [...filteredLectures].sort(sortLecturesNaturally),
+      lectures: filteredLectures,
       notes: filteredNotes,
-      books: filteredBooks,
+      books: filteredBooks
     };
   }, [item, allVideos, allResources, allBooks, id, type]);
 
@@ -649,28 +742,6 @@ const FullScreenViewer = () => {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
-              </div>
-            ) : /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? (
-              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-bg-secondary border border-border-color rounded-2xl max-w-lg mx-auto my-auto gap-5 shadow-sm">
-                <div className="w-24 h-16 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shadow-inner">
-                  <FileText size={32} />
-                </div>
-                <div className="px-4">
-                  <h3 className="font-display font-bold text-base text-text-primary leading-snug">
-                    {item?.title}
-                  </h3>
-                  <p className="text-text-secondary text-xs mt-1 leading-relaxed">
-                    Open PDF directly for the best reading experience.
-                  </p>
-                </div>
-                <a
-                  href={viewerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full max-w-xs py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 hover:no-underline border-0 cursor-pointer text-center"
-                >
-                  <Eye size={14} /> Open PDF Document
-                </a>
               </div>
             ) : (
               <div className="w-full h-full flex flex-col relative">

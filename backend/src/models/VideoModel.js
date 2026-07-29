@@ -1,38 +1,53 @@
 const db = require('../config/db');
 
 const sortLecturesNaturally = (a, b) => {
-  if (!a || !b) return 0;
-  const titleA = (a.title || '').trim();
-  const titleB = (b.title || '').trim();
 
-  const matchA = titleA.match(/(\d+)\.(\d+)/);
-  const matchB = titleB.match(/(\d+)\.(\d+)/);
+  const extractLecture = (title = '') => {
 
-  if (matchA && matchB) {
-    const majorA = parseInt(matchA[1], 10);
-    const minorA = parseInt(matchA[2], 10);
-    const majorB = parseInt(matchB[1], 10);
-    const minorB = parseInt(matchB[2], 10);
+    // last occurrence of number.number
+    const matches = title.match(/\d+\.\d+/g);
 
-    if (majorA !== majorB) return majorA - majorB;
-    if (minorA !== minorB) return minorA - minorB;
-  } else if (matchA) {
-    const singleB = titleB.match(/(\d+)/);
-    if (singleB) {
-      const numA = parseInt(matchA[1], 10);
-      const numB = parseInt(singleB[1], 10);
-      if (numA !== numB) return numA - numB;
+    if (!matches || matches.length === 0) {
+      return null;
     }
-  } else if (matchB) {
-    const singleA = titleA.match(/(\d+)/);
-    if (singleA) {
-      const numA = parseInt(singleA[1], 10);
-      const numB = parseInt(matchB[1], 10);
-      if (numA !== numB) return numA - numB;
+
+    const last = matches[matches.length - 1];
+
+    const [major, minor] = last.split('.');
+
+    return {
+      major: Number(major),
+      minor: Number(minor)
+    };
+  };
+
+
+  const A = extractLecture(a?.title);
+  const B = extractLecture(b?.title);
+
+
+  if (A && B) {
+
+    if (A.major !== B.major) {
+      return A.major - B.major;
     }
+
+    return A.minor - B.minor;
   }
 
-  return titleA.localeCompare(titleB, undefined, { numeric: true, sensitivity: 'base' });
+
+  if (A) return -1;
+  if (B) return 1;
+
+
+  return (a?.title || '').localeCompare(
+    b?.title || '',
+    undefined,
+    {
+      numeric:true,
+      sensitivity:'base'
+    }
+  );
 };
 
 const VideoModel = {
